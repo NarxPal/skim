@@ -1,17 +1,23 @@
-import React, { ReactNode, useState, DragEvent, ChangeEvent } from 'react';
-import styles from "@/styles/dash.module.css"
+"use client";
+import React, { ReactNode, useState, DragEvent, ChangeEvent } from "react";
+import styles from "@/styles/dash.module.css";
 
 interface MediaUploadProps {
   children: ReactNode;
+  setVideoPreview: (url: string | null) => void;
 }
 
-const Upload: React.FC<MediaUploadProps> = ({ children }) => {
-  const [files, setFiles] = useState<File[]>([]);
-
+const Upload: React.FC<MediaUploadProps> = ({ children, setVideoPreview }) => {
   // Handle files from drag-and-drop or file input
   const handleFiles = (selectedFiles: FileList) => {
     const fileArray = Array.from(selectedFiles);
-    setFiles((prevFiles) => [...prevFiles, ...fileArray]);
+
+    fileArray.forEach((file) => {
+      if (file.type.startsWith("video")) {
+        const videoURL = URL.createObjectURL(file);
+        setVideoPreview(videoURL);
+      }
+    });
   };
 
   // Drag and Drop Handlers
@@ -35,7 +41,7 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
     <div
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      onClick={() => document.getElementById('file-input')?.click()}
+      onClick={() => document.getElementById("file-input")?.click()}
       className={styles.icon_text}
     >
       <input
@@ -43,19 +49,10 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
         id="file-input"
         accept="video/*,audio/*,image/*"
         multiple
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
         onChange={handleFileChange}
       />
-{children}
-
-      {/* Display uploaded files */}
-      <div className="file-preview">
-        {files.map((file, index) => (
-          <div key={index}>
-            <p className={styles.pane_text}>{file.name} - {file.type}</p>
-          </div>
-        ))}
-      </div>
+      {children}
     </div>
   );
 };

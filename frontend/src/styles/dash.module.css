@@ -1,130 +1,122 @@
-.dash_bg{
-  @apply bg-dash_dark h-screen w-screen flex
- }
-
- .head_pane{
-    @apply flex flex-col h-full w-full 
- }
-
- .dash_header_div{
-@apply flex flex-row h-[5%] w-full text-white items-center p-3
-  }
-
-  .dash_header{
-    @apply flex flex-row w-full h-full text-white justify-between
-  }
-
-.logo_filename_div{
-    @apply flex flex-row items-center gap-6 p-3
+.dash_bg {
+  @apply bg-dash_dark h-screen w-screen flex;
 }
 
-.logo_div{
-   @apply rounded-full bg-white h-8 w-8 
+.head_pane {
+  @apply flex flex-col h-full w-full;
 }
 
-.filename_div{
-
+.dash_header_div {
+  @apply flex flex-row h-[5%] w-full text-white items-center p-3;
 }
 
-.input{
-   @apply bg-transparent outline-none border-none opacity-50 text-sm 
+.dash_header {
+  @apply flex flex-row w-full h-full text-white justify-between;
 }
 
-.tools{
-@apply flex   gap-4 
+.logo_filename_div {
+  @apply flex flex-row items-center gap-6 p-3;
 }
 
-.ur_div{
-    @apply flex flex-row gap-4 items-center
+.logo_div {
+  @apply rounded-full bg-white h-8 w-8;
 }
 
-.vertical_line{
-    @apply  h-full w-[1px] bg-white opacity-60
+.filename_div {
 }
 
-.cd_div{
-    @apply flex flex-row gap-3 items-center
- }
-
-
-
-
-
-.ex_pf{
-    @apply flex flex-row gap-2 items-center
-} 
-
-
-
-
-
-
-.pf_export_div{
-   @apply w-auto flex gap-1
-}
-.pf{
-@apply rounded-full w-6 h-6 bg-white flex border-2 border-green-400
-}
-.export_btn{
-@apply flex 
+.input {
+  @apply bg-transparent outline-none border-none opacity-50 text-sm;
 }
 
-.btn{
-@apply bg-blue-500 text-white px-[14px] py-1 rounded-md  items-center text-xs font-semibold
+.tools {
+  @apply flex   gap-4;
 }
 
-
-.pane_div{
-    @apply w-full h-full  flex
+.ur_div {
+  @apply flex flex-row gap-4 items-center;
 }
 
-.sm_pane{
-    @apply flex-none flex-col  p-3 justify-between 
+.vertical_line {
+  @apply h-full w-[1px] bg-white opacity-60;
 }
 
-.ul_items{
-    @apply gap-[0.7rem] flex flex-col
+.cd_div {
+  @apply flex flex-row gap-3 items-center;
 }
 
-.li_text{
-    @apply text-icon_col 
+.ex_pf {
+  @apply flex flex-row gap-2 items-center;
 }
 
-.li{
-    @apply items-center flex flex-col cursor-pointer hover:bg-gray_col p-2 rounded-md 
+.pf_export_div {
+  @apply w-auto flex gap-1;
+}
+.pf {
+  @apply rounded-full w-6 h-6 bg-white flex border-2 border-green-400;
+}
+.export_btn {
+  @apply flex;
 }
 
-.pane_sidebar{
-    @apply flex-none w-1/5 border-gray_col rounded-md border-2 h-[98%]  p-3
+.btn {
+  @apply bg-blue-500 text-white px-[14px] py-1 rounded-md  items-center text-xs font-semibold;
 }
 
-.upload_box{
-@apply  h-1/6 rounded-md border-2 border-dashed opacity-20 hover:opacity-50
+.pane_div {
+  @apply w-full h-full  flex;
 }
 
-.icon_text{
-    @apply h-full w-full items-center flex flex-col justify-center
+.sm_pane {
+  @apply flex-none flex-col  p-3 justify-between;
 }
 
-
-
-
-
-
-.upload_icon{
-    @apply items-center 
-}
-.pane_text{
-    @apply text-white 
-}
-.canvas_pane{
-    @apply flex-1 h-[98%] rounded-md mx-4 flex-col gap-3 flex
+.ul_items {
+  @apply gap-[0.7rem] flex flex-col;
 }
 
-.canvas{
-    @apply h-[60%] bg-gray_col flex rounded-md
+.li_text {
+  @apply text-icon_col;
 }
 
-.timeline{
-    @apply  h-[40%] bg-gray_col flex rounded-md
+.li {
+  @apply items-center flex flex-col cursor-pointer hover:bg-gray_col p-2 rounded-md;
+}
+
+.pane_sidebar {
+  @apply flex-none w-1/5 border-gray_col rounded-md border-2 h-[98%]  p-3;
+}
+
+.upload_box {
+  @apply h-1/6 rounded-md border-2 border-dashed opacity-20 hover:opacity-50 cursor-pointer;
+}
+
+.icon_text {
+  @apply h-full w-full items-center flex flex-col justify-center;
+}
+
+.upload_icon {
+  @apply items-center;
+}
+.pane_text {
+  @apply text-white;
+}
+.canvas_pane {
+  @apply flex-1 h-[98%] rounded-md mx-4 flex-col gap-3 flex;
+}
+
+.canvas {
+  @apply h-[60%] bg-gray_col flex rounded-md relative;
+}
+
+.video_div {
+  @apply absolute items-center justify-center flex m-auto h-full w-full;
+}
+
+.video_tag {
+  @apply flex rounded-md h-[90%] w-[90%];
+}
+
+.timeline {
+  @apply h-[40%] bg-gray_col flex rounded-md;
 }
