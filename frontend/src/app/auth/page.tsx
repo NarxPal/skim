@@ -1,14 +1,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import styles from "@/styles/auth.module.css";
-import { createUserWithEmailAndPassword,signInWithEmailAndPassword } from "firebase/auth";
-import {auth} from "../../../firebaseConfig"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation";
+import { signUp, signIn, signOut } from "./auth";
+import { supabase } from "../../../supabaseClient";
 
 const Auth = () => {
-
-  
-  const router = useRouter()
+  const router = useRouter();
 
   const [login, setLogin] = useState<boolean>(false);
 
@@ -30,31 +28,32 @@ const Auth = () => {
     }));
   };
 
-const handleSignUp = async (e: React.FormEvent): Promise<void> => {
+  const handleSignUp = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
-    
+
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const userCredential = await signUp(formData.email, formData.password);
       console.log("User signed up:", userCredential.user);
-      const uid = userCredential.user.uid;
-      router.push(`/dashboard/${uid}`);
+      if (userCredential && userCredential.user) {
+        const uid = userCredential.user.id;
+        router.push(`/dashboard/${uid}`);
+      }
     } catch (error) {
       console.error("Error signing up:", error);
     }
   };
 
-const handleLogIn = async (e:React.FormEvent): Promise<void> => {
- e.preventDefault();
-try {
-      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+  const handleLogIn = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    try {
+      const userCredential = await signIn(formData.email, formData.password);
       console.log("User signed in:", userCredential.user);
-      const uid = userCredential.user.uid;
+      const uid = userCredential.user.id;
       router.push(`/dashboard/${uid}`);
-} catch (error) {
+    } catch (error) {
       console.error("Error signing in:", error);
-}  
-}
-
+    }
+  };
 
   return (
     <div>
@@ -77,7 +76,6 @@ try {
             onChange={handleChange}
             required
             className="text-black"
-            
           />
         </div>
 
@@ -107,7 +105,7 @@ try {
           />
         </div>
 
-        <button type="submit">{login? "LogIn" : "SignUp"}</button>
+        <button type="submit">{login ? "LogIn" : "SignUp"}</button>
       </form>
     </div>
   );

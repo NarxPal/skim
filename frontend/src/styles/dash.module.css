@@ -7,15 +7,15 @@
 }
 
 .dash_header_div {
-  @apply flex flex-row h-[5%] w-full text-white items-center p-3;
+  @apply flex flex-row h-auto w-full text-white items-center py-2 px-4;
 }
 
 .dash_header {
-  @apply flex flex-row w-full h-full text-white justify-between;
+  @apply flex flex-row w-full h-full text-white justify-between p-3 rounded-lg border-2 border-light_gray bg-too_light;
 }
 
 .logo_filename_div {
-  @apply flex flex-row items-center gap-6 p-3;
+  @apply flex flex-row items-center gap-6;
 }
 
 .logo_div {
@@ -34,15 +34,28 @@
 }
 
 .ur_div {
-  @apply flex flex-row gap-4 items-center;
+  @apply flex flex-row gap-0.5 items-center;
 }
-
+.uBtn {
+  @apply p-2 rounded-md hover:bg-gray_col;
+}
+.rBtn {
+  @apply p-2 rounded-md hover:bg-gray_col;
+}
 .vertical_line {
   @apply h-full w-[1px] bg-white opacity-60;
 }
 
 .cd_div {
-  @apply flex flex-row gap-3 items-center;
+  @apply flex flex-row gap-0.5 items-center;
+}
+
+.cursor {
+  @apply p-2 hover:bg-gray_col rounded-md cursor-pointer;
+}
+
+.drag {
+  @apply p-2 hover:bg-gray_col rounded-md cursor-pointer;
 }
 
 .ex_pf {
@@ -64,27 +77,31 @@
 }
 
 .pane_div {
-  @apply w-full h-full  flex;
+  @apply w-full h-[90%]  flex;
 }
 
 .sm_pane {
-  @apply flex-none flex-col  p-3 justify-between;
+  @apply flex-none flex-col  pr-0 pl-4 justify-between;
+}
+
+.sm_inner {
+  @apply border-2 border-light_gray bg-too_light  rounded-l-lg h-full;
 }
 
 .ul_items {
-  @apply gap-[0.7rem] flex flex-col;
+  @apply gap-[0.7rem] flex flex-col p-2;
 }
 
 .li_text {
-  @apply text-icon_col;
+  @apply text-icon_col font-medium text-xs;
 }
 
 .li {
-  @apply items-center flex flex-col cursor-pointer hover:bg-gray_col p-2 rounded-md;
+  @apply items-center flex flex-col cursor-pointer hover:bg-gray_col p-2 rounded-md gap-1;
 }
 
 .pane_sidebar {
-  @apply flex-none w-1/5 border-gray_col rounded-md border-2 h-[98%]  p-3;
+  @apply flex-none w-1/5 border-light_gray rounded-r-lg border-2 border-l-0 h-full bg-too_light  p-3;
 }
 
 .upload_box {
@@ -92,7 +109,7 @@
 }
 
 .icon_text {
-  @apply h-full w-full items-center flex flex-col justify-center;
+  @apply h-full w-full items-center flex flex-col justify-center text-white;
 }
 
 .upload_icon {
@@ -102,11 +119,11 @@
   @apply text-white;
 }
 .canvas_pane {
-  @apply flex-1 h-[98%] rounded-md mx-4 flex-col gap-3 flex;
+  @apply flex-1 h-full rounded-md mr-4 ml-2 flex-col gap-3 flex;
 }
 
 .canvas {
-  @apply h-[60%] bg-gray_col flex rounded-md relative;
+  @apply h-[60%] bg-too_light border-2 border-light_gray flex rounded-lg relative;
 }
 
 .video_div {
@@ -118,5 +135,11 @@
 }
 
 .timeline {
-  @apply h-[40%] bg-gray_col flex rounded-md;
+  @apply h-[40%]  bg-too_light border-2 border-light_gray flex rounded-lg;
+}
+
+/* *********** sidebar content stuff ********************** */
+
+.sidebar_content {
+  @apply text-white h-full w-full;
 }
