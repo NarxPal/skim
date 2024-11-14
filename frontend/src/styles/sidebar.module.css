@@ -1,0 +1,43 @@
+/* left_pane.tsx content */
+.pane_sidebar {
+  @apply flex-none w-1/5 border-light_gray rounded-r-lg border-2 border-l-0 h-full bg-too_light  p-3 overflow-auto mr-3;
+}
+
+.upload_box {
+  @apply h-1/6 rounded-md border-2 border-dashed opacity-20 hover:opacity-50 cursor-pointer;
+}
+
+.icon_text {
+  @apply h-full w-full items-center flex flex-col justify-center text-white;
+}
+
+.upload_icon {
+  @apply items-center;
+}
+.pane_text {
+  @apply text-white;
+}
+
+/* upload.tsx content */
+.upload_area {
+  /* @apply h-full w-full; */
+}
+.all_media {
+  @apply h-full;
+}
+
+.media_library {
+  @apply h-full grid-cols-2 grid gap-3;
+}
+
+.media_item {
+  @apply p-2 bg-light_gray rounded-lg flex gap-2 flex-col;
+}
+
+.media_preview {
+  @apply h-[98.86px] w-[173px] object-cover rounded-lg;
+}
+
+.media_name {
+  @apply flex w-full text-xs font-medium opacity-50 text-white;
+}

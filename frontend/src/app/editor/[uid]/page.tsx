@@ -6,6 +6,7 @@ import styles from "@/styles/dash.module.css";
 import Image from "next/image";
 import Upload from "@/components/upload";
 import { supabase } from "../../../../supabaseClient";
+import Left_pane from "../sidebar/left_pane";
 
 const UserId = () => {
   const params = useParams<{ uid: string }>();
@@ -14,6 +15,7 @@ const UserId = () => {
   const [uid, setUid] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("upload");
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -37,8 +39,9 @@ const UserId = () => {
     }
   }, [uid, loading, params.uid]);
 
-  // for handling upload through icon
-  const handleUpload = () => {};
+  const handleTabClick = (tab: string) => {
+    setActiveTab(tab);
+  };
 
   return (
     <div className={styles.dash_bg}>
@@ -130,7 +133,10 @@ const UserId = () => {
           <div className={styles.sm_pane}>
             <div className={styles.sm_inner}>
               <ul className={styles.ul_items}>
-                <li className={styles.li} onClick={handleUpload}>
+                <li
+                  className={styles.li}
+                  onClick={() => handleTabClick("upload")}
+                >
                   <Image
                     src="/upload2.png"
                     alt="upload"
@@ -142,7 +148,10 @@ const UserId = () => {
                   <span className={styles.li_text}>upload</span>
                 </li>
 
-                <li className={styles.li}>
+                <li
+                  className={styles.li}
+                  onClick={() => handleTabClick("text")}
+                >
                   <Image
                     src="/text2.png"
                     alt="text"
@@ -153,7 +162,10 @@ const UserId = () => {
                   <span className={styles.li_text}>text</span>
                 </li>
 
-                <li className={styles.li}>
+                <li
+                  className={styles.li}
+                  onClick={() => handleTabClick("video")}
+                >
                   <Image
                     src="/video.png"
                     alt="video"
@@ -165,7 +177,10 @@ const UserId = () => {
                   <span className={styles.li_text}>video</span>
                 </li>
 
-                <li className={styles.li} onClick={handleUpload}>
+                <li
+                  className={styles.li}
+                  onClick={() => handleTabClick("audio")}
+                >
                   <Image
                     src="/audio.png"
                     alt="audio"
@@ -179,27 +194,7 @@ const UserId = () => {
               </ul>
             </div>
           </div>
-
-          <div className={styles.pane_sidebar}>
-            <Upload setVideoPreview={setVideoPreview}>
-              <div className={styles.upload_box}>
-                <div className={styles.icon_text}>
-                  <Image
-                    src="/upload.png"
-                    alt="upload"
-                    height={30}
-                    width={30}
-                    priority={true}
-                    className={styles.upload_icon}
-                  />
-                  <span className={styles.pane_text}>
-                    drop or click to upload your files.
-                  </span>
-                </div>
-              </div>
-            </Upload>
-          </div>
-
+          <Left_pane />
           <div className={styles.canvas_pane}>
             <div className={styles.canvas}>
               {videoPreview && (

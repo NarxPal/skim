@@ -36,7 +36,7 @@ const Auth = () => {
       console.log("User signed up:", userCredential.user);
       if (userCredential && userCredential.user) {
         const uid = userCredential.user.id;
-        router.push(`/dashboard/${uid}`);
+        router.push(`/editor/${uid}`);
       }
     } catch (error) {
       console.error("Error signing up:", error);
@@ -49,7 +49,7 @@ const Auth = () => {
       const userCredential = await signIn(formData.email, formData.password);
       console.log("User signed in:", userCredential.user);
       const uid = userCredential.user.id;
-      router.push(`/dashboard/${uid}`);
+      router.push(`/editor/${uid}`);
     } catch (error) {
       console.error("Error signing in:", error);
     }
