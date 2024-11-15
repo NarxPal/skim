@@ -22,6 +22,7 @@ export default {
         too_light: "#1c1b1b7a",
         grayBox: "#212121",
         containerGray: "#2C2C2C",
+        scroll_hover: "#555",
       },
     },
   },

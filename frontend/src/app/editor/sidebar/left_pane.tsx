@@ -8,10 +8,22 @@ type MediaItem = {
   signedUrl: string | null;
   name: string;
   filepath: string;
+  type: string;
 };
 
-const Left_pane = () => {
+const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [mediaType, setMediaType] = useState<string>("");
+
+  useEffect(() => {
+    // Fetch the media based on the selected category
+    const fetchMedia = async () => {
+      setMediaType(selectedCategory);
+      console.log("selected category bro", selectedCategory);
+    };
+
+    fetchMedia();
+  }, [selectedCategory]);
 
   async function getSignedUrl(filePath: string) {
     const { data, error } = await supabase.storage
@@ -66,7 +78,7 @@ const Left_pane = () => {
     // Optional: Refresh URLs every hour if needed
     const interval = setInterval(loadMedia, 60 * 60 * 1000); // Refresh every hour
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedCategory]);
 
   return (
     <div className={styles.pane_sidebar}>
@@ -86,25 +98,29 @@ const Left_pane = () => {
         </div>
       </Upload>
 
+      <div className={styles.text_head}>
+        <h2>Uploaded Media</h2>
+      </div>
       <div className={styles.all_media}>
-        <h2>uploaded media</h2>
         <div className={styles.media_library}>
-          {mediaItems.map((item) => (
-            <div key={item.filepath} className={styles.media_item}>
-              {item.signedUrl && (
-                <img
-                  src={item.signedUrl}
-                  alt={item.name}
-                  className={styles.media_preview}
-                />
-              )}
-              <p className={styles.media_name}>
-                {item.name.length > 20
-                  ? item.name.substring(0, 20) + "..."
-                  : item.name}
-              </p>
-            </div>
-          ))}
+          {mediaItems
+            .filter((item) => mediaType === "upload" || item.type === mediaType)
+            .map((item) => (
+              <div key={item.filepath} className={styles.media_item}>
+                {item.signedUrl && (
+                  <img
+                    src={item.signedUrl}
+                    alt={item.name}
+                    className={styles.media_preview}
+                  />
+                )}
+                <p className={styles.media_name}>
+                  {item.name.length > 20
+                    ? item.name.substring(0, 20) + "..."
+                    : item.name}
+                </p>
+              </div>
+            ))}
         </div>
       </div>
     </div>

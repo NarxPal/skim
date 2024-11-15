@@ -5,3 +5,18 @@
 /* body{
   @apply bg-dash_dark 
 } */
+
+/* width */
+::-webkit-scrollbar {
+  @apply w-1;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  @apply bg-containerGray rounded-lg;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-scroll_hover;
+}

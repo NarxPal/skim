@@ -80,26 +80,6 @@
   @apply w-full h-[90%] p-4 pt-0 flex;
 }
 
-.sm_pane {
-  @apply flex-none flex-col   justify-between;
-}
-
-.sm_inner {
-  @apply border-2 border-light_gray bg-too_light  rounded-l-lg h-full;
-}
-
-.ul_items {
-  @apply gap-[0.7rem] flex flex-col p-2;
-}
-
-.li_text {
-  @apply text-icon_col font-medium text-xs;
-}
-
-.li {
-  @apply items-center flex flex-col cursor-pointer hover:bg-gray_col p-2 rounded-md gap-1;
-}
-
 .canvas_pane {
   @apply flex-1 h-full rounded-md flex-col gap-3 flex;
 }
