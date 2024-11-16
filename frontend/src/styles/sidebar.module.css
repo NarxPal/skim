@@ -1,6 +1,6 @@
 /* left_pane.tsx content */
 .pane_sidebar {
-  @apply flex flex-col gap-2 w-1/5 border-light_gray rounded-r-lg border-2 border-l-0 h-full bg-too_light  p-3 mr-3;
+  @apply flex flex-col gap-2 w-1/5 border-light_gray rounded-r-xl border-2 border-l-0 h-full bg-too_light  p-3 mr-3;
 }
 
 .upload_box {
@@ -52,7 +52,7 @@
 }
 
 .sm_inner {
-  @apply border-2 border-light_gray bg-too_light  rounded-l-lg h-full;
+  @apply border-2 border-light_gray bg-too_light  rounded-l-xl h-full;
 }
 
 .ul_items {

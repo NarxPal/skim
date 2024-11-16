@@ -14,6 +14,7 @@ type MediaItem = {
 const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [mediaType, setMediaType] = useState<string>("");
+  const [draggedItem, setDraggedItem] = useState(null);
 
   useEffect(() => {
     // Fetch the media based on the selected category
@@ -67,6 +68,16 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
     return mediaWithUrls; // this will return array of media item each containing signed url and metadata
   }
 
+  const handleDragStart = (e: any, item: any) => {
+    const mediaItemData = JSON.stringify(item);
+    e.dataTransfer.setData("text/plain", mediaItemData);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    console.log("Drag ended");
+  };
+
   useEffect(() => {
     const loadMedia = async () => {
       console.log("loadmedia ruan");
@@ -106,7 +117,13 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
           {mediaItems
             .filter((item) => mediaType === "upload" || item.type === mediaType)
             .map((item) => (
-              <div key={item.filepath} className={styles.media_item}>
+              <div
+                key={item.filepath}
+                className={styles.media_item}
+                draggable
+                onDragStart={(e) => handleDragStart(e, item)}
+                onDragEnd={handleDragEnd}
+              >
                 {item.signedUrl && (
                   <img
                     src={item.signedUrl}
