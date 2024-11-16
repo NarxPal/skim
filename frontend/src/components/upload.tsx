@@ -1,11 +1,5 @@
 "use client";
-import React, {
-  ReactNode,
-  useState,
-  useEffect,
-  DragEvent,
-  ChangeEvent,
-} from "react";
+import React, { ReactNode, useState, useEffect } from "react";
 import styles from "@/styles/sidebar.module.css";
 import { supabase } from "../../supabaseClient";
 
@@ -13,17 +7,10 @@ interface MediaUploadProps {
   children: ReactNode;
 }
 
-type MediaItem = {
-  signedUrl: string | null;
-  name: string;
-  filepath: string;
-};
-
 const Upload: React.FC<MediaUploadProps> = ({ children }) => {
-  const [isUploading, setIsUploading] = useState(false);
+  // const [isUploading, setIsUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
   const [uid, setUid] = useState<string>("");
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
 
   useEffect(() => {
     const fetchUser = async () => {

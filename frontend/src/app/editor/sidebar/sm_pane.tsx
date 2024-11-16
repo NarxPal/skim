@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import styles from "@/styles/sidebar.module.css";
 import Image from "next/image";
 
@@ -71,7 +71,7 @@ const Sm_pane = ({
               priority={true}
             />
 
-            <span className={styles.li_text}>image</span>
+            <span className={styles.li_text}>image </span>
           </li>
         </ul>
       </div>

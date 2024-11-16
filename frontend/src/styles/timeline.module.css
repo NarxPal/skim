@@ -1,0 +1,32 @@
+.timeline {
+  @apply h-[40%]  w-[75%] flex-col bg-too_light border-2 border-light_gray flex rounded-xl;
+}
+
+.tm_top {
+  @apply h-auto w-full gap-2;
+}
+
+.top_icons {
+  @apply flex flex-row p-1  border-b-2 border-light_gray;
+}
+
+.tm_icon {
+  @apply cursor-pointer hover:bg-light_gray p-2 rounded-lg;
+}
+
+.tm_media_container {
+  @apply flex h-full w-full flex-col overflow-auto p-12;
+}
+
+.media_timeline {
+  /* @apply  */
+}
+
+.playhead {
+}
+.item_box_div {
+  @apply p-2 flex flex-col gap-2;
+}
+.m_item_box {
+  @apply bg-sm_light_gray p-2 rounded-lg h-12 border-dashed border-2 border-white border-opacity-10 hover:border-opacity-70 hover:border-white;
+}

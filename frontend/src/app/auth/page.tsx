@@ -1,9 +1,9 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import styles from "@/styles/auth.module.css";
 import { useRouter } from "next/navigation";
-import { signUp, signIn, signOut } from "./auth";
-import { supabase } from "../../../supabaseClient";
+import { signUp, signIn } from "./auth";
+// import { supabase } from "../../../supabaseClient";
 
 const Auth = () => {
   const router = useRouter();

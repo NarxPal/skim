@@ -8,9 +8,17 @@
 
 /* width */
 ::-webkit-scrollbar {
-  @apply w-1;
+  @apply w-1 h-1;
 }
 
+/* Track */
+::-webkit-scrollbar-track {
+  @apply bg-light_gray;
+}
+/* Scrollbar Corner */
+::-webkit-scrollbar-corner {
+  @apply bg-light_gray;
+}
 /* Handle */
 ::-webkit-scrollbar-thumb {
   @apply bg-containerGray rounded-lg;

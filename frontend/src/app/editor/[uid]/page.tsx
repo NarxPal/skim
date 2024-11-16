@@ -1,13 +1,13 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
+// import { usePathname } from "next/navigation";
 import styles from "@/styles/dash.module.css";
 import Image from "next/image";
-import Upload from "@/components/upload";
 import { supabase } from "../../../../supabaseClient";
 import Left_pane from "../sidebar/left_pane";
 import Sm_pane from "../sidebar/sm_pane";
+import Timeline from "../canvas/timeline";
 
 const UserId = () => {
   const params = useParams<{ uid: string }>();
@@ -15,7 +15,7 @@ const UserId = () => {
 
   const [uid, setUid] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
-  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  // const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("upload");
 
   useEffect(() => {
@@ -135,7 +135,7 @@ const UserId = () => {
           <Left_pane selectedCategory={activeTab} />
           <div className={styles.canvas_pane}>
             <div className={styles.canvas}>
-              {videoPreview && (
+              {/* {videoPreview && (
                 <div className={styles.video_div}>
                   <video
                     src={videoPreview}
@@ -144,9 +144,9 @@ const UserId = () => {
                     className={styles.video_tag}
                   />
                 </div>
-              )}
+              )} */}
             </div>
-            <div className={styles.timeline}></div>
+            <Timeline />
           </div>
         </div>
       </div>
