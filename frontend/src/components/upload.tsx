@@ -23,11 +23,11 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
   }, []);
 
   // Handle drag and drop
-  const handleDragOver = (event: React.DragEvent) => {
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
   };
 
-  const handleDrop = (event: React.DragEvent) => {
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const files = event.dataTransfer.files;
     if (files) handleFiles(files);
@@ -72,6 +72,7 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
             name: file.name,
             filepath: filePath,
             type: fileType,
+            width: "100%",
             uploaded_at: new Date(),
           });
 

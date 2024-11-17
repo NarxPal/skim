@@ -9,12 +9,13 @@ type MediaItem = {
   name: string;
   filepath: string;
   type: string;
+  width: string | number;
 };
 
 const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [mediaType, setMediaType] = useState<string>("");
-  const [draggedItem, setDraggedItem] = useState(null);
+  // const [draggedItem, setDraggedItem] = useState(null);
 
   useEffect(() => {
     // Fetch the media based on the selected category
@@ -43,7 +44,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
     const user = await supabase.auth.getUser();
     const { data: mediaFiles, error } = await supabase
       .from("media_files")
-      .select("name, type, filepath")
+      .select("name, type, width, filepath")
       .eq("user_id", user.data.user?.id);
     console.log("user id", user.data.user?.id);
     console.log("media files data bro", mediaFiles);
@@ -68,13 +69,16 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
     return mediaWithUrls; // this will return array of media item each containing signed url and metadata
   }
 
-  const handleDragStart = (e: any, item: any) => {
+  const handleDragStart = (
+    e: React.DragEvent<HTMLDivElement>,
+    item: MediaItem
+  ) => {
     const mediaItemData = JSON.stringify(item);
     e.dataTransfer.setData("text/plain", mediaItemData);
   };
 
   const handleDragEnd = () => {
-    setDraggedItem(null);
+    // setDraggedItem(null);
     console.log("Drag ended");
   };
 
