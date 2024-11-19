@@ -15,11 +15,15 @@
 }
 
 .tm_m_container_div {
-  @apply relative h-full;
+  @apply relative h-full w-full;
 }
 
 .tm_media_container {
-  @apply flex h-full w-full flex-col overflow-auto p-12 absolute;
+  @apply flex h-full w-full flex-col overflow-auto p-12;
+}
+
+.item_box_div {
+  @apply flex flex-col gap-2 select-none absolute;
 }
 
 .media_timeline {
@@ -28,11 +32,12 @@
 
 .playhead {
 }
-.item_box_div {
-  @apply flex flex-col gap-2;
-}
 .m_item_box {
   @apply bg-sm_light_gray p-2 rounded-lg h-12 border-dashed border-2 border-white border-opacity-10 hover:border-opacity-70 hover:border-white text-white text-opacity-50 bg-cover font-semibold text-xs;
+}
+
+.m_item_bar {
+  /* @apply relative; */
 }
 
 .m_item_box_drop {
@@ -43,12 +48,16 @@
   @apply flex flex-row w-full items-center gap-1;
 }
 
-/* .bar_arrow {
-  @apply p-1 bg-white bg-opacity-10 shadow-md rounded-md;
+/* .bar_handle_left {
+  @apply absolute left-0 h-full;
+}
+
+.bar_handle_right {
+  @apply absolute right-0 h-full;
 } */
 
 .bar_arrow {
-  @apply h-full items-center flex px-3 cursor-col-resize bg-indigo-500 shadow-md rounded-lg;
+  @apply h-full items-center flex px-3 cursor-ew-resize bg-indigo-500 shadow-md rounded-lg;
 }
 
 .item_content_drop {

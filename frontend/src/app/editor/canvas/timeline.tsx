@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import styles from "@/styles/timeline.module.css";
 import Image from "next/image";
 
@@ -7,13 +7,29 @@ type MediaItem = {
   name: string;
   filepath: string;
   type: string;
-  width: number | string;
+  width: number;
+  left: number;
+  id: number;
 };
 
 const Timeline = () => {
   // const [currentTime, setCurrentTime] = useState(0); // Current time in seconds
   // const [duration, setDuration] = useState(60); // Total duration in seconds
   const [droppedItem, setDroppedItem] = useState<MediaItem[]>([]); // media items that will be dropped in timeline will be stored in this state variable
+
+  const [handleRightItems, setHandleRightItems] = useState<MediaItem[]>([]);
+  const [handleLeftItems, setHandleLeftItems] = useState<MediaItem[]>([]);
+
+  // const [isResizing, setIsResizing] = useState<{
+  //   id: number;
+  //   handle: "left" | "right";
+  // } | null>(null);
+
+  const [barState, setBarState] = useState({ width: 200, left: 50 });
+
+  const isResizing = useRef(false);
+  const resizeDirection = useRef<"left" | "right" | null>(null);
+  const startX = useRef(0);
 
   // const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -36,33 +52,75 @@ const Timeline = () => {
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const dropped_Item = event.dataTransfer.getData("text/plain");
+    console.log("dropped item bro", dropped_Item);
     const parsedItem = JSON.parse(dropped_Item);
-    setDroppedItem((prev) => [...prev, parsedItem]);
-    console.log(`Dropped item bro: ${parsedItem}`);
+
+    setDroppedItem((prev) => {
+      const updatedItems = [...prev, parsedItem];
+      return updatedItems;
+    });
+
     console.log("signed url bro", parsedItem.signedUrl);
   };
 
-  /*   const handleMouseDown = (index, e) => {
-    const startX = e.clientX;
-    const startWidth = droppedItems[index].width;
+  const myfunction = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    const parentElement = e.currentTarget; // This refers to the div that triggered the event
+    const parentRect = parentElement.getBoundingClientRect();
 
-    const handleMouseMove = (e) => {
-      const newWidth = startWidth + (e.clientX - startX);
-      setDroppedItem((prev) =>
-        prev.map((item, i) =>
-          i === index ? { ...item, width: Math.max(newWidth, 50) } : item
-        )
-      );
-    };
+    // Get mouse coordinates relative to the parent element
+    const x = e.clientX - parentRect.left;
+    const y = e.clientY - parentRect.top;
 
-    const handleMouseUp = () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
+    // Log or use the coordinates
+    const coor = `Coordinates: (${x}, ${y})`;
+    // document.getElementById("demo")!.innerHTML = coor;
+    // console.log("coordinates bro:", coor);
+  };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-  } */ return (
+  const clearMyFunction = () => {};
+
+  const startResize = (e: React.MouseEvent, direction: "left" | "right") => {
+    isResizing.current = true;
+    resizeDirection.current = direction;
+    startX.current = e.clientX;
+    document.addEventListener("mousemove", resizeBar);
+    document.addEventListener("mouseup", stopResize);
+  };
+
+  const resizeBar = (e: MouseEvent) => {
+    if (!isResizing.current || !resizeDirection.current) return;
+
+    const dx = e.clientX - startX.current;
+
+    setBarState((prevState) => {
+      const newWidth =
+        resizeDirection.current === "left"
+          ? prevState.width - dx
+          : prevState.width + dx;
+      const newLeft =
+        resizeDirection.current === "left"
+          ? prevState.left + dx
+          : prevState.left;
+
+      return {
+        width: Math.max(newWidth, 50), // Ensure minimum width
+        left: newLeft,
+      };
+    });
+
+    startX.current = e.clientX;
+  };
+
+  const stopResize = () => {
+    isResizing.current = false;
+    resizeDirection.current = null;
+    document.removeEventListener("mousemove", resizeBar);
+    document.removeEventListener("mouseup", stopResize);
+  };
+
+  const SCALING_FACTOR = 0.1;
+
+  return (
     <div className={styles.timeline}>
       <div className={styles.tm_top}>
         <div className={styles.top_icons}>
@@ -73,6 +131,7 @@ const Timeline = () => {
               height={15}
               alt="delete"
               priority={true}
+              draggable={false}
             />
           </div>
 
@@ -83,6 +142,7 @@ const Timeline = () => {
               height={15}
               alt="duplicate"
               priority={true}
+              draggable={false}
             />
           </div>
 
@@ -93,23 +153,25 @@ const Timeline = () => {
               height={15}
               alt="split"
               priority={true}
+              draggable={false}
             />
           </div>
         </div>
       </div>
-      <div className={styles.tm_m_container_div}>
+      <div
+        className={styles.tm_m_container_div}
+        onMouseMove={(e) => myfunction(e)}
+        onMouseOut={clearMyFunction}
+      >
         <div className={styles.tm_media_container}>
-          <div
-            className={styles.playhead}
-            // style={{ left: `${playheadPosition}px` }}
-          ></div>
-          {/* this is for vertical line */}
-          <div className={styles.media_timeline}></div>{" "}
-          {/* to show horizontal time series */}
           <div
             className={styles.item_box_div}
             onDragOver={(e) => handleDragOver(e)}
             onDrop={(e) => handleDrop(e)}
+            style={{
+              width: `${barState.width}px`,
+              left: `${barState.left}px`,
+            }}
           >
             {(droppedItem.length === 0
               ? new Array(3).fill(null)
@@ -122,22 +184,25 @@ const Timeline = () => {
                     ? `${styles.m_item_box_drop}`
                     : `${styles.m_item_box}`
                 }
-                style={{
-                  width: item && item.width ? `${item.width}` : "100%", // the width is saved as percentage (default = 100%)
-                }}
               >
                 <div className={styles.bar_content}>
                   {droppedItem && droppedItem.length !== 0 ? (
-                    <div className={styles.bar_arrow}>
+                    // <div className={styles.bar_handle_left}>
+                    <div
+                      className={styles.bar_arrow}
+                      onMouseDown={(e) => startResize(e, "left")}
+                    >
                       <Image
                         src="/left_arrow.png"
                         alt="left_arrow"
                         width={10}
                         height={10}
                         priority={true}
+                        draggable={false}
                       />
                     </div>
-                  ) : null}
+                  ) : // </div>
+                  null}
                   <div
                     className={
                       droppedItem.length !== 0
@@ -168,14 +233,14 @@ const Timeline = () => {
                                 width={10}
                                 height={10}
                                 priority={true}
+                                draggable={false}
                               />
                             )}
-                            {/* <span className={styles.m_item_type}>
-                            {item.type}
-                          </span> */}
                           </div>
                           <span className={styles.m_item_label}>
-                            {item.name}
+                            {item.name.length > 20
+                              ? `${item.name.substring(0, 40)}...`
+                              : item.name}
                           </span>
                         </div>
                       </div>
@@ -183,16 +248,23 @@ const Timeline = () => {
                   </div>
 
                   {droppedItem && droppedItem.length !== 0 ? (
-                    <div className={styles.bar_arrow}>
+                    // <div className={styles.bar_handle_right}>
+                    <div
+                      className={styles.bar_arrow}
+                      // onMouseDown={(e) => handleMouseDownRight(index, e)}
+                      onMouseDown={(e) => startResize(e, "right")}
+                    >
                       <Image
                         src="/chevron_right.png"
                         alt="right_arrow"
                         width={10}
                         height={10}
                         priority={true}
+                        draggable={false}
                       />
                     </div>
-                  ) : null}
+                  ) : // </div>
+                  null}
                 </div>
               </div>
             ))}

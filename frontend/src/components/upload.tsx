@@ -72,7 +72,8 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
             name: file.name,
             filepath: filePath,
             type: fileType,
-            width: "100%",
+            width: 100,
+            left: 0,
             uploaded_at: new Date(),
           });
 
