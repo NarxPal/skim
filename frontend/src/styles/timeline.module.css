@@ -14,16 +14,20 @@
   @apply cursor-pointer hover:bg-light_gray p-2 rounded-lg;
 }
 
+.media_parent_div {
+  @apply h-full p-2;
+}
+
 .tm_m_container_div {
-  @apply relative h-full w-full;
+  @apply relative h-full w-full overflow-auto flex flex-col;
 }
 
 .tm_media_container {
-  @apply flex h-full w-full flex-col overflow-auto p-12;
+  @apply flex h-full w-full flex-col absolute gap-2;
 }
 
 .item_box_div {
-  @apply flex flex-col gap-2 select-none absolute;
+  @apply select-none relative;
 }
 
 .media_timeline {
@@ -48,16 +52,12 @@
   @apply flex flex-row w-full items-center gap-1;
 }
 
-/* .bar_handle_left {
-  @apply absolute left-0 h-full;
-}
-
-.bar_handle_right {
-  @apply absolute right-0 h-full;
-} */
-
 .bar_arrow {
   @apply h-full items-center flex px-3 cursor-ew-resize bg-indigo-500 shadow-md rounded-lg;
+}
+
+.arrow_div {
+  @apply w-2.5 h-2.5 flex;
 }
 
 .item_content_drop {
