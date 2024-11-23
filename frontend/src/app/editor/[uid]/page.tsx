@@ -8,6 +8,7 @@ import { supabase } from "../../../../supabaseClient";
 import Left_pane from "../sidebar/left_pane";
 import Sm_pane from "../sidebar/sm_pane";
 import Timeline from "../canvas/timeline";
+import Project from "@/app/project/[uid]/page";
 
 const UserId = () => {
   const params = useParams<{ uid: string }>();
@@ -150,6 +151,8 @@ const UserId = () => {
           </div>
         </div>
       </div>
+
+      {/* <Project /> */}
     </div>
   );
 };

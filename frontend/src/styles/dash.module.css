@@ -85,7 +85,7 @@
 }
 
 .canvas {
-  @apply h-[60%] w-[75%] bg-too_light border-2 border-light_gray flex rounded-xl relative;
+  @apply h-[40%] w-[75%] bg-too_light border-2 border-light_gray flex rounded-xl relative;
 }
 
 .video_div {

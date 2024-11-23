@@ -1,0 +1,119 @@
+.bg_div {
+  @apply h-screen w-screen bg-editor_bg text-white font-semibold text-xs;
+}
+
+.col_div {
+  @apply flex flex-col h-full w-full;
+}
+
+.header {
+  @apply w-full  border-b-2 border-editor_gray;
+}
+
+.head_content {
+  @apply flex flex-row justify-between p-4;
+}
+
+.profileBtn {
+  @apply bg-blue_btn text-white px-4 py-2 font-semibold rounded-md text-xs shadow-md cursor-pointer;
+}
+
+.pane_div {
+  @apply flex flex-row w-full h-full;
+}
+
+.sm_pane {
+  @apply border-r-2 border-editor_gray w-[4%];
+}
+
+.sm_items {
+  @apply w-full h-full p-6;
+}
+
+.sm_icons {
+  @apply items-center justify-center flex flex-col gap-2;
+}
+
+.home_icon {
+  @apply hover:bg-editor_gray  rounded-lg cursor-pointer;
+}
+
+.left_pane {
+  @apply w-1/6 border-r-2 border-editor_gray;
+}
+
+.left_items {
+  @apply flex  flex-col h-full w-full p-6 gap-2;
+}
+
+.search_bar_div {
+  @apply flex justify-center items-center;
+}
+
+.search_bar {
+  @apply bg-editor_gray px-3 py-4 rounded-lg w-full flex flex-row gap-4 focus-within:outline-blue_btn outline-offset-0 focus-within:outline focus-within:outline-2;
+}
+
+.left_menu {
+  @apply flex flex-col gap-1 px-3 py-1 mb-auto;
+}
+
+.left_li {
+  @apply px-2 py-3 hover:bg-editor_gray rounded-lg flex flex-row items-center  gap-4 cursor-pointer;
+}
+
+.input_bar {
+  @apply bg-transparent focus:outline-none w-full;
+}
+
+.btn_div {
+  @apply flex mb-auto;
+}
+
+.btn {
+  @apply bg-blue_btn px-2 py-3 w-full h-full rounded-lg;
+}
+
+.main_pane {
+  @apply h-full w-[78%] overflow-scroll;
+}
+
+.main_content {
+  @apply p-6 flex flex-col gap-6 overflow-scroll;
+}
+
+.create_box_div {
+  @apply h-1/2 hover:border-blue_btn w-1/4 border-2 border-dashed border-white rounded-lg p-3 cursor-pointer;
+}
+
+.create_box {
+  @apply flex flex-col gap-2;
+}
+
+.user_dirs {
+  @apply flex h-full w-full;
+}
+
+.box_col_row {
+  @apply h-full w-full grid-cols-4 grid gap-4;
+}
+
+.prj_box {
+  @apply flex h-full w-full bg-editor_gray flex-col rounded-lg gap-2 p-3;
+}
+
+.thumbnail {
+  @apply h-[10rem];
+}
+
+.name_ic {
+  @apply flex flex-row justify-between;
+}
+
+.icons_ul {
+  @apply flex flex-row gap-2;
+}
+
+.ic_li {
+  @apply cursor-pointer;
+}

@@ -11,10 +11,13 @@ type MediaItem = {
   width: number;
   left: number;
   id: number;
+  column: number;
 };
 
 const Timeline = () => {
   const [droppedItem, setDroppedItem] = useState<MediaItem[]>([]); // media items that will be dropped in timeline will be stored in this state variable
+
+  const [barDragging, setBarDragging] = useState<boolean>(false);
 
   const isResizing = useRef(false);
   const resizeDirection = useRef<"left" | "right" | null>(null);
@@ -36,11 +39,13 @@ const Timeline = () => {
   //     : 0;
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault(); // Allow drop
+    event.preventDefault();
+    // setBarDragging(false);
   };
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    console.log("handle drop u are inside ");
     const dropped_Item = event.dataTransfer.getData("text/plain"); // the data here is passed from leftpane.tsx
     // console.log("dropped item bro", dropped_Item);
     const parsedItem = JSON.parse(dropped_Item);
@@ -50,7 +55,8 @@ const Timeline = () => {
       return updatedItems;
     });
 
-    console.log("signed url bro", parsedItem.signedUrl);
+    // setBarDragging(false);
+    // console.log("signed url bro", parsedItem.signedUrl);
   };
 
   const myfunction = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
@@ -112,25 +118,6 @@ const Timeline = () => {
 
     const dx = e.clientX - startX.current; // the e.clientx is the current mouse position during the movement of the mouse and we are subtracting it with initial mouse (starting) position during mousedown
 
-    // setBarState((prevState) => {
-    //   let newWidth =
-    //     resizeDirection.current === "left"
-    //       ? prevState.left === 0
-    //         ? prevState.width
-    //         : prevState.width - dx
-    //       : prevState.width + dx;
-
-    //   let newLeft =
-    //     resizeDirection.current === "left"
-    //       ? Math.max(prevState.left + dx, 0)
-    //       : prevState.left;
-
-    //   return {
-    //     width: Math.max(newWidth, 125),
-    //     left: newLeft,
-    //   };
-    // });
-
     setDroppedItem((prevBars) => {
       return prevBars.map((bar) => {
         if (bar.id === activeBarId.current) {
@@ -168,7 +155,120 @@ const Timeline = () => {
     document.removeEventListener("mouseup", stopResize);
   };
 
-  const SCALING_FACTOR = 0.1;
+  const updateBarCol = async (updatedBars: MediaItem) => {
+    const { data, error } = await supabase
+      .from("media_files")
+      .update({ column: updatedBars.column })
+      .eq("id", updatedBars.id);
+
+    if (error) {
+      console.error("Error updating item:", error);
+    } else {
+      console.log("Update successful:", data);
+    }
+  };
+
+  const handleBarDragStart = (
+    index: number,
+    e: React.DragEvent<HTMLDivElement>
+  ) => {
+    setBarDragging(true);
+    const draggedBarIndex = JSON.stringify(index);
+    e.dataTransfer.setData("draggedIndex", draggedBarIndex); //here converting id(number) to string since setData require data in string
+    console.log("bar drag started bro");
+  };
+
+  const handleBarDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    // Allow the element to be dropped by preventing the default behavior
+    e.preventDefault();
+  };
+
+  const handleBarDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    Barindex: string
+  ) => {
+    const draggedIndex = e.dataTransfer.getData("draggedIndex"); // it is index value since we are passing index of the draggedbar in handleDragStart
+
+    const targetColumnEle = e.target as HTMLElement;
+    const targetColumnId = targetColumnEle.getAttribute("id"); // individual bars id
+
+    // console.log(
+    //   "draggedidnex bro, paramindex bro",
+    //   draggedIndex,
+    //   targetColumn.id,
+    //   targetColumnEle
+    // );
+
+    const draggedIndexNum = Number(draggedIndex); // Convert index to a number
+    // const draggedItem = droppedItem[draggedIndexNum];
+
+    // converting draggedIndex to number from string
+    // targetIndex contains the id(not index) of the targeted bar
+    console.log("targetcolid above", Number(targetColumnId));
+    console.log("dragidexNumber", draggedIndexNum);
+    if (draggedIndexNum === (targetColumnId as number | null)) return; // Prevent reordering if same index
+
+    // Reorder the bars by changing their position
+    const updatedBars = [...droppedItem];
+
+    console.log("updated bars after droppping: ", updatedBars);
+    console.log("droppedItem", droppedItem);
+
+    const draggedItem = updatedBars.splice(Number(draggedIndex), 1)[0];
+
+    draggedItem.column = Number(targetColumnId);
+
+    console.log("draggedItem.column", draggedItem.column);
+    console.log("target col id", Number(targetColumnId));
+    console.log("barindex bro", Barindex);
+
+    console.log("draggedbar", draggedItem);
+
+    // Remove the dragged item from its old position
+    updatedBars.splice(Number(Barindex), 0, draggedItem); // it will reorder the array
+
+    console.log("updatedBars splice:", updatedBars);
+
+    updatedBars.forEach((bar) => {
+      console.log("bar foreach", bar.column);
+      console.log("bars bro", bar);
+      updateBarCol(bar);
+    });
+
+    setDroppedItem(updatedBars); // Update state with the new order
+    setBarDragging(false);
+  };
+
+  const handleBarDragEnd = () => {
+    setBarDragging(false);
+    // Optionally, you can reset or update styles here
+  };
+
+  // useEffect(() => {
+  //   console.log("barDragging state", barDragging);
+  // }, [barDragging]);
+
+  const handleDynamicDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    index: string
+  ) => {
+    console.log("bardragging state:", barDragging);
+    if (barDragging) {
+      console.log("u are to run handleBar drop");
+      handleBarDrop(e, index);
+    } else {
+      console.log("u are to run handleDrop");
+      handleDrop(e);
+    }
+  };
+
+  const handleDynamicDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (barDragging) {
+      handleBarDragOver(e);
+    } else {
+      handleDragOver(e);
+    }
+  };
 
   return (
     <div className={styles.timeline}>
@@ -221,104 +321,113 @@ const Timeline = () => {
               : droppedItem
             ).map((item, index) => (
               <div
-                className={styles.item_box_div}
-                onDragOver={(e) => handleDragOver(e)}
-                onDrop={(e) => handleDrop(e)}
-                key={item ? item.id : index}
-                style={{
-                  width: item && item.width ? `${item.width}px` : "200px",
-                  left: item && item.left ? `${item.left}px` : "10px",
-                }}
+                // className={styles.item_box_div}
+                key={index}
+                id={index.toString()} // id will contain numeric value for each columns
+                onDragOver={(e) => handleDynamicDragOver(e)}
+                onDrop={(e) => handleDynamicDrop(e, index.toString())}
               >
                 <div
-                  // key={index}
-                  className={
-                    droppedItem.length !== 0
-                      ? `${styles.m_item_box_drop}`
-                      : `${styles.m_item_box}`
-                  }
+                  className={styles.item_box_div}
+                  style={{
+                    width: item && item.width ? `${item.width}px` : "200px",
+                    left: item && item.left ? `${item.left}px` : "10px",
+                  }}
                 >
-                  <div className={styles.bar_content}>
-                    {droppedItem && droppedItem.length !== 0 ? (
-                      <div
-                        className={styles.bar_arrow}
-                        onMouseDown={(e) => startResize(e, "left", item.id)}
-                      >
-                        <div className={styles.arrow_div}>
-                          <Image
-                            src="/left_arrow.png"
-                            alt="left_arrow"
-                            width={10}
-                            height={10}
-                            priority={true}
-                            draggable={false}
-                          />
+                  <div
+                    className={
+                      droppedItem.length !== 0
+                        ? `${styles.m_item_box_drop}`
+                        : `${styles.m_item_box}`
+                    }
+                  >
+                    <div className={styles.bar_content}>
+                      {droppedItem && droppedItem.length !== 0 ? (
+                        <div
+                          className={styles.bar_arrow}
+                          onMouseDown={(e) => startResize(e, "left", item.id)}
+                        >
+                          <div className={styles.arrow_div}>
+                            <Image
+                              src="/left_arrow.png"
+                              alt="left_arrow"
+                              width={10}
+                              height={10}
+                              priority={true}
+                              draggable={false}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    ) : null}
-                    <div
-                      className={
-                        droppedItem.length !== 0
-                          ? `${styles.item_content_drop}`
-                          : ""
-                      }
-                    >
-                      {item && (
-                        <div className={styles.m_item_keys}>
-                          <div
-                            className={styles.m_item_thumb}
-                            style={{
-                              backgroundImage: item
-                                ? `url(${item.signedUrl})`
-                                : "none",
+                      ) : null}
+                      <div
+                        className={
+                          droppedItem.length !== 0
+                            ? `${styles.item_content_drop}`
+                            : ""
+                        }
+                        draggable
+                        onDragStart={(e) => handleBarDragStart(index, e)}
+                        onDragEnd={(e) => handleBarDragEnd()}
+                      >
+                        {item && (
+                          <div className={styles.m_item_keys}>
+                            <div
+                              className={styles.m_item_thumb}
+                              style={{
+                                backgroundImage: item
+                                  ? `url(${item.signedUrl})`
+                                  : "none",
 
-                              backgroundRepeat: "repeat-x",
-                              backgroundSize: "auto 100%",
-                            }}
-                          ></div>
+                                backgroundRepeat: "repeat-x",
+                                backgroundSize: "auto 100%",
+                              }}
+                            ></div>
 
-                          {item.width >= 300 && (
-                            <div className={styles.m_type_label}>
-                              <div className={styles.type_icon}>
-                                {item.type in icons && (
-                                  <Image
-                                    src={icons[item.type as keyof typeof icons]}
-                                    alt={item.type}
-                                    width={10}
-                                    height={10}
-                                    priority={true}
-                                    draggable={false}
-                                  />
-                                )}
+                            {item.width >= 300 && (
+                              <div className={styles.m_type_label}>
+                                <div className={styles.type_icon}>
+                                  {item.type in icons && (
+                                    <Image
+                                      src={
+                                        icons[item.type as keyof typeof icons]
+                                      }
+                                      alt={item.type}
+                                      width={10}
+                                      height={10}
+                                      priority={true}
+                                      draggable={false}
+                                    />
+                                  )}
+                                </div>
+                                <span className={styles.m_item_label}>
+                                  {item.name.length > 20
+                                    ? `${item.name.substring(0, 25)}...`
+                                    : item.name}
+                                </span>
                               </div>
-                              <span className={styles.m_item_label}>
-                                {item.name.length > 20
-                                  ? `${item.name.substring(0, 25)}...`
-                                  : item.name}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {droppedItem && droppedItem.length !== 0 ? (
-                      <div
-                        className={styles.bar_arrow}
-                        onMouseDown={(e) => startResize(e, "right", item.id)}
-                      >
-                        <div className={styles.arrow_div}>
-                          <Image
-                            src="/chevron_right.png"
-                            alt="right_arrow"
-                            width={10}
-                            height={10}
-                            priority={true}
-                            draggable={false}
-                          />
-                        </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    ) : null}
+
+                      {droppedItem && droppedItem.length !== 0 ? (
+                        <div
+                          className={styles.bar_arrow}
+                          onMouseDown={(e) => startResize(e, "right", item.id)}
+                        >
+                          <div className={styles.arrow_div}>
+                            <Image
+                              src="/chevron_right.png"
+                              alt="right_arrow"
+                              width={10}
+                              height={10}
+                              priority={true}
+                              draggable={false}
+                            />
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </div>

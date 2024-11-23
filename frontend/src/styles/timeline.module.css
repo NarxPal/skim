@@ -1,5 +1,5 @@
 .timeline {
-  @apply h-[40%]  w-[75%] flex-col bg-too_light border-2 border-light_gray flex rounded-xl;
+  @apply h-[60%]  w-[75%] flex-col bg-too_light border-2 border-light_gray flex rounded-xl;
 }
 
 .tm_top {
@@ -27,7 +27,7 @@
 }
 
 .item_box_div {
-  @apply select-none relative;
+  @apply select-none relative rounded-lg;
 }
 
 .media_timeline {

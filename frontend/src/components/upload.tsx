@@ -74,6 +74,7 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
             type: fileType,
             width: 100,
             left: 0,
+            column: 0, // choose what default value to give here since we are dropping from left pane into timeline
             uploaded_at: new Date(),
           });
 

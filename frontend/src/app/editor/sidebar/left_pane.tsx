@@ -12,6 +12,7 @@ type MediaItem = {
   width: number;
   left: number;
   id: number;
+  column: number;
 };
 
 const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
@@ -46,7 +47,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
     const user = await supabase.auth.getUser();
     const { data: mediaFiles, error } = await supabase
       .from("media_files")
-      .select("name, type, width, left,id, filepath")
+      .select("name, type, width, left,column, id, filepath")
       .eq("user_id", user.data.user?.id);
     console.log("user id", user.data.user?.id);
     console.log("media files data bro", mediaFiles);

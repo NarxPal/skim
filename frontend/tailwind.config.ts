@@ -23,6 +23,13 @@ export default {
         grayBox: "#212121",
         containerGray: "#2C2C2C",
         scroll_hover: "#555",
+
+        // new design col
+
+        editor_bg: "#161819",
+        editor_gray: "#1F2027",
+        blue_btn: "#2A6FFF",
+        border: "#1B1D1E",
       },
     },
   },
