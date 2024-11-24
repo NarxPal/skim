@@ -71,6 +71,10 @@ const Project = () => {
     setEditPrjData({ filename, id });
   };
 
+  const openProject = (id: number) => {
+    router.push(`/editor/${params.uid}/${id}`);
+  };
+
   return (
     <div className={styles.bg_div}>
       <div className={styles.col_div}>
@@ -177,7 +181,11 @@ const Project = () => {
                 <div className={styles.box_col_row}>
                   {data &&
                     data.map((item) => (
-                      <div className={styles.prj_box} key={item.id}>
+                      <div
+                        className={styles.prj_box}
+                        key={item.id}
+                        onClick={() => openProject(item.id)}
+                      >
                         <div className={styles.thumbnail}>
                           thumbnail here bro
                         </div>

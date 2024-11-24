@@ -4,18 +4,20 @@ import { useParams, useRouter } from "next/navigation";
 // import { usePathname } from "next/navigation";
 import styles from "@/styles/dash.module.css";
 import Image from "next/image";
-import { supabase } from "../../../../supabaseClient";
-import Left_pane from "../sidebar/left_pane";
-import Sm_pane from "../sidebar/sm_pane";
-import Timeline from "../canvas/timeline";
+import { supabase } from "../../../../../supabaseClient";
+import Left_pane from "../../sidebar/left_pane";
+import Sm_pane from "../../sidebar/sm_pane";
+import Timeline from "../../canvas/timeline";
 import Project from "@/app/project/[uid]/page";
 
 const UserId = () => {
-  const params = useParams<{ uid: string }>();
+  const params = useParams<{ uid: string; id: string }>();
   const router = useRouter();
 
   const [uid, setUid] = useState<string>("");
+  const [id, setId] = useState<string | null>("");
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingId, setLoadingId] = useState<boolean>(true);
   // const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("upload");
 
@@ -31,12 +33,41 @@ const UserId = () => {
   }, []);
 
   useEffect(() => {
+    const fetchId = async () => {
+      const { data } = await supabase.from("projects").select("id");
+      if (data) {
+        const filteredId = data.filter((item) => {
+          return item.id === Number(params.id);
+        });
+
+        if (filteredId.length > 0) {
+          setId(filteredId[0].id);
+        } else {
+          setId(null);
+        }
+      }
+      setLoadingId(false);
+    };
+
+    fetchId();
+  }, []);
+
+  useEffect(() => {
+    if (!loadingId) {
+      if (id?.toString() !== params.id) {
+        router.push("/auth");
+      } else {
+        console.log("add pop up here");
+      }
+    }
+  }, [loadingId, params.id, id]);
+
+  useEffect(() => {
     if (!loading) {
       if (uid !== params.uid) {
         router.push("/auth");
-        console.log("Redirecting: uid and params.uid", uid, params.uid);
       } else {
-        console.log("You are the user, bro");
+        console.log("add pop up here");
       }
     }
   }, [uid, loading, params.uid]);

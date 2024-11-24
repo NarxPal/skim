@@ -7,11 +7,11 @@
 }
 
 .header {
-  @apply w-full  border-b-2 border-editor_gray;
+  @apply w-full h-[7%] border-b-2 border-editor_gray;
 }
 
 .head_content {
-  @apply flex flex-row justify-between p-4;
+  @apply flex flex-row justify-between p-4 items-center;
 }
 
 .profileBtn {
@@ -19,7 +19,7 @@
 }
 
 .pane_div {
-  @apply flex flex-row w-full h-full;
+  @apply flex flex-row w-full h-[93%];
 }
 
 .sm_pane {
@@ -79,7 +79,7 @@
 }
 
 .main_content {
-  @apply p-6 flex flex-col gap-6 overflow-scroll;
+  @apply p-6 flex flex-col gap-6;
 }
 
 .create_box_div {
