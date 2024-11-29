@@ -3,10 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from './models/user.entity';
 import { Projects } from './models/projects.entity';
+import { Media } from './models/media.entity';
+import { Columns } from './models/columns.entity';
+import { Bars } from './models/bars.entity';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -18,7 +20,7 @@ import { Projects } from './models/projects.entity';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         // entities: [__dirname + '/../**/*.entity{.ts,.js}'], // Adjust as per your structure
-        entities: [User, Projects],
+        entities: [User, Projects, Media, Columns, Bars],
         synchronize: true, // Auto sync entities with the database
       }),
     }),

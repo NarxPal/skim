@@ -6,7 +6,10 @@ export class Projects {
   @PrimaryGeneratedColumn() // auto generates the id field
   id: number;
 
-  @Column()
+  @Column({
+    type: 'uuid',
+    nullable: false,
+  })
   user_id: string;
 
   @Column()

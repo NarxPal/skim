@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import styles from "@/styles/auth.module.css";
 import { useRouter } from "next/navigation";
 import { signUp, signIn } from "./auth";
-// import { supabase } from "../../../supabaseClient";
 
 const Auth = () => {
   const router = useRouter();
@@ -32,8 +31,12 @@ const Auth = () => {
     e.preventDefault();
 
     try {
-      const userCredential = await signUp(formData.email, formData.password);
-      console.log("User signed up:", userCredential.user);
+      const userCredential = await signUp(
+        formData.email,
+        formData.password,
+        formData.username
+      );
+      console.log("User signed up:", userCredential);
       if (userCredential && userCredential.user) {
         const uid = userCredential.user.id;
         router.push(`/project/${uid}`);
@@ -47,9 +50,9 @@ const Auth = () => {
     e.preventDefault();
     try {
       const userCredential = await signIn(formData.email, formData.password);
-      console.log("User signed in:", userCredential.user);
-      const uid = userCredential.user.id;
-      router.push(`/project/${uid}`);
+      console.log("User signed in:", userCredential);
+      // const uid = userCredential.user.id;
+      // router.push(`/project/${uid}`);
     } catch (error) {
       console.error("Error signing in:", error);
     }

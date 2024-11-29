@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 
-@Entity('columns')
-export class Columns {
+@Entity('media_files')
+export class Media {
   @PrimaryGeneratedColumn() // auto generates the id field
   id: number;
 
@@ -15,7 +15,13 @@ export class Columns {
   project_id: number;
 
   @Column()
-  position: number; // rather than position here we need to take array of column , to know how much column does each project carry , by default 3 cols will be shown
+  name: string;
+
+  @Column()
+  filepath: string;
+
+  @Column()
+  type: string;
 
   // many to one mean , many project can belong to one user
   // here user property is decorated with @manytoone
