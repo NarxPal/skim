@@ -4,7 +4,8 @@ import styles from "@/styles/project.module.css";
 import Image from "next/image";
 import Modal from "@/components/modal";
 import { useParams, useRouter } from "next/navigation";
-import { supabase } from "../../../../supabaseClient";
+import axios from "axios";
+import Cookies from "js-cookie";
 
 type data = {
   id: number;
@@ -31,16 +32,35 @@ const Project = () => {
     id: null,
   });
 
+  axios.defaults.withCredentials = true;
+
   useEffect(() => {
-    const fetchUser = async () => {
-      const user = await supabase.auth.getUser();
-      if (user && user.data.user) {
-        setUid(user.data.user.id);
+    const token = Cookies.get("access_token");
+
+    const handleGetUser = async () => {
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/${params.uid}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        console.log("User data:", response.data);
+        const res_uid = response.data.user_id;
+        setUid(res_uid);
+        setLoading(false);
+        return response.data;
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        router.push("/auth");
       }
-      setLoading(false);
     };
-    fetchUser();
-  }, []);
+    if (token) {
+      handleGetUser();
+    }
+  }, [params.uid]);
 
   useEffect(() => {
     if (!loading) {
@@ -53,18 +73,23 @@ const Project = () => {
   }, [uid, loading, params.uid]);
 
   useEffect(() => {
-    const fecthPrjData = async () => {
-      const { data, error } = await supabase.from("projects").select();
-      if (error) {
-        console.error("failed to fetch data:", error);
-      } else {
-        console.log("data fetched!:", data);
+    const fetchPrjData = async () => {
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/projects`
+        );
+        console.log("bru u want", response.data);
+        const data = response.data;
         setData(data);
+        return response.data;
+      } catch (error: any) {
+        throw new Error(
+          error.response?.data?.message || "failed to fetch projects"
+        );
       }
     };
-
-    fecthPrjData();
-  }, [uid, params.uid, openCreateModal, openEditModal]);
+    fetchPrjData();
+  }, [params.uid, openCreateModal, openEditModal]);
 
   const handleEditPrj = async (filename: string, id: number) => {
     setOpenEditModal(true);
@@ -180,44 +205,47 @@ const Project = () => {
               <div className={styles.user_dirs}>
                 <div className={styles.box_col_row}>
                   {data &&
-                    data.map((item) => (
-                      <div
-                        className={styles.prj_box}
-                        key={item.id}
-                        onClick={() => openProject(item.id)}
-                      >
-                        <div className={styles.thumbnail}>
-                          thumbnail here bro
-                        </div>
+                    data
+                      .filter((item) => item.user_id === params.uid)
+                      .map((item) => (
+                        <div className={styles.prj_box} key={item.id}>
+                          <div
+                            className={styles.thumbnail}
+                            onClick={() => openProject(item.id)}
+                          >
+                            thumbnail here bro
+                          </div>
 
-                        <div className={styles.name_ic}>
-                          <div>{item.name}</div>
-                          <ul className={styles.icons_ul}>
-                            <li
-                              className={styles.ic_li}
-                              onClick={() => handleEditPrj(item.name, item.id)}
-                            >
-                              <Image
-                                src="/edit.png"
-                                alt="edit"
-                                height={20}
-                                width={20}
-                                priority={true}
-                              />
-                            </li>
-                            <li className={styles.ic_li}>
-                              <Image
-                                src="/delete.png"
-                                alt="edit"
-                                height={20}
-                                width={20}
-                                priority={true}
-                              />
-                            </li>
-                          </ul>
+                          <div className={styles.name_ic}>
+                            <div>{item.name}</div>
+                            <ul className={styles.icons_ul}>
+                              <li
+                                className={styles.ic_li}
+                                onClick={() =>
+                                  handleEditPrj(item.name, item.id)
+                                }
+                              >
+                                <Image
+                                  src="/edit.png"
+                                  alt="edit"
+                                  height={20}
+                                  width={20}
+                                  priority={true}
+                                />
+                              </li>
+                              <li className={styles.ic_li}>
+                                <Image
+                                  src="/delete.png"
+                                  alt="edit"
+                                  height={20}
+                                  width={20}
+                                  priority={true}
+                                />
+                              </li>
+                            </ul>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                 </div>
               </div>
             </div>

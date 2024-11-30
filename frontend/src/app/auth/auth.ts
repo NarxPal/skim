@@ -27,7 +27,8 @@ export const signIn = async (email: string, password: string) => {
       {
         email,
         password,
-      }
+      },
+      { withCredentials: true }
     );
     return response.data;
   } catch (error: any) {

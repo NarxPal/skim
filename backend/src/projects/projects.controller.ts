@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, Param } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { Projects } from '../models/projects.entity';
 
@@ -16,6 +16,15 @@ export class ProjectsController {
   @Post()
   async create(@Body() projectData: Partial<Projects>): Promise<Projects> {
     return this.projectService.create(projectData);
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: number,
+    @Body() projectData: Partial<Projects>,
+  ): Promise<Projects> {
+    // projectData is only given filename , since we are using patch in here
+    return this.projectService.update(id, projectData);
   }
 
   // this get req is for fetching projects with id param (/projects/id)

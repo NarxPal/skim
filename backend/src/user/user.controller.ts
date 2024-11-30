@@ -1,4 +1,12 @@
-import { UseGuards, Controller, Get, Post, Body, Param } from '@nestjs/common';
+import {
+  UseGuards,
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Response,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from 'src/models/user.entity';
 import { JwtAuthGuard } from './jwtAuthGuard';
@@ -10,17 +18,27 @@ export class UserController {
 
   @Post('signup')
   async signUp(
-    @Body() createUserDto: CreateUserDto, // Assume CreateUserDto has user input validation
-  ): Promise<User> {
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<{ user: User; accessToken: string }> {
     return this.userService.signUp(createUserDto);
   }
 
   // User SignIn - Returns JWT Token
   @Post('signin')
   async signIn(
+    @Response() res,
     @Body() signInDto: { email: string; password: string },
-  ): Promise<{ accessToken: string }> {
-    return this.userService.signIn(signInDto.email, signInDto.password);
+  ) {
+    const data = await this.userService.signIn(
+      signInDto.email,
+      signInDto.password,
+    );
+
+    return res.send({
+      accessToken: data.accessToken,
+      message: 'logged in',
+      user: data.user,
+    });
   }
 
   // Get All Users (Only accessible with JWT)
@@ -32,6 +50,7 @@ export class UserController {
 
   // Get User by ID (Only accessible with JWT)
   // this get req is for fetching user with id param (/user/id)
+  // this is for the editor andproject main page
   @Get(':user_id')
   @UseGuards(JwtAuthGuard)
   async findOne(@Param('user_id') user_id: string): Promise<User> {

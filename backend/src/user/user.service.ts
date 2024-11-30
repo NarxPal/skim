@@ -27,19 +27,24 @@ export class UserService {
     username: string;
     email: string;
     password: string;
-  }): Promise<User> {
+  }): Promise<{ user: User; accessToken: string }> {
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     const user = this.userRepository.create({
       ...userData,
       password: hashedPassword,
     });
-    return this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+
+    const payload = { sub: savedUser.id, email: savedUser.email };
+    const accessToken = this.jwtService.sign(payload);
+
+    return { user: savedUser, accessToken };
   }
 
   async signIn(
     email: string,
     password: string,
-  ): Promise<{ accessToken: string }> {
+  ): Promise<{ accessToken: string; user: User }> {
     const user = await this.userRepository.findOne({ where: { email } });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -48,8 +53,10 @@ export class UserService {
 
     const payload = { sub: user.id, email: user.email };
 
+    const accessToken = await this.jwtService.signAsync(payload);
     return {
-      accessToken: await this.jwtService.signAsync(payload),
+      accessToken,
+      user,
     };
   }
 }

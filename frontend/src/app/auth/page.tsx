@@ -1,13 +1,16 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import styles from "@/styles/auth.module.css";
 import { useRouter } from "next/navigation";
 import { signUp, signIn } from "./auth";
+import axios from "axios";
+import Cookies from "js-cookie";
 
 const Auth = () => {
   const router = useRouter();
 
   const [login, setLogin] = useState<boolean>(false);
+  const [accessToken, setAccessToken] = useState<string>("");
 
   const [formData, setFormData] = useState<{
     username: string;
@@ -37,8 +40,8 @@ const Auth = () => {
         formData.username
       );
       console.log("User signed up:", userCredential);
-      if (userCredential && userCredential.user) {
-        const uid = userCredential.user.id;
+      const uid = userCredential.user.user_id;
+      if (userCredential && uid) {
         router.push(`/project/${uid}`);
       }
     } catch (error) {
@@ -50,9 +53,18 @@ const Auth = () => {
     e.preventDefault();
     try {
       const userCredential = await signIn(formData.email, formData.password);
-      console.log("User signed in:", userCredential);
-      // const uid = userCredential.user.id;
-      // router.push(`/project/${uid}`);
+      // setAccessToken(userCredential.accessToken);
+      const uid = userCredential.user.user_id;
+
+      const token = userCredential.accessToken;
+      Cookies.set("access_token", token, {
+        expires: 365,
+        secure: false, // Set to true in production for HTTPS
+        sameSite: "Lax", // For cross-origin support
+        priority: "High",
+      });
+
+      router.push(`/project/${uid}`);
     } catch (error) {
       console.error("Error signing in:", error);
     }

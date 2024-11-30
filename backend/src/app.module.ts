@@ -7,8 +7,6 @@ import { ProjectsController } from './projects/projects.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Projects } from './models/projects.entity';
 import { User } from './models/user.entity';
-import { UserService } from './user/user.service';
-import { UserController } from './user/user.controller';
 import { MediaService } from './media/media.service';
 import { MediaController } from './media/media.controller';
 import { ColumnsService } from './columns/columns.service';
@@ -21,6 +19,7 @@ import { Bars } from './models/bars.entity';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
+import { ProtectedController } from './protected/protected.controller';
 
 @Module({
   controllers: [
@@ -29,6 +28,7 @@ import { UserModule } from './user/user.module';
     MediaController,
     ColumnsController,
     BarsController,
+    ProtectedController,
   ],
   providers: [
     AppService,

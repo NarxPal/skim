@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import styles from "@/styles/modal.module.css";
-import { supabase } from "../../supabaseClient";
+import axios from "axios";
 
 type EditPrjData = {
   filename: string;
@@ -35,33 +35,36 @@ const Modal: React.FC<ModalProps> = ({
     }
 
     if (openCreateModal) {
-      const { data, error } = await supabase
-        .from("projects")
-        .insert([{ user_id: params, name: filename }]);
-
-      if (error) {
-        console.error("Error inserting project:", error);
-        alert("Failed to create project.");
-      } else {
-        console.log("Project created successfully:", data);
+      try {
+        console.log("filename bro", filename);
+        const response = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/projects`,
+          {
+            user_id: params,
+            name: filename,
+          }
+        );
         alert("Project created successfully!");
         setFilename("");
         setOpenCreateModal(false);
+      } catch (error) {
+        console.error("Error inserting project:", error);
+        alert("Failed to create project.");
       }
     } else {
-      const { data, error } = await supabase
-        .from("projects")
-        .update({ name: editPrjData.filename })
-        .eq("id", editPrjData.id);
-
-      if (error) {
-        console.error("Error updating project:", error);
-        alert("Failed to update project.");
-      } else {
-        console.log("Project updated successfully:", data);
+      try {
+        const response = await axios.patch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/projects/${editPrjData.id}`,
+          {
+            name: editPrjData.filename,
+          }
+        );
         alert("Project updated successfully!");
         setEditPrjData((prev) => ({ ...prev, filename: "", id: null }));
         setOpenEditModal(false);
+      } catch (error) {
+        console.error("Error updating project:", error);
+        alert("Failed to update project.");
       }
     }
   };
