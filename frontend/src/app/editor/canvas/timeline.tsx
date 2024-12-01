@@ -14,8 +14,21 @@ type MediaItem = {
   column: number;
 };
 
+type BarsProp = {
+  id: number;
+  user_id: string;
+  column_id: number;
+  name: string;
+  media_id: number;
+  left_position: number;
+  width: number;
+  position: number;
+  project_id: number;
+};
+
 const Timeline = () => {
   const [droppedItem, setDroppedItem] = useState<MediaItem[]>([]); // media items that will be dropped in timeline will be stored in this state variable
+  const [barsData, setBarsData] = useState<BarsProp[]>([]);
 
   const [barDragging, setBarDragging] = useState<boolean>(false);
 
@@ -47,8 +60,8 @@ const Timeline = () => {
     event.preventDefault();
     console.log("handle drop u are inside ");
     const dropped_Item = event.dataTransfer.getData("text/plain"); // the data here is passed from leftpane.tsx
-    // console.log("dropped item bro", dropped_Item);
     const parsedItem = JSON.parse(dropped_Item);
+    console.log("dropped parsed item bro", parsedItem);
 
     setDroppedItem((prev) => {
       const updatedItems = [...prev, parsedItem];
@@ -119,6 +132,7 @@ const Timeline = () => {
     const dx = e.clientX - startX.current; // the e.clientx is the current mouse position during the movement of the mouse and we are subtracting it with initial mouse (starting) position during mousedown
 
     setDroppedItem((prevBars) => {
+      // here instead of setDroppedItem we will use something for bars table so new state variable create here
       return prevBars.map((bar) => {
         if (bar.id === activeBarId.current) {
           const newWidth =
@@ -188,7 +202,6 @@ const Timeline = () => {
     Barindex: string
   ) => {
     const draggedIndex = e.dataTransfer.getData("draggedIndex"); // it is index value since we are passing index of the draggedbar in handleDragStart
-
     const targetColumnEle = e.target as HTMLElement;
     const targetColumnId = targetColumnEle.getAttribute("id"); // individual bars id
 
@@ -315,6 +328,7 @@ const Timeline = () => {
           onMouseMove={(e) => myfunction(e)}
           onMouseOut={clearMyFunction}
         >
+          {/* // here we should map columns table rather than droppedItem */}
           <div className={styles.tm_media_container}>
             {(droppedItem.length === 0
               ? new Array(3).fill(null)
@@ -330,7 +344,7 @@ const Timeline = () => {
                 <div
                   className={styles.item_box_div}
                   style={{
-                    width: item && item.width ? `${item.width}px` : "200px",
+                    width: item && item.width ? `${item.width}px` : "800px", // since we are not using width in mediaItem[]
                     left: item && item.left ? `${item.left}px` : "10px",
                   }}
                 >

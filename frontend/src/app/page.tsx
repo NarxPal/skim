@@ -4,7 +4,10 @@ import Link from "next/link";
 const Home = () => {
   return (
     <div>
-      hey bro just login here :<span><Link href="/auth">signup</Link></span>
+      hey bro just login here :
+      <span>
+        <Link href="/auth">signup</Link>
+      </span>
     </div>
   );
 };

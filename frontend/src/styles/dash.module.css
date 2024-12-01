@@ -1,5 +1,5 @@
 .dash_bg {
-  @apply bg-dash_dark h-screen w-screen flex;
+  @apply bg-editor_bg h-screen w-screen flex;
 }
 
 .head_pane {
@@ -7,11 +7,11 @@
 }
 
 .dash_header_div {
-  @apply flex flex-row h-auto w-full text-white items-center py-2 px-4;
+  @apply flex flex-row h-[6%] w-full text-white items-center border-b-2 border-editor_gray;
 }
 
 .dash_header {
-  @apply flex flex-row w-full h-full text-white justify-between p-3 rounded-lg border-2 border-light_gray bg-too_light;
+  @apply flex flex-row w-full h-full text-white justify-between p-3;
 }
 
 .logo_filename_div {
@@ -73,19 +73,19 @@
 }
 
 .btn {
-  @apply bg-blue-500 text-white px-[14px] py-1 rounded-md  items-center text-xs font-semibold;
+  @apply hover:bg-blue-500 bg-blue_btn text-white px-[14px] py-2 rounded-md  items-center text-xs font-semibold;
 }
 
 .pane_div {
-  @apply w-full h-[90%] p-4 pt-0 flex;
+  @apply w-full h-[94%] flex;
 }
 
 .canvas_pane {
-  @apply flex-1 h-full rounded-md flex-col gap-3 flex;
+  @apply h-full w-[55%] rounded-md flex-col gap-3 flex border-r-2 border-editor_gray;
 }
 
 .canvas {
-  @apply h-[40%] w-[75%] bg-too_light border-2 border-light_gray flex rounded-xl relative;
+  @apply h-[40%] w-full flex relative;
 }
 
 .video_div {

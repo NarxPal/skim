@@ -1,5 +1,5 @@
 .timeline {
-  @apply h-[60%]  w-[75%] flex-col bg-too_light border-2 border-light_gray flex rounded-xl;
+  @apply h-[60%]  w-full flex-col border-editor_gray border-t-2 flex;
 }
 
 .tm_top {

@@ -2,23 +2,31 @@ import React, { useState, useEffect } from "react";
 import styles from "@/styles/sidebar.module.css";
 import Upload from "@/components/upload";
 import Image from "next/image";
-import { supabase } from "../../../../supabaseClient";
+import { supabase } from "../../../../supabaseClient"; // here, supabase is used for storage
+import { useParams } from "next/navigation";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import axios from "axios";
+import { fetchUser } from "@/components/fetchUser";
 
 type MediaItem = {
   signedUrl: string | null;
+  project_id: number;
   name: string;
   filepath: string;
-  type: string;
-  width: number;
-  left: number;
   id: number;
-  column: number;
+  type: string;
 };
 
 const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
+  const params = useParams<{ uid: string; id: string }>();
+
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [mediaType, setMediaType] = useState<string>("");
   // const [draggedItem, setDraggedItem] = useState(null);
+
+  fetchUser(params.uid); // calling useeffect to fetch the user_id
+  const userId = useSelector((state: RootState) => state.userId.userId);
 
   useEffect(() => {
     // Fetch the media based on the selected category
@@ -42,34 +50,34 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
     return data.signedUrl;
   }
 
-  async function fetchUserMediaWithUrls() {
+  async function fetchUserMediaWithUrls(): Promise<MediaItem[]> {
     // Fetch metadata from the media_files table
-    const user = await supabase.auth.getUser();
-    const { data: mediaFiles, error } = await supabase
-      .from("media_files")
-      .select("name, type, width, left,column, id, filepath")
-      .eq("user_id", user.data.user?.id);
-    console.log("user id", user.data.user?.id);
-    console.log("media files data bro", mediaFiles);
-
-    if (error) {
-      console.error("Error fetching media metadata:", error.message);
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/media/${userId}`
+      );
+      const mediaFiles = res.data;
+      console.log("mediafile bro", mediaFiles);
+      const filteredMediaFiles = mediaFiles.filter(
+        (file: MediaItem) => file.project_id === Number(params.id)
+      );
+      console.log("filteremedia files bro:", filteredMediaFiles);
+      // Generate signed URLs for each file
+      const mediaWithUrls = await Promise.all(
+        filteredMediaFiles.map(async (file: MediaItem) => {
+          // mapping to generate signed url for every media file
+          const signedUrl = await getSignedUrl(file.filepath);
+          return {
+            ...file,
+            signedUrl,
+          };
+        })
+      );
+      return mediaWithUrls;
+    } catch (error) {
+      console.log("error fetching media", error);
       return [];
     }
-
-    // Generate signed URLs for each file
-    const mediaWithUrls = await Promise.all(
-      mediaFiles.map(async (file) => {
-        // mapping to generate signed url for every media file
-        const signedUrl = await getSignedUrl(file.filepath);
-        return {
-          ...file,
-          signedUrl,
-        };
-      })
-    );
-
-    return mediaWithUrls; // this will return array of media item each containing signed url and metadata
   }
 
   const handleDragStart = (
@@ -78,6 +86,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
   ) => {
     const mediaItemData = JSON.stringify(item);
     e.dataTransfer.setData("text/plain", mediaItemData);
+    // this dragged data will be fetched in timeline.tsx handleDrop func
   };
 
   const handleDragEnd = () => {
@@ -89,14 +98,14 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
     const loadMedia = async () => {
       console.log("loadmedia ruan");
       const media_Items = await fetchUserMediaWithUrls();
-      setMediaItems(media_Items);
       console.log("media items bro:", media_Items);
+      setMediaItems(media_Items);
     };
     loadMedia();
     // Optional: Refresh URLs every hour if needed
     const interval = setInterval(loadMedia, 60 * 60 * 1000); // Refresh every hour
     return () => clearInterval(interval);
-  }, [selectedCategory]);
+  }, [selectedCategory, userId]);
 
   return (
     <div className={styles.pane_sidebar}>
@@ -115,6 +124,22 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
           </span>
         </div>
       </Upload>
+
+      {/* <div className={styles.search_bar_div}>
+        <div className={styles.search_bar}>
+          <Image
+            src="/search.png"
+            alt="search"
+            width={20}
+            height={20}
+            priority={true}
+          />
+          <input
+            placeholder="search your projects"
+            className={styles.input_bar}
+          />
+        </div>
+      </div> */}
 
       <div className={styles.text_head}>
         <h2>Uploaded Media</h2>
@@ -146,6 +171,10 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
               </div>
             ))}
         </div>
+      </div>
+
+      <div className={styles.up_btn_div}>
+        <button className={styles.up_btn}>Upload Media</button>
       </div>
     </div>
   );

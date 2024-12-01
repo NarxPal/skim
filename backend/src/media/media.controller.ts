@@ -6,9 +6,9 @@ import { Media } from 'src/models/media.entity';
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 
-  @Get() // http req
-  async findAll(): Promise<Media[]> {
-    return this.mediaService.findAll();
+  @Get(':user_id') // http req
+  async findByUserId(@Param('user_id') user_id: string): Promise<Media[]> {
+    return this.mediaService.findByUserId(user_id);
   }
 
   @Post()
@@ -17,7 +17,7 @@ export class MediaController {
   }
 
   // this get req is for fetching projects with id param (/projects/id)
-  @Get(':id')
+  @Get('/file/:id')
   async findOne(@Param('id') id: number): Promise<Media> {
     return this.mediaService.findOne(id);
   }

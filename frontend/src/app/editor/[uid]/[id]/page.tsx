@@ -4,51 +4,40 @@ import { useParams, useRouter } from "next/navigation";
 // import { usePathname } from "next/navigation";
 import styles from "@/styles/dash.module.css";
 import Image from "next/image";
-import { supabase } from "../../../../../supabaseClient";
 import Left_pane from "../../sidebar/left_pane";
 import Sm_pane from "../../sidebar/sm_pane";
 import Timeline from "../../canvas/timeline";
 import Project from "@/app/project/[uid]/page";
+import axios from "axios";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import { fetchUser } from "@/components/fetchUser";
 
 const UserId = () => {
   const params = useParams<{ uid: string; id: string }>();
   const router = useRouter();
 
-  const [uid, setUid] = useState<string>("");
   const [id, setId] = useState<string | null>("");
-  const [loading, setLoading] = useState<boolean>(true);
   const [loadingId, setLoadingId] = useState<boolean>(true);
   // const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("upload");
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const user = await supabase.auth.getUser();
-      if (user && user.data.user) {
-        setUid(user.data.user.id);
-      }
-      setLoading(false);
-    };
-    fetchUser();
-  }, []);
+  const { loading } = fetchUser(params.uid); // calling useeffect to fetch the user_id
+  const userId = useSelector((state: RootState) => state.userId.userId); // userid has been set in project/uid
 
   useEffect(() => {
     const fetchId = async () => {
-      const { data } = await supabase.from("projects").select("id");
-      if (data) {
-        const filteredId = data.filter((item) => {
-          return item.id === Number(params.id);
-        });
-
-        if (filteredId.length > 0) {
-          setId(filteredId[0].id);
-        } else {
-          setId(null);
-        }
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/projects/${params.id}`
+        );
+        setId(response.data.id);
+      } catch (error) {
+        console.error("Error fetching project with provided id :", error);
+        router.push("/auth");
       }
       setLoadingId(false);
     };
-
     fetchId();
   }, []);
 
@@ -64,13 +53,13 @@ const UserId = () => {
 
   useEffect(() => {
     if (!loading) {
-      if (uid !== params.uid) {
+      if (userId !== params.uid) {
         router.push("/auth");
       } else {
         console.log("add pop up here");
       }
     }
-  }, [uid, loading, params.uid]);
+  }, [userId, loading, params.uid]);
 
   const handleTabClick = (tab: string) => {
     setActiveTab(tab);
@@ -145,7 +134,7 @@ const UserId = () => {
             </div>
 
             <div className={styles.ex_pf}>
-              <div className={styles.pf_export_div}>
+              {/* <div className={styles.pf_export_div}>
                 <div className={styles.pf}></div>
 
                 <div className={styles.pf}></div>
@@ -153,7 +142,7 @@ const UserId = () => {
                 <div className={styles.pf}></div>
 
                 <div className={styles.pf}></div>
-              </div>
+              </div> */}
 
               <div className={styles.export_btn}>
                 <button className={styles.btn}>Export</button>
@@ -180,6 +169,8 @@ const UserId = () => {
             </div>
             <Timeline />
           </div>
+
+          <div className={styles.right_pane}></div>
         </div>
       </div>
 

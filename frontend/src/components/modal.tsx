@@ -17,6 +17,12 @@ type ModalProps = {
   setEditPrjData: React.Dispatch<React.SetStateAction<EditPrjData>>;
 };
 
+type projectProps = {
+  id: number;
+  name: string;
+  user_id: string;
+};
+
 const Modal: React.FC<ModalProps> = ({
   openCreateModal,
   setOpenCreateModal,
@@ -27,6 +33,23 @@ const Modal: React.FC<ModalProps> = ({
   setEditPrjData,
 }) => {
   const [filename, setFilename] = useState<string>("");
+
+  const CreateColumn = async (prjData: projectProps) => {
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns`,
+        {
+          project_id: prjData.id,
+          name: prjData.name,
+          user_id: prjData.user_id,
+          position: 0, // idk what is it for
+        }
+      );
+      console.log("create col res", response);
+    } catch (error) {
+      console.error("error creating column", error);
+    }
+  };
 
   const handlePrjName = async () => {
     if ((openCreateModal && !filename) || (!openCreateModal && !editPrjData)) {
@@ -47,6 +70,8 @@ const Modal: React.FC<ModalProps> = ({
         alert("Project created successfully!");
         setFilename("");
         setOpenCreateModal(false);
+        console.log("response bru", response.data);
+        CreateColumn(response.data);
       } catch (error) {
         console.error("Error inserting project:", error);
         alert("Failed to create project.");

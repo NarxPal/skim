@@ -1,26 +1,25 @@
 "use client";
 import React, { ReactNode, useState, useEffect } from "react";
 import styles from "@/styles/sidebar.module.css";
-import { supabase } from "../../supabaseClient";
-
+import { supabase } from "../../supabaseClient"; // here, supabase used for storage
+import { useParams } from "next/navigation";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import axios from "axios";
+import { fetchUser } from "./fetchUser";
 interface MediaUploadProps {
   children: ReactNode;
 }
 
 const Upload: React.FC<MediaUploadProps> = ({ children }) => {
+  const params = useParams<{ uid: string; id: string }>();
+
   // const [isUploading, setIsUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
-  const [uid, setUid] = useState<string>("");
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const user = await supabase.auth.getUser();
-      if (user && user.data.user) {
-        setUid(user.data.user.id);
-      }
-    };
-    fetchUser();
-  }, []);
+  fetchUser(params.uid); // calling useeffect to fetch the user_id
+
+  const userId = useSelector((state: RootState) => state.userId.userId);
 
   // Handle drag and drop
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
@@ -57,37 +56,30 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
           : file.type.startsWith("video")
           ? "video"
           : "audio";
-        const filePath = `${uid}/${file.type}/${file.name}`;
+        const filePath = `${userId}/${file.type}/${file.name}`;
+        // storing the media in supabase storage
         const { data, error: uploadError } = await supabase.storage
           .from("media")
           .upload(filePath, file);
         console.log("storage data bro", data);
         if (uploadError) throw uploadError;
 
-        // inserting metadata along with the media bucket in media_files table
-        const { error: insertError } = await supabase
-          .from("media_files")
-          .insert({
-            user_id: uid,
+        // inserting metadata of the supabase stored media in media_files table in psql
+        const response = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/media`,
+          {
+            user_id: userId,
+            project_id: params.id,
             name: file.name,
             filepath: filePath,
             type: fileType,
-            width: 100,
-            left: 0,
-            column: 0, // choose what default value to give here since we are dropping from left pane into timeline
-            uploaded_at: new Date(),
-          });
-
-        if (insertError) {
-          console.error("Error saving metadata:", insertError.message);
-        } else {
-          console.log("File uploaded and metadata saved successfully.");
-        }
+          }
+        );
+        console.log("bro media post res", response.data);
       });
 
       await Promise.all(fileUploads);
       setUploadMessage(`${files.length} file(s) uploaded successfully.`);
-      // clear the files variable if needed
     } catch (error: any) {
       setUploadMessage("Error uploading files: " + error.message);
       console.error("Upload error:", error);
@@ -110,7 +102,7 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
         onChange={handleFiles}
       />
       {children}
-      {uploadMessage && <p>{uploadMessage}</p>}
+      {/* {uploadMessage && <p>{uploadMessage}</p>} */} {/* pop msg for this */}
     </div>
   );
 };

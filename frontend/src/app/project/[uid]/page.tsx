@@ -6,6 +6,9 @@ import Modal from "@/components/modal";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import Cookies from "js-cookie";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "@/redux/store";
+import { setUserId } from "@/redux/userId";
 
 type data = {
   id: number;
@@ -21,16 +24,18 @@ type editPrjData = {
 const Project = () => {
   const params = useParams<{ uid: string }>();
   const router = useRouter();
+  const dispatch = useDispatch();
 
   const [openCreateModal, setOpenCreateModal] = useState<boolean>(false);
   const [openEditModal, setOpenEditModal] = useState<boolean>(false);
-  const [uid, setUid] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<data[]>([]);
   const [editPrjData, setEditPrjData] = useState<editPrjData>({
     filename: "",
     id: null,
   });
+
+  const userId = useSelector((state: RootState) => state.userId.userId);
 
   axios.defaults.withCredentials = true;
 
@@ -49,7 +54,7 @@ const Project = () => {
         );
         console.log("User data:", response.data);
         const res_uid = response.data.user_id;
-        setUid(res_uid);
+        dispatch(setUserId(res_uid));
         setLoading(false);
         return response.data;
       } catch (error) {
@@ -64,13 +69,13 @@ const Project = () => {
 
   useEffect(() => {
     if (!loading) {
-      if (uid !== params.uid) {
+      if (userId !== params.uid) {
         router.push("/auth");
       } else {
         console.log("You are the user, bro");
       }
     }
-  }, [uid, loading, params.uid]);
+  }, [userId, loading, params.uid]);
 
   useEffect(() => {
     const fetchPrjData = async () => {

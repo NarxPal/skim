@@ -3,14 +3,12 @@ import React, { useEffect, useState } from "react";
 import styles from "@/styles/auth.module.css";
 import { useRouter } from "next/navigation";
 import { signUp, signIn } from "./auth";
-import axios from "axios";
 import Cookies from "js-cookie";
 
 const Auth = () => {
   const router = useRouter();
 
   const [login, setLogin] = useState<boolean>(false);
-  const [accessToken, setAccessToken] = useState<string>("");
 
   const [formData, setFormData] = useState<{
     username: string;

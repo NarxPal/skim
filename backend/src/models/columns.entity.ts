@@ -17,6 +17,9 @@ export class Columns {
   @Column()
   position: number; // rather than position here we need to take array of column , to know how much column does each project carry , by default 3 cols will be shown
 
+  @Column({ type: 'simple-array', default: '1,2,3' })
+  columns: number[];
+
   // many to one mean , many project can belong to one user
   // here user property is decorated with @manytoone
   // @ManyToOne(() => User, (user) => user.projects)

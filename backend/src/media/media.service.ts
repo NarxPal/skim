@@ -16,8 +16,8 @@ export class MediaService {
     return this.mediaRepository.save(media);
   }
 
-  findAll(): Promise<Media[]> {
-    return this.mediaRepository.find();
+  findByUserId(user_id: string): Promise<Media[]> {
+    return this.mediaRepository.find({ where: { user_id } });
   }
 
   findOne(id: number): Promise<Media> {
