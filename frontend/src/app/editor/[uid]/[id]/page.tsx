@@ -167,7 +167,7 @@ const UserId = () => {
                 </div>
               )} */}
             </div>
-            <Timeline />
+            <Timeline prjId={params.id} />
           </div>
 
           <div className={styles.right_pane}></div>

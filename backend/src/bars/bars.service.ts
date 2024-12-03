@@ -11,8 +11,8 @@ export class BarsService {
   ) {}
 
   // all the business logic here
-  create(projectData: Partial<Bars>): Promise<Bars> {
-    const bars = this.barsRepository.create(projectData);
+  create(barData: Partial<Bars>): Promise<Bars> {
+    const bars = this.barsRepository.create(barData);
     return this.barsRepository.save(bars);
   }
 
@@ -22,5 +22,19 @@ export class BarsService {
 
   findOne(id: number): Promise<Bars> {
     return this.barsRepository.findOne({ where: { id } });
+  }
+
+  async update(id: number, updateData: Partial<Bars>): Promise<Bars> {
+    const bar = await this.barsRepository.findOne({ where: { id } });
+
+    if (!bar) {
+      throw new Error('Bar not found'); // You can throw a custom exception here
+    }
+
+    // Update the bar with the provided data
+    Object.assign(bar, updateData);
+
+    // Save the updated bar to the database
+    return this.barsRepository.save(bar);
   }
 }

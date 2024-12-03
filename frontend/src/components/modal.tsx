@@ -34,18 +34,17 @@ const Modal: React.FC<ModalProps> = ({
 }) => {
   const [filename, setFilename] = useState<string>("");
 
-  const CreateColumn = async (prjData: projectProps) => {
+  const createRootColumn = async (prjData: projectProps) => {
     try {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns`,
         {
           project_id: prjData.id,
-          name: prjData.name,
           user_id: prjData.user_id,
-          position: 0, // idk what is it for
+          parent_id: null, // since this is the creation of root column after creating project
         }
       );
-      console.log("create col res", response);
+      console.log("create col res", response.data);
     } catch (error) {
       console.error("error creating column", error);
     }
@@ -71,7 +70,7 @@ const Modal: React.FC<ModalProps> = ({
         setFilename("");
         setOpenCreateModal(false);
         console.log("response bru", response.data);
-        CreateColumn(response.data);
+        createRootColumn(response.data);
       } catch (error) {
         console.error("Error inserting project:", error);
         alert("Failed to create project.");

@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { Columns } from './columns.entity';
 
 @Entity('bars')
 export class Bars {
@@ -12,13 +19,10 @@ export class Bars {
   user_id: string;
 
   @Column()
-  column_id: number;
+  name: string; // take name from media entity.ts, using name bc there could be multiple media with same id
 
-  @Column()
-  name: string;
-
-  @Column()
-  media_id: number;
+  // @Column()
+  // media_id: number;
 
   @Column()
   left_position: number;
@@ -26,17 +30,16 @@ export class Bars {
   @Column()
   width: number;
 
-  @Column()
-  start_time: number;
+  // @Column()
+  // start_time: number;
 
-  @Column()
-  position: number;
+  // @Column()
+  // position: number;
 
   @Column()
   project_id: number;
 
-  // many to one mean , many project can belong to one user
-  // here user property is decorated with @manytoone
-  // @ManyToOne(() => User, (user) => user.projects)
-  // user: User;
+  // column_id should be the id of sub_column
+  @Column()
+  column_id: number;
 }

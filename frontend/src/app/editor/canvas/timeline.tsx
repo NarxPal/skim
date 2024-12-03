@@ -2,16 +2,19 @@ import React, { useState, useRef, useEffect } from "react";
 import styles from "@/styles/timeline.module.css";
 import Image from "next/image";
 import { supabase } from "../../../../supabaseClient";
+import axios from "axios";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 type MediaItem = {
   signedUrl: string | null;
   name: string;
   filepath: string;
   type: string;
-  width: number;
-  left: number;
   id: number;
   column: number;
+  width: number;
+  left: number;
 };
 
 type BarsProp = {
@@ -26,8 +29,17 @@ type BarsProp = {
   project_id: number;
 };
 
-const Timeline = () => {
+type ColumnsProps = {
+  // column_ids: { id: number }[];
+  id: number;
+  position: number;
+  project_id: number;
+  user_id: string;
+};
+
+const Timeline = ({ prjId }: { prjId: string }) => {
   const [droppedItem, setDroppedItem] = useState<MediaItem[]>([]); // media items that will be dropped in timeline will be stored in this state variable
+  const [columns, setColumns] = useState<ColumnsProps | undefined>(undefined);
   const [barsData, setBarsData] = useState<BarsProp[]>([]);
 
   const [barDragging, setBarDragging] = useState<boolean>(false);
@@ -36,6 +48,8 @@ const Timeline = () => {
   const resizeDirection = useRef<"left" | "right" | null>(null);
   const startX = useRef(0);
   const activeBarId = useRef<number | null>(null);
+
+  const userId = useSelector((state: RootState) => state.userId.userId); // userid has been set in project/uid
 
   // const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -51,22 +65,98 @@ const Timeline = () => {
   //     ? (currentTime / duration) * timelineRef.current.offsetWidth
   //     : 0;
 
+  useEffect(() => {
+    const fetchRootColumn = async () => {
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${Number(prjId)}`
+        );
+
+        console.log("fetch root column bro", response.data);
+        const columnData = response.data;
+        setColumns(columnData);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    if (prjId) {
+      fetchRootColumn();
+    }
+  }, [prjId]);
+
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     // setBarDragging(false);
   };
 
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+  const createSubCol = async (parsedItem: BarsProp) => {
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
+      {
+        project_id: parsedItem.project_id,
+        user_id: parsedItem.user_id,
+        parent_id: columns?.id,
+        bars: [
+          {
+            id: Math.random().toString(36) + Date.now(), // correctly create id in here
+            user_id: parsedItem.user_id,
+            name: parsedItem.name,
+            left_position: 10,
+            width: 800,
+            project_id: parsedItem.project_id,
+          },
+        ],
+      }
+    );
+    console.log("create sub col bro:", response.data);
+    return response;
+  };
+
+  const handleAddBarToCol = async (
+    parseditem: BarsProp,
+    subColumnId: number
+  ) => {
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars`,
+        {
+          user_id: parseditem.user_id,
+          name: parseditem.name,
+          left_position: parseditem.left_position,
+          width: parseditem.width,
+          project_id: parseditem.project_id,
+          column_id: subColumnId,
+        }
+      );
+      console.log("add bar to col res bro", response.data);
+      return response;
+    } catch (error) {
+      console.log("bar not added to column", error);
+    }
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     console.log("handle drop u are inside ");
     const dropped_Item = event.dataTransfer.getData("text/plain"); // the data here is passed from leftpane.tsx
     const parsedItem = JSON.parse(dropped_Item);
     console.log("dropped parsed item bro", parsedItem);
 
-    setDroppedItem((prev) => {
-      const updatedItems = [...prev, parsedItem];
-      return updatedItems;
-    });
+    try {
+      const subColumnResponse = await createSubCol(parsedItem);
+      const subColumnId = subColumnResponse.data.id; // Get the newly created sub-column ID
+      console.log("Created Sub-Column ID:", subColumnId);
+      console.log("subcol res", subColumnResponse.data);
+
+      await handleAddBarToCol(subColumnResponse.data.bars[0], subColumnId);
+
+      setDroppedItem((prev) => {
+        const updatedItems = [...prev, parsedItem];
+        return updatedItems;
+      });
+    } catch (error) {
+      console.error("Error in handling drop:", error);
+    }
 
     // setBarDragging(false);
     // console.log("signed url bro", parsedItem.signedUrl);

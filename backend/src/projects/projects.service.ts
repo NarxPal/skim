@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Projects } from '../models/projects.entity';
-
+import { Columns } from 'src/models/columns.entity';
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -10,7 +10,6 @@ export class ProjectsService {
     private projectRepository: Repository<Projects>,
   ) {}
 
-  // all the business logic here
   create(projectData: Partial<Projects>): Promise<Projects> {
     const project = this.projectRepository.create(projectData);
     return this.projectRepository.save(project);
@@ -29,6 +28,8 @@ export class ProjectsService {
   }
 
   findOne(id: number): Promise<Projects> {
-    return this.projectRepository.findOne({ where: { id } });
+    return this.projectRepository.findOne({
+      where: { id },
+    });
   }
 }

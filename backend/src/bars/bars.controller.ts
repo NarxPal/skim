@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch } from '@nestjs/common';
 import { BarsService } from './bars.service';
 import { Bars } from 'src/models/bars.entity';
 
@@ -14,8 +14,16 @@ export class BarsController {
   }
 
   @Post()
-  async create(@Body() projectData: Partial<Bars>): Promise<Bars> {
-    return this.barsService.create(projectData);
+  async create(@Body() barData: Partial<Bars>): Promise<Bars> {
+    return this.barsService.create(barData);
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: number, // The ID of the bar to be updated
+    @Body() updateData: Partial<Bars>, // Data to update in the bar
+  ): Promise<Bars> {
+    return this.barsService.update(id, updateData); // Call service to update the bar
   }
 
   // this get req is for fetching Bars with id param (/Bars/id)

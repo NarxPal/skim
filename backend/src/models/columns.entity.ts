@@ -1,9 +1,36 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { Bars } from './bars.entity';
+import { Projects } from './projects.entity';
+// import { Expose, Transform } from 'class-transformer';
+
+type Bar = {
+  id: number;
+  user_id: string;
+  name: string;
+  left_position: number;
+  width: number;
+  project_id: number;
+};
+
+type Sub_Column = {
+  id: number;
+  project_id: number;
+  user_id: string;
+  parent_id: number;
+  bars?: Bar[];
+};
 
 @Entity('columns')
 export class Columns {
   @PrimaryGeneratedColumn() // auto generates the id field
-  id: number;
+  id: number; // it should be unique, since bars are linked to it using column_id (see bars entitiy)
 
   @Column({
     type: 'uuid',
@@ -12,16 +39,16 @@ export class Columns {
   user_id: string;
 
   @Column()
-  project_id: number;
+  project_id: number; // will be connecting the column with the project id
 
-  @Column()
-  position: number; // rather than position here we need to take array of column , to know how much column does each project carry , by default 3 cols will be shown
+  @Column({ nullable: true })
+  parent_id: number; // this will contain the id from the root col for sub-column, for root column it will null
 
-  @Column({ type: 'simple-array', default: '1,2,3' })
-  columns: number[];
+  @Column('json', { nullable: true })
+  sub_columns: Sub_Column[];
 
-  // many to one mean , many project can belong to one user
-  // here user property is decorated with @manytoone
-  // @ManyToOne(() => User, (user) => user.projects)
-  // user: User;
+  // // the above data will be shown in projects entity as well
+  // @ManyToOne(() => Projects, (project) => project.column)
+  // @JoinColumn({ name: 'id' })
+  // project: Projects;
 }
