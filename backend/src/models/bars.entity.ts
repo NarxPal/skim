@@ -4,12 +4,13 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  PrimaryColumn,
 } from 'typeorm';
 import { Columns } from './columns.entity';
 
 @Entity('bars')
 export class Bars {
-  @PrimaryGeneratedColumn()
+  @PrimaryColumn()
   id: number;
 
   @Column({
@@ -42,4 +43,13 @@ export class Bars {
   // column_id should be the id of sub_column
   @Column()
   column_id: number;
+
+  @Column()
+  type: string;
+
+  @Column()
+  signedUrl: string;
+
+  @Column()
+  filepath: string;
 }

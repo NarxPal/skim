@@ -22,6 +22,14 @@
   @apply flex justify-end gap-2;
 }
 
+.com_btn {
+  @apply text-white px-4 py-2 rounded  focus:outline-none;
+}
+
 .btn {
-  @apply bg-blue_btn text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring focus:ring-blue-300;
+  @apply com_btn bg-blue_btn hover:bg-blue-600;
+}
+
+.del_btn {
+  @apply bg-red-500 com_btn hover:bg-red-600;
 }

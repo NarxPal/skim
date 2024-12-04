@@ -38,16 +38,13 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
     fetchMedia();
   }, [selectedCategory]);
 
-  async function getSignedUrl(filePath: string) {
-    const { data, error } = await supabase.storage
+  async function getPublicUrl(filePath: string) {
+    const { data } = await supabase.storage
       .from("media")
-      .createSignedUrl(filePath, 60 * 60);
+      .getPublicUrl(filePath);
 
-    if (error) {
-      console.error("Error generating signed URL:", error.message);
-      return null;
-    }
-    return data.signedUrl;
+    console.log("getpublic url data bro:", data);
+    return data.publicUrl;
   }
 
   async function fetchUserMediaWithUrls(): Promise<MediaItem[]> {
@@ -66,10 +63,10 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
       const mediaWithUrls = await Promise.all(
         filteredMediaFiles.map(async (file: MediaItem) => {
           // mapping to generate signed url for every media file
-          const signedUrl = await getSignedUrl(file.filepath);
+          const signedUrl = await getPublicUrl(file.filepath);
           return {
             ...file,
-            signedUrl,
+            signedUrl, // this is public url and is permanent
           };
         })
       );
@@ -86,7 +83,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
   ) => {
     const mediaItemData = JSON.stringify(item);
     e.dataTransfer.setData("text/plain", mediaItemData);
-    // this dragged data will be fetched in timeline.tsx handleDrop func
+    // this dragged data will be fetched in timeline.tsx handleMediaDrop func
   };
 
   const handleDragEnd = () => {

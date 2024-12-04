@@ -15,6 +15,11 @@ type ModalProps = {
   setOpenEditModal: React.Dispatch<React.SetStateAction<boolean>>;
   editPrjData: EditPrjData;
   setEditPrjData: React.Dispatch<React.SetStateAction<EditPrjData>>;
+
+  openDelModal: boolean;
+  setOpenDelModal: React.Dispatch<React.SetStateAction<boolean>>;
+  delPrjData: EditPrjData;
+  setDelPrjData: React.Dispatch<React.SetStateAction<EditPrjData>>;
 };
 
 type projectProps = {
@@ -31,6 +36,11 @@ const Modal: React.FC<ModalProps> = ({
   setOpenEditModal,
   editPrjData,
   setEditPrjData,
+
+  openDelModal,
+  setOpenDelModal,
+  delPrjData,
+  setDelPrjData,
 }) => {
   const [filename, setFilename] = useState<string>("");
 
@@ -47,6 +57,18 @@ const Modal: React.FC<ModalProps> = ({
       console.log("create col res", response.data);
     } catch (error) {
       console.error("error creating column", error);
+    }
+  };
+
+  const deleteRootColumn = async (projectId: number | null) => {
+    try {
+      const response = await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${projectId}`
+      );
+      setDelPrjData((prev) => ({ ...prev, filename: "", id: null }));
+      console.log("deleted root column:", response.data);
+    } catch (error) {
+      console.log("error deleting root column", error);
     }
   };
 
@@ -92,6 +114,20 @@ const Modal: React.FC<ModalProps> = ({
       }
     }
   };
+
+  const handleDelPrj = async () => {
+    try {
+      const response = await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/projects/${delPrjData.id}`
+      );
+      console.log("delete project", response);
+      setOpenDelModal(false);
+      deleteRootColumn(delPrjData.id);
+    } catch (error) {
+      console.log("error deleting project", error);
+    }
+  };
+
   return (
     <div>
       {(openCreateModal || openEditModal) && (
@@ -131,6 +167,33 @@ const Modal: React.FC<ModalProps> = ({
               <div className={styles.btn_div}>
                 <button className={styles.btn} onClick={() => handlePrjName()}>
                   {openCreateModal ? "Create" : "Edit"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {openDelModal && (
+        <div className={styles.modal_bg} onClick={() => setOpenDelModal(false)}>
+          <div
+            className={styles.modal_div}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modal_content}>
+              <div>Delete Project</div>
+              <div>
+                <p>
+                  are you sure you want to delete project{" "}
+                  <span>{`"${delPrjData.filename}"`}</span> &#63;
+                </p>
+              </div>
+              <div className={styles.btn_div}>
+                <button
+                  className={styles.del_btn}
+                  onClick={() => handleDelPrj()}
+                >
+                  Delete
                 </button>
               </div>
             </div>

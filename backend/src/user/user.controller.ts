@@ -18,9 +18,9 @@ export class UserController {
 
   @Post('signup')
   async signUp(
-    @Body() createUserDto: CreateUserDto,
+    @Body() userData: CreateUserDto,
   ): Promise<{ user: User; accessToken: string }> {
-    return this.userService.signUp(createUserDto);
+    return this.userService.signUp(userData);
   }
 
   // User SignIn - Returns JWT Token

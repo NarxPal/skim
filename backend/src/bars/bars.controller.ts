@@ -20,10 +20,10 @@ export class BarsController {
 
   @Patch(':id')
   async update(
-    @Param('id') id: number, // The ID of the bar to be updated
-    @Body() updateData: Partial<Bars>, // Data to update in the bar
+    @Param('id') id: number,
+    @Body() updateBarData: { left_position: number; width: number },
   ): Promise<Bars> {
-    return this.barsService.update(id, updateData); // Call service to update the bar
+    return this.barsService.update(id, updateBarData);
   }
 
   // this get req is for fetching Bars with id param (/Bars/id)

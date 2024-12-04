@@ -14,19 +14,36 @@ type MediaItem = {
   id: number;
   column: number;
   width: number;
-  left: number;
+  left_position: number;
+  user_id: string;
+  project_id: number;
 };
 
+type bar = {
+  filepath: string;
+  id: number;
+  left_position: number;
+  name: string;
+  project_id: number;
+  signedUrl: string;
+  type: string;
+  user_id: string;
+  width: number;
+};
+
+type sub_column = {
+  id: number;
+  parent_id: number;
+  project_id: number;
+  user_id: string;
+  bars: bar[];
+};
 type BarsProp = {
   id: number;
-  user_id: string;
-  column_id: number;
-  name: string;
-  media_id: number;
-  left_position: number;
-  width: number;
-  position: number;
+  parent_id: number;
   project_id: number;
+  user_id: string;
+  sub_columns: sub_column[];
 };
 
 type ColumnsProps = {
@@ -43,6 +60,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   const [barsData, setBarsData] = useState<BarsProp[]>([]);
 
   const [barDragging, setBarDragging] = useState<boolean>(false);
+  const [fetchBars, setFetchBars] = useState<boolean>(false);
 
   const isResizing = useRef(false);
   const resizeDirection = useRef<"left" | "right" | null>(null);
@@ -65,6 +83,85 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   //     ? (currentTime / duration) * timelineRef.current.offsetWidth
   //     : 0;
 
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    // setBarDragging(false);
+  };
+
+  const createSubCol = async (parsedItem: MediaItem) => {
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
+      {
+        project_id: parsedItem.project_id,
+        user_id: parsedItem.user_id,
+        parent_id: columns?.id,
+        bars: [
+          {
+            id: Math.floor(Math.random() * 1000000) + (Date.now() % 1000000),
+            user_id: parsedItem.user_id,
+            name: parsedItem.name,
+            left_position: 10, // default left position
+            width: 800, // default value
+            project_id: parsedItem.project_id,
+            type: parsedItem.type,
+            signedUrl: parsedItem.signedUrl, // we don't have to store signedurl since it will be newly recreated hourly basis
+            filepath: parsedItem.filepath,
+          },
+        ],
+      }
+    );
+    console.log("create sub col bro:", response.data);
+    return response;
+  };
+
+  const handleAddBarToCol = async (
+    parseditem: MediaItem,
+    subColumnId: number
+  ) => {
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars`,
+        {
+          id: parseditem.id,
+          user_id: parseditem.user_id,
+          name: parseditem.name,
+          left_position: parseditem.left_position,
+          width: parseditem.width, // width and left will here be default values and u have to make a req to server to change it
+          project_id: parseditem.project_id,
+          column_id: subColumnId, // this is only in bars table
+          type: parseditem.type,
+          signedUrl: parseditem.signedUrl,
+          filepath: parseditem.filepath,
+        }
+      );
+      console.log("add bar to col res bro", response.data);
+      return response;
+    } catch (error) {
+      console.log("bar not added to column", error);
+    }
+  };
+
+  const handleMediaDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const dropped_Item = event.dataTransfer.getData("text/plain"); // the data here is passed from leftpane.tsx using .setData
+    const parsedItem = JSON.parse(dropped_Item);
+    console.log("media dropped parsed item bro", parsedItem);
+
+    // adding the dropped bar to root column, currently each dropped bar will create it's own sub-column
+    try {
+      const subColumnResponse = await createSubCol(parsedItem);
+      const subColumnId = subColumnResponse.data.id;
+      console.log("subcol res", subColumnResponse.data);
+
+      await handleAddBarToCol(subColumnResponse.data.bars[0], subColumnId);
+      setFetchBars(true);
+    } catch (error) {
+      console.error("Error in handling drop:", error);
+    }
+
+    // setBarDragging(false);
+  };
+
   useEffect(() => {
     const fetchRootColumn = async () => {
       try {
@@ -75,92 +172,17 @@ const Timeline = ({ prjId }: { prjId: string }) => {
         console.log("fetch root column bro", response.data);
         const columnData = response.data;
         setColumns(columnData);
+        console.log("bars data", [response.data]);
+        setBarsData([columnData]);
       } catch (error) {
         console.log(error);
       }
+      setFetchBars(false);
     };
     if (prjId) {
       fetchRootColumn();
     }
-  }, [prjId]);
-
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    // setBarDragging(false);
-  };
-
-  const createSubCol = async (parsedItem: BarsProp) => {
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
-      {
-        project_id: parsedItem.project_id,
-        user_id: parsedItem.user_id,
-        parent_id: columns?.id,
-        bars: [
-          {
-            id: Math.random().toString(36) + Date.now(), // correctly create id in here
-            user_id: parsedItem.user_id,
-            name: parsedItem.name,
-            left_position: 10,
-            width: 800,
-            project_id: parsedItem.project_id,
-          },
-        ],
-      }
-    );
-    console.log("create sub col bro:", response.data);
-    return response;
-  };
-
-  const handleAddBarToCol = async (
-    parseditem: BarsProp,
-    subColumnId: number
-  ) => {
-    try {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars`,
-        {
-          user_id: parseditem.user_id,
-          name: parseditem.name,
-          left_position: parseditem.left_position,
-          width: parseditem.width,
-          project_id: parseditem.project_id,
-          column_id: subColumnId,
-        }
-      );
-      console.log("add bar to col res bro", response.data);
-      return response;
-    } catch (error) {
-      console.log("bar not added to column", error);
-    }
-  };
-
-  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    console.log("handle drop u are inside ");
-    const dropped_Item = event.dataTransfer.getData("text/plain"); // the data here is passed from leftpane.tsx
-    const parsedItem = JSON.parse(dropped_Item);
-    console.log("dropped parsed item bro", parsedItem);
-
-    try {
-      const subColumnResponse = await createSubCol(parsedItem);
-      const subColumnId = subColumnResponse.data.id; // Get the newly created sub-column ID
-      console.log("Created Sub-Column ID:", subColumnId);
-      console.log("subcol res", subColumnResponse.data);
-
-      await handleAddBarToCol(subColumnResponse.data.bars[0], subColumnId);
-
-      setDroppedItem((prev) => {
-        const updatedItems = [...prev, parsedItem];
-        return updatedItems;
-      });
-    } catch (error) {
-      console.error("Error in handling drop:", error);
-    }
-
-    // setBarDragging(false);
-    // console.log("signed url bro", parsedItem.signedUrl);
-  };
+  }, [prjId, fetchBars]);
 
   const myfunction = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     const parentElement = e.currentTarget; // This refers to the div that triggered the event
@@ -194,58 +216,69 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   const updateItemInDatabase = async (
     id: number,
     width: number,
-    left: number
+    left_position: number
   ) => {
-    // supabase.channel("media_file_channel").on(
-    //   "postgres_changes",
-    //   {
-    //     schema: "public",
-    //     event: "UPDATE",
-    //     table: "media_files",
-    //   },
-    //   (payload) => {
-    //     // console.log("payload bro", payload)
-    //   }
-    // );
+    try {
+      const subColResponse = await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/bars/${id}`,
+        {
+          left_position,
+          width,
+        }
+      );
 
-    const { error } = await supabase
-      .from("media_files")
-      .update({ width, left })
-      .eq("id", id);
-
-    if (error) console.error("Error updating item:", error);
+      const barResponse = await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars/${id}`,
+        {
+          width,
+          left_position,
+        }
+      );
+    } catch (error) {
+      console.error("Failed to update bar:", error);
+      throw error;
+    }
   };
 
   const resizeBar = (e: MouseEvent) => {
     if (!isResizing.current || !resizeDirection.current) return;
-
     const dx = e.clientX - startX.current; // the e.clientx is the current mouse position during the movement of the mouse and we are subtracting it with initial mouse (starting) position during mousedown
 
-    setDroppedItem((prevBars) => {
-      // here instead of setDroppedItem we will use something for bars table so new state variable create here
-      return prevBars.map((bar) => {
-        if (bar.id === activeBarId.current) {
-          const newWidth =
-            resizeDirection.current === "left"
-              ? bar.left === 0
-                ? bar.width
-                : bar.width - dx
-              : bar.width + dx;
+    setBarsData((prevRootColumn: BarsProp[]) => {
+      return prevRootColumn.map((rootColumn) => {
+        return {
+          ...rootColumn,
+          sub_columns: rootColumn.sub_columns.map((subColumn, index) => {
+            return {
+              ...subColumn,
+              bars: subColumn.bars.map((bar) => {
+                if (bar.id === activeBarId.current) {
+                  const newWidth =
+                    resizeDirection.current === "left"
+                      ? bar.left_position === 0
+                        ? bar.width
+                        : bar.width - dx
+                      : bar.width + dx;
 
-          const newLeft =
-            resizeDirection.current === "left"
-              ? Math.max(bar.left + dx, 0)
-              : bar.left;
+                  const newLeft =
+                    resizeDirection.current === "left"
+                      ? Math.max(bar.left_position + dx, 0)
+                      : bar.left_position;
 
-          updateItemInDatabase(bar.id, newWidth, newLeft);
+                  // Update the database
+                  updateItemInDatabase(bar.id, newWidth, newLeft);
 
-          return {
-            ...bar,
-            width: Math.max(newWidth, 125),
-            left: newLeft,
-          };
-        }
-        return bar;
+                  return {
+                    ...bar,
+                    width: Math.max(newWidth, 125),
+                    left_position: newLeft, // Use correct key here
+                  };
+                }
+                return bar;
+              }),
+            };
+          }),
+        };
       });
     });
 
@@ -360,8 +393,8 @@ const Timeline = ({ prjId }: { prjId: string }) => {
       console.log("u are to run handleBar drop");
       handleBarDrop(e, index);
     } else {
-      console.log("u are to run handleDrop");
-      handleDrop(e);
+      console.log("u are to run handleMediaDrop");
+      handleMediaDrop(e);
     }
   };
 
@@ -420,36 +453,42 @@ const Timeline = ({ prjId }: { prjId: string }) => {
         >
           {/* // here we should map columns table rather than droppedItem */}
           <div className={styles.tm_media_container}>
-            {(droppedItem.length === 0
+            {(barsData && barsData[0]?.sub_columns === null
               ? new Array(3).fill(null)
-              : droppedItem
+              : barsData[0]?.sub_columns || []
             ).map((item, index) => (
               <div
                 // className={styles.item_box_div}
                 key={index}
-                id={index.toString()} // id will contain numeric value for each columns
+                id={item?.id} // id will contain numeric value for each columns
                 onDragOver={(e) => handleDynamicDragOver(e)}
                 onDrop={(e) => handleDynamicDrop(e, index.toString())}
               >
                 <div
                   className={styles.item_box_div}
                   style={{
-                    width: item && item.width ? `${item.width}px` : "800px", // since we are not using width in mediaItem[]
-                    left: item && item.left ? `${item.left}px` : "10px",
+                    width: item?.bars?.[0]?.width
+                      ? `${item.bars[0].width}px`
+                      : "800px",
+                    left: item?.bars?.[0]?.left_position
+                      ? `${item.bars[0].left_position}px`
+                      : "10px",
                   }}
                 >
                   <div
                     className={
-                      droppedItem.length !== 0
+                      barsData[0]?.sub_columns?.length
                         ? `${styles.m_item_box_drop}`
                         : `${styles.m_item_box}`
                     }
                   >
                     <div className={styles.bar_content}>
-                      {droppedItem && droppedItem.length !== 0 ? (
+                      {barsData[0]?.sub_columns?.length ? (
                         <div
                           className={styles.bar_arrow}
-                          onMouseDown={(e) => startResize(e, "left", item.id)}
+                          onMouseDown={(e) =>
+                            startResize(e, "left", item.bars[0]?.id)
+                          }
                         >
                           <div className={styles.arrow_div}>
                             <Image
@@ -463,39 +502,42 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                           </div>
                         </div>
                       ) : null}
+
                       <div
                         className={
-                          droppedItem.length !== 0
+                          barsData[0]?.sub_columns?.length
                             ? `${styles.item_content_drop}`
                             : ""
                         }
                         draggable
                         onDragStart={(e) => handleBarDragStart(index, e)}
-                        onDragEnd={(e) => handleBarDragEnd()}
+                        onDragEnd={handleBarDragEnd}
                       >
                         {item && (
                           <div className={styles.m_item_keys}>
                             <div
                               className={styles.m_item_thumb}
                               style={{
-                                backgroundImage: item
-                                  ? `url(${item.signedUrl})`
+                                backgroundImage: item.bars[0]?.signedUrl
+                                  ? `url(${item.bars[0].signedUrl})`
                                   : "none",
-
                                 backgroundRepeat: "repeat-x",
                                 backgroundSize: "auto 100%",
                               }}
                             ></div>
 
-                            {item.width >= 300 && (
+                            {item.bars[0]?.width >= 300 && (
                               <div className={styles.m_type_label}>
                                 <div className={styles.type_icon}>
-                                  {item.type in icons && (
+                                  {item.bars[0]?.type in icons && (
                                     <Image
                                       src={
-                                        icons[item.type as keyof typeof icons]
+                                        icons[
+                                          item.bars[0]
+                                            .type as keyof typeof icons
+                                        ]
                                       }
-                                      alt={item.type}
+                                      alt={item.bars[0].type}
                                       width={10}
                                       height={10}
                                       priority={true}
@@ -504,9 +546,9 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                                   )}
                                 </div>
                                 <span className={styles.m_item_label}>
-                                  {item.name.length > 20
-                                    ? `${item.name.substring(0, 25)}...`
-                                    : item.name}
+                                  {item.bars[0]?.name.length > 20
+                                    ? `${item.bars[0].name.substring(0, 25)}...`
+                                    : item.bars[0]?.name}
                                 </span>
                               </div>
                             )}
@@ -514,10 +556,12 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                         )}
                       </div>
 
-                      {droppedItem && droppedItem.length !== 0 ? (
+                      {barsData[0]?.sub_columns?.length ? (
                         <div
                           className={styles.bar_arrow}
-                          onMouseDown={(e) => startResize(e, "right", item.id)}
+                          onMouseDown={(e) =>
+                            startResize(e, "right", item.bars[0]?.id)
+                          }
                         >
                           <div className={styles.arrow_div}>
                             <Image

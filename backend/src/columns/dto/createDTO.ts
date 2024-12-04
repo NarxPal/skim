@@ -1,10 +1,4 @@
-import {
-  IsNotEmpty,
-  IsOptional,
-  IsNumber,
-  IsUUID,
-  isNotEmpty,
-} from 'class-validator';
+import { IsNotEmpty, IsOptional, IsNumber, IsUUID } from 'class-validator';
 
 export class CreateColumnDto {
   @IsUUID()
@@ -27,6 +21,11 @@ type Bar = {
   left_position: number;
   width: number;
   project_id: number;
+  type: string;
+  signedUrl: string;
+  filepath: string;
+
+  // later: not having here column_id since don't know how we will pass it in frontend from handlemediadrop to createsubcol
 };
 
 type Sub_Column = {

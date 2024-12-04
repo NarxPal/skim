@@ -17,6 +17,9 @@ type Bar = {
   left_position: number;
   width: number;
   project_id: number;
+  type: string;
+  signedUrl: string;
+  filepath: string;
 };
 
 type Sub_Column = {

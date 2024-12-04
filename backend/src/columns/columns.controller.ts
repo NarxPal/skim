@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  NotFoundException,
+  Patch,
+} from '@nestjs/common';
 import { ColumnsService } from './columns.service';
 import { Columns } from 'src/models/columns.entity';
 import { CreateColumnDto } from './dto/createDTO';
@@ -30,8 +39,31 @@ export class ColumnsController {
     return this.columnsService.addSubColumnToRoot(rootColumnId, subColumnData);
   }
 
+  @Patch('sub-columns/bars/:id')
+  async updateBar(
+    @Param('id') id: number,
+    @Body() updateBarData: { left_position: number; width: number },
+  ) {
+    return this.columnsService.updateBar(Number(id), updateBarData);
+  }
+
   @Post()
   createColumn(@Body() createColumnDto: CreateColumnDto) {
     return this.columnsService.create(createColumnDto);
+  }
+
+  @Delete('/:projectId')
+  async deleteRootCol(
+    @Param('projectId') project_id: number,
+  ): Promise<{ message: string }> {
+    const deleted = await this.columnsService.delete(project_id);
+    if (!deleted) {
+      throw new NotFoundException(
+        `root column with ID ${project_id} not found.`,
+      );
+    }
+    return {
+      message: `root column with ID ${project_id} successfully deleted.`,
+    };
   }
 }

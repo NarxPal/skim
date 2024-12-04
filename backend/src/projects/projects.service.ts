@@ -23,6 +23,11 @@ export class ProjectsService {
     return this.projectRepository.save(project);
   }
 
+  async delete(id: number): Promise<boolean> {
+    const result = await this.projectRepository.delete(id);
+    return result.affected > 0;
+  }
+
   findAll(): Promise<Projects[]> {
     return this.projectRepository.find();
   }

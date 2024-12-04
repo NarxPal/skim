@@ -34,6 +34,12 @@ const Project = () => {
     filename: "",
     id: null,
   });
+  const [openDelModal, setOpenDelModal] = useState<boolean>(false);
+  const [delPrjData, setDelPrjData] = useState<editPrjData>({
+    // both editprj and del have same type, later: no need of both hooks
+    filename: "",
+    id: null,
+  });
 
   const userId = useSelector((state: RootState) => state.userId.userId);
 
@@ -99,6 +105,11 @@ const Project = () => {
   const handleEditPrj = async (filename: string, id: number) => {
     setOpenEditModal(true);
     setEditPrjData({ filename, id });
+  };
+
+  const handleDelPrj = async (filename: string, id: number) => {
+    setOpenDelModal(true);
+    setDelPrjData({ filename, id });
   };
 
   const openProject = (id: number) => {
@@ -238,7 +249,10 @@ const Project = () => {
                                   priority={true}
                                 />
                               </li>
-                              <li className={styles.ic_li}>
+                              <li
+                                className={styles.ic_li}
+                                onClick={() => handleDelPrj(item.name, item.id)}
+                              >
                                 <Image
                                   src="/delete.png"
                                   alt="edit"
@@ -266,6 +280,11 @@ const Project = () => {
         setOpenEditModal={setOpenEditModal}
         editPrjData={editPrjData}
         setEditPrjData={setEditPrjData}
+        // todo : no need to maintain separate hooks for edit and del
+        delPrjData={delPrjData}
+        setDelPrjData={setDelPrjData}
+        openDelModal={openDelModal}
+        setOpenDelModal={setOpenDelModal}
       />
     </div>
   );

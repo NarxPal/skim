@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Columns } from 'src/models/columns.entity';
@@ -26,6 +26,11 @@ export class ColumnsService {
     return this.columnsRepository.save(column);
   }
 
+  async delete(project_id: number): Promise<boolean> {
+    const result = await this.columnsRepository.delete({ project_id });
+    return result.affected > 0;
+  }
+
   // Add sub-column to a root column
   async addSubColumnToRoot(rootColumnId: number, subColumnData: SubColDto) {
     const rootColumn = await this.columnsRepository.findOne({
@@ -51,5 +56,37 @@ export class ColumnsService {
     await this.columnsRepository.save(rootColumn);
 
     return newSubColumn;
+  }
+
+  async updateBar(
+    id: number,
+    updateBarData: { left_position: number; width: number },
+  ) {
+    const columns = await this.columnsRepository.find();
+
+    if (!columns || columns.length === 0) {
+      throw new NotFoundException(`No columns found`);
+    }
+
+    let barFound = false;
+    columns.forEach((column) => {
+      if (column.sub_columns) {
+        column.sub_columns.forEach((subColumn) => {
+          subColumn.bars?.forEach((bar) => {
+            if (bar.id === id) {
+              bar.left_position = updateBarData.left_position;
+              bar.width = updateBarData.width;
+              barFound = true;
+            }
+          });
+        });
+      }
+    });
+
+    if (!barFound) {
+      throw new NotFoundException(`Bar with id ${id} not found`);
+    }
+
+    return this.columnsRepository.save(columns);
   }
 }
