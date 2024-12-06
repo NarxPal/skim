@@ -310,6 +310,60 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                     }
                   }
 
+                  // for scrolling the parent element of bars when bars are resized and get out of view
+                  const parentElement = document.querySelector(
+                    "#id-1"
+                  ) as HTMLElement;
+                  if (parentElement) {
+                    const barRightEdge = newLeft + newWidth; // Calculate the bar's right edge
+                    const parentScrollRight =
+                      parentElement.scrollLeft + parentElement.offsetWidth;
+
+                    const buffer = 50; // Pixels of buffer space around the handle
+
+                    if (resizeDirection.current === "right") {
+                      if (barRightEdge > parentScrollRight) {
+                        parentElement.scrollLeft +=
+                          barRightEdge - parentScrollRight; // Scroll parent to the right
+                      }
+                      if (barRightEdge < parentElement.scrollLeft) {
+                        // scroll parent to left
+                        parentElement.scrollLeft -=
+                          parentElement.scrollLeft - barRightEdge;
+                      }
+
+                      if (barRightEdge > parentScrollRight - buffer) {
+                        parentElement.scrollLeft +=
+                          barRightEdge + buffer - parentScrollRight;
+                      }
+                      if (barRightEdge < parentElement.scrollLeft + buffer) {
+                        parentElement.scrollLeft -=
+                          parentElement.scrollLeft - (barRightEdge - buffer);
+                      }
+                    } else if (resizeDirection.current === "left") {
+                      // scroll parent to right
+                      if (newLeft > parentScrollRight) {
+                        parentElement.scrollLeft += newLeft - parentScrollRight;
+                      }
+                      // scroll parent to left
+                      if (newLeft < parentElement.scrollLeft) {
+                        parentElement.scrollLeft -=
+                          parentElement.scrollLeft - newLeft;
+                      }
+
+                      if (newLeft < parentElement.scrollLeft + buffer) {
+                        parentElement.scrollLeft -=
+                          parentElement.scrollLeft - (newLeft - buffer);
+                      }
+                      if (newLeft > parentScrollRight - buffer) {
+                        parentElement.scrollLeft +=
+                          newLeft + buffer - parentScrollRight;
+                      }
+                    }
+                  } else if (!parentElement) {
+                    console.error("Parent element not found");
+                  }
+
                   // Update the database
                   updateItemInDatabase(bar.id, newWidth, newLeft);
 
@@ -363,14 +417,17 @@ const Timeline = ({ prjId }: { prjId: string }) => {
       console.log(dropSubColId);
       console.log("dragged bar data bro:", getBarData.data);
       const addBarData = getBarData.data;
+
       const addBarResponse = await axios.patch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${dropSubColId}`,
         {
           addBarData,
         }
       );
-
-      delBarSubCol(Number(draggedBarId), Number(dragSubColId));
+      // don't delete the subcol if drag and drop sub col id for bar is same
+      if (Number(dragSubColId) !== dropSubColId) {
+        delBarSubCol(Number(draggedBarId), Number(dragSubColId));
+      }
     } catch (error) {
       console.log("updatebarSubcol error", error);
     }
@@ -492,7 +549,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
           onMouseOut={clearMyFunction}
         >
           {/* // here we should map columns table rather than droppedItem */}
-          <div className={styles.tm_media_container}>
+          <div className={styles.tm_media_container} id={"id-1"}>
             {(barsData && barsData[0]?.sub_columns === null
               ? new Array(3).fill(null) //now here 3 empty array will be shown when no sub_column will be present(initial state of timeline)
               : barsData[0]?.sub_columns || []

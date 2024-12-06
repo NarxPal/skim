@@ -97,7 +97,6 @@ export class ColumnsService {
       if (column.sub_columns) {
         column.sub_columns.forEach((subColumn) => {
           if (subColumn.id === Number(SubColId)) {
-            console.log('BRO SEE THIS:', subColumn.id, SubColId);
             subColumn.bars = subColumn.bars?.filter(
               (bar) => bar.id !== Number(BarId),
             );
@@ -121,7 +120,10 @@ export class ColumnsService {
       if (column.sub_columns) {
         column.sub_columns.forEach((subColumn) => {
           if (subColumn.id == id) {
-            subColumn.bars.push(addBarData.addBarData);
+            if (!subColumn.bars) {
+              subColumn.bars = [];
+            }
+            subColumn?.bars?.push(addBarData.addBarData);
           }
         });
       }

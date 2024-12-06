@@ -19,15 +19,15 @@
 }
 
 .tm_m_container_div {
-  @apply relative h-full w-full overflow-auto flex flex-col;
+  @apply relative h-full w-full flex flex-col;
 }
 
 .tm_media_container {
-  @apply flex h-full w-full flex-col absolute gap-2;
+  @apply h-full w-full absolute gap-2 overflow-auto;
 }
 
 .sub_col_div {
-  @apply relative h-20;
+  @apply relative h-20 mb-2;
 }
 
 .item_box_div {
