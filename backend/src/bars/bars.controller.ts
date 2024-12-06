@@ -26,9 +26,9 @@ export class BarsController {
     return this.barsService.update(id, updateBarData);
   }
 
-  // this get req is for fetching Bars with id param (/Bars/id)
+  // this get req is for fetching Bars with id param (/bars/id)
   @Get(':id')
   async findOne(@Param('id') id: number): Promise<Bars> {
-    return this.barsService.findOne(id);
+    return this.barsService.findOne(Number(id));
   }
 }

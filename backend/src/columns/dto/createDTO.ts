@@ -55,3 +55,8 @@ export class SubColDto {
   @IsNotEmpty()
   bars: Bar[];
 }
+
+// this BarData is for subColumn bars, so here we don't have column_id
+export class BarData {
+  bars: Bar[];
+}

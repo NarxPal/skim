@@ -89,4 +89,44 @@ export class ColumnsService {
 
     return this.columnsRepository.save(columns);
   }
+
+  async deleteDraggedBar(SubColId: number, BarId: number) {
+    const columns = await this.columnsRepository.find();
+    // not deleted from db
+    columns.forEach((column) => {
+      if (column.sub_columns) {
+        column.sub_columns.forEach((subColumn) => {
+          if (subColumn.id === Number(SubColId)) {
+            console.log('BRO SEE THIS:', subColumn.id, SubColId);
+            subColumn.bars = subColumn.bars?.filter(
+              (bar) => bar.id !== Number(BarId),
+            );
+
+            if (subColumn.bars && subColumn.bars.length === 0) {
+              subColumn.bars = undefined;
+            }
+          }
+        });
+      }
+    });
+
+    await this.columnsRepository.save(columns);
+  }
+
+  // here id refers to sub_column id
+  async addBarToSubCol(id: number, addBarData: any) {
+    const columns = await this.columnsRepository.find();
+
+    columns.forEach((column) => {
+      if (column.sub_columns) {
+        column.sub_columns.forEach((subColumn) => {
+          if (subColumn.id == id) {
+            subColumn.bars.push(addBarData.addBarData);
+          }
+        });
+      }
+    });
+
+    await this.columnsRepository.save(columns);
+  }
 }

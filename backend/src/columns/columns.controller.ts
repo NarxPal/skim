@@ -47,6 +47,20 @@ export class ColumnsController {
     return this.columnsService.updateBar(Number(id), updateBarData);
   }
 
+  @Patch('sub-columns/:SubColId/bars/:BarId')
+  async delBarSubCol(
+    @Param('SubColId') SubColId: number,
+    @Param('BarId') BarId: number,
+  ) {
+    console.log(SubColId, BarId);
+    return this.columnsService.deleteDraggedBar(SubColId, BarId);
+  }
+
+  @Patch('sub-columns/:id')
+  async addBarToSubCol(@Param('id') id: number, @Body() addBarData: any) {
+    return this.columnsService.addBarToSubCol(Number(id), addBarData);
+  }
+
   @Post()
   createColumn(@Body() createColumnDto: CreateColumnDto) {
     return this.columnsService.create(createColumnDto);

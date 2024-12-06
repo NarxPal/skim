@@ -26,8 +26,12 @@
   @apply flex h-full w-full flex-col absolute gap-2;
 }
 
+.sub_col_div {
+  @apply relative h-20;
+}
+
 .item_box_div {
-  @apply select-none relative rounded-lg;
+  @apply select-none absolute rounded-lg;
 }
 
 .media_timeline {

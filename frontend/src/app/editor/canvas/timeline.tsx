@@ -169,10 +169,9 @@ const Timeline = ({ prjId }: { prjId: string }) => {
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${Number(prjId)}`
         );
 
-        console.log("fetch root column bro", response.data);
         const columnData = response.data;
         setColumns(columnData);
-        console.log("bars data", [response.data]);
+        console.log("root col data", [response.data]);
         setBarsData([columnData]);
       } catch (error) {
         console.log(error);
@@ -251,19 +250,65 @@ const Timeline = ({ prjId }: { prjId: string }) => {
           sub_columns: rootColumn.sub_columns.map((subColumn, index) => {
             return {
               ...subColumn,
-              bars: subColumn.bars.map((bar) => {
+              bars: subColumn?.bars?.map((bar, barIndex, bars) => {
                 if (bar.id === activeBarId.current) {
-                  const newWidth =
-                    resizeDirection.current === "left"
-                      ? bar.left_position === 0
-                        ? bar.width
-                        : bar.width - dx
-                      : bar.width + dx;
+                  let newWidth = bar.width;
+                  let newLeft = bar.left_position;
 
-                  const newLeft =
-                    resizeDirection.current === "left"
-                      ? Math.max(bar.left_position + dx, 0)
-                      : bar.left_position;
+                  if (resizeDirection.current === "left") {
+                    const minWidth = 125;
+
+                    const minLeft =
+                      bar.width === minWidth
+                        ? bar.left_position
+                        : bar.left_position + dx >= 0
+                        ? bar.left_position + dx
+                        : 0; // Prevent moving beyond left limit
+
+                    newLeft = minLeft;
+
+                    // Ensure the width doesn't grow when reaching the left gap constraint
+                    if (newLeft === 0) {
+                      newWidth = Math.max(bar.width - dx, minWidth); // Stop resizing width if at gap
+                    } else {
+                      newWidth = bar.width - dx;
+                    }
+
+                    // Prevent overlap with the previous bar
+                    if (barIndex > 0) {
+                      for (let i = 0; i < barIndex; i++) {
+                        // Only check for previous bars if it's not the first bar
+                        const prevBar = bars[barIndex - 1];
+                        const minPosition =
+                          prevBar.left_position + prevBar.width + 10;
+
+                        if (newLeft < minPosition) {
+                          newLeft = minPosition; // Prevent overlap with previous bar
+                          newWidth = bar.width - (bar.left_position - newLeft); // Adjust width accordingly
+                        }
+                      }
+                    } else {
+                      // For the first bar, set left limit and stop increasing width if the left limit is reached
+                      const minLeft = 10; // Prevent moving beyond left limit
+                      newLeft = Math.max(newLeft, minLeft); // Set minimum left position
+                      if (newLeft === minLeft) {
+                        newWidth = bar.width;
+                      } else {
+                        newWidth = Math.max(newWidth, minWidth); // Ensure minimum width
+                      }
+                    }
+                  } else {
+                    // Right handle: prevent overlap with next bar
+                    newWidth = bar.width + dx;
+
+                    for (let i = barIndex + 1; i < bars.length; i++) {
+                      const nextBar = bars[i];
+                      const maxRightPosition = nextBar.left_position - 10;
+                      if (newWidth + bar.left_position > maxRightPosition) {
+                        newWidth = maxRightPosition - bar.left_position - 10;
+                      }
+                    }
+                  }
 
                   // Update the database
                   updateItemInDatabase(bar.id, newWidth, newLeft);
@@ -271,7 +316,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                   return {
                     ...bar,
                     width: Math.max(newWidth, 125),
-                    left_position: newLeft, // Use correct key here
+                    left_position: newLeft,
                   };
                 }
                 return bar;
@@ -292,26 +337,55 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     document.removeEventListener("mouseup", stopResize);
   };
 
-  const updateBarCol = async (updatedBars: MediaItem) => {
-    const { data, error } = await supabase
-      .from("media_files")
-      .update({ column: updatedBars.column })
-      .eq("id", updatedBars.id);
+  const delBarSubCol = async (draggedBarId: number, dragSubColId: number) => {
+    try {
+      const delBar = await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${dragSubColId}/bars/${draggedBarId}`
+      );
 
-    if (error) {
-      console.error("Error updating item:", error);
-    } else {
-      console.log("Update successful:", data);
+      console.log("del bar res", delBar);
+      setFetchBars(true);
+    } catch (error) {
+      console.log("error deleting bar", error);
+    }
+  };
+
+  const updateBarSubCol = async (
+    draggedBarId: number,
+    dropSubColId: number,
+    e: React.DragEvent<HTMLDivElement>
+  ) => {
+    const dragSubColId = e.dataTransfer.getData("dragSubColId");
+    try {
+      const getBarData = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars/${draggedBarId}`
+      );
+      console.log(dropSubColId);
+      console.log("dragged bar data bro:", getBarData.data);
+      const addBarData = getBarData.data;
+      const addBarResponse = await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${dropSubColId}`,
+        {
+          addBarData,
+        }
+      );
+
+      delBarSubCol(Number(draggedBarId), Number(dragSubColId));
+    } catch (error) {
+      console.log("updatebarSubcol error", error);
     }
   };
 
   const handleBarDragStart = (
-    index: number,
-    e: React.DragEvent<HTMLDivElement>
+    draggedBarId: number,
+    e: React.DragEvent<HTMLDivElement>,
+    dragSubColId: number
   ) => {
     setBarDragging(true);
-    const draggedBarIndex = JSON.stringify(index);
-    e.dataTransfer.setData("draggedIndex", draggedBarIndex); //here converting id(number) to string since setData require data in string
+    const BarId = JSON.stringify(draggedBarId);
+    const subColId = JSON.stringify(dragSubColId);
+    e.dataTransfer.setData("draggedBarId", BarId); //here converting id(number) to string since setData require data in string
+    e.dataTransfer.setData("dragSubColId", subColId);
     console.log("bar drag started bro");
   };
 
@@ -322,56 +396,22 @@ const Timeline = ({ prjId }: { prjId: string }) => {
 
   const handleBarDrop = (
     e: React.DragEvent<HTMLDivElement>,
-    Barindex: string
+    dropSubColId: number
   ) => {
-    const draggedIndex = e.dataTransfer.getData("draggedIndex"); // it is index value since we are passing index of the draggedbar in handleDragStart
-    const targetColumnEle = e.target as HTMLElement;
-    const targetColumnId = targetColumnEle.getAttribute("id"); // individual bars id
+    const draggedBarId = e.dataTransfer.getData("draggedBarId"); // it is index value since we are passing index of the draggedbar in handleBarDragStart
+    // const dragSubColId = e.dataTransfer.getData("dragSubColId");
 
-    // console.log(
-    //   "draggedidnex bro, paramindex bro",
-    //   draggedIndex,
-    //   targetColumn.id,
-    //   targetColumnEle
-    // );
+    console.log(
+      "id of drag bar, dropped in subcol :",
+      draggedBarId,
+      dropSubColId
+    );
 
-    const draggedIndexNum = Number(draggedIndex); // Convert index to a number
-    // const draggedItem = droppedItem[draggedIndexNum];
+    // console.log("dragSubcolId bro", dragSubColId);
 
-    // converting draggedIndex to number from string
-    // targetIndex contains the id(not index) of the targeted bar
-    console.log("targetcolid above", Number(targetColumnId));
-    console.log("dragidexNumber", draggedIndexNum);
-    if (draggedIndexNum === (targetColumnId as number | null)) return; // Prevent reordering if same index
+    updateBarSubCol(Number(draggedBarId), dropSubColId, e);
+    // delBarSubCol(Number(draggedBarId), Number(dragSubColId));
 
-    // Reorder the bars by changing their position
-    const updatedBars = [...droppedItem];
-
-    console.log("updated bars after droppping: ", updatedBars);
-    console.log("droppedItem", droppedItem);
-
-    const draggedItem = updatedBars.splice(Number(draggedIndex), 1)[0];
-
-    draggedItem.column = Number(targetColumnId);
-
-    console.log("draggedItem.column", draggedItem.column);
-    console.log("target col id", Number(targetColumnId));
-    console.log("barindex bro", Barindex);
-
-    console.log("draggedbar", draggedItem);
-
-    // Remove the dragged item from its old position
-    updatedBars.splice(Number(Barindex), 0, draggedItem); // it will reorder the array
-
-    console.log("updatedBars splice:", updatedBars);
-
-    updatedBars.forEach((bar) => {
-      console.log("bar foreach", bar.column);
-      console.log("bars bro", bar);
-      updateBarCol(bar);
-    });
-
-    setDroppedItem(updatedBars); // Update state with the new order
     setBarDragging(false);
   };
 
@@ -386,12 +426,12 @@ const Timeline = ({ prjId }: { prjId: string }) => {
 
   const handleDynamicDrop = (
     e: React.DragEvent<HTMLDivElement>,
-    index: string
+    dropSubColId: number
   ) => {
     console.log("bardragging state:", barDragging);
     if (barDragging) {
       console.log("u are to run handleBar drop");
-      handleBarDrop(e, index);
+      handleBarDrop(e, dropSubColId);
     } else {
       console.log("u are to run handleMediaDrop");
       handleMediaDrop(e);
@@ -454,130 +494,140 @@ const Timeline = ({ prjId }: { prjId: string }) => {
           {/* // here we should map columns table rather than droppedItem */}
           <div className={styles.tm_media_container}>
             {(barsData && barsData[0]?.sub_columns === null
-              ? new Array(3).fill(null)
+              ? new Array(3).fill(null) //now here 3 empty array will be shown when no sub_column will be present(initial state of timeline)
               : barsData[0]?.sub_columns || []
             ).map((item, index) => (
               <div
-                // className={styles.item_box_div}
+                className={styles.sub_col_div}
                 key={index}
-                id={item?.id} // id will contain numeric value for each columns
+                id={item?.id} // id will contain numeric value for each sub_column
                 onDragOver={(e) => handleDynamicDragOver(e)}
-                onDrop={(e) => handleDynamicDrop(e, index.toString())}
+                onDrop={(e) => handleDynamicDrop(e, item?.id)}
               >
-                <div
-                  className={styles.item_box_div}
-                  style={{
-                    width: item?.bars?.[0]?.width
-                      ? `${item.bars[0].width}px`
-                      : "800px",
-                    left: item?.bars?.[0]?.left_position
-                      ? `${item.bars[0].left_position}px`
-                      : "10px",
-                  }}
-                >
-                  <div
-                    className={
-                      barsData[0]?.sub_columns?.length
-                        ? `${styles.m_item_box_drop}`
-                        : `${styles.m_item_box}`
-                    }
-                  >
-                    <div className={styles.bar_content}>
-                      {barsData[0]?.sub_columns?.length ? (
-                        <div
-                          className={styles.bar_arrow}
-                          onMouseDown={(e) =>
-                            startResize(e, "left", item.bars[0]?.id)
-                          }
-                        >
-                          <div className={styles.arrow_div}>
-                            <Image
-                              src="/left_arrow.png"
-                              alt="left_arrow"
-                              width={10}
-                              height={10}
-                              priority={true}
-                              draggable={false}
-                            />
-                          </div>
-                        </div>
-                      ) : null}
-
+                {item?.bars?.length > 0 ? (
+                  item?.bars?.map((bar: bar, barIndex: number) => (
+                    <div
+                      className={styles.item_box_div}
+                      style={{
+                        width: bar?.width ? `${bar.width}px` : "800px",
+                        left: bar?.left_position
+                          ? `${bar.left_position}px`
+                          : "10px",
+                      }}
+                      key={barIndex}
+                    >
                       <div
                         className={
-                          barsData[0]?.sub_columns?.length
-                            ? `${styles.item_content_drop}`
-                            : ""
+                          barsData[0]?.sub_columns === null
+                            ? `${styles.m_item_box}`
+                            : `${styles.m_item_box_drop}`
                         }
-                        draggable
-                        onDragStart={(e) => handleBarDragStart(index, e)}
-                        onDragEnd={handleBarDragEnd}
                       >
-                        {item && (
-                          <div className={styles.m_item_keys}>
+                        <div className={styles.bar_content}>
+                          {barsData[0]?.sub_columns?.length ? (
                             <div
-                              className={styles.m_item_thumb}
-                              style={{
-                                backgroundImage: item.bars[0]?.signedUrl
-                                  ? `url(${item.bars[0].signedUrl})`
-                                  : "none",
-                                backgroundRepeat: "repeat-x",
-                                backgroundSize: "auto 100%",
-                              }}
-                            ></div>
+                              className={styles.bar_arrow}
+                              onMouseDown={(e) =>
+                                startResize(e, "left", bar?.id)
+                              }
+                            >
+                              <div className={styles.arrow_div}>
+                                <Image
+                                  src="/left_arrow.png"
+                                  alt="left_arrow"
+                                  width={10}
+                                  height={10}
+                                  priority={true}
+                                  draggable={false}
+                                />
+                              </div>
+                            </div>
+                          ) : null}
 
-                            {item.bars[0]?.width >= 300 && (
-                              <div className={styles.m_type_label}>
-                                <div className={styles.type_icon}>
-                                  {item.bars[0]?.type in icons && (
-                                    <Image
-                                      src={
-                                        icons[
-                                          item.bars[0]
-                                            .type as keyof typeof icons
-                                        ]
-                                      }
-                                      alt={item.bars[0].type}
-                                      width={10}
-                                      height={10}
-                                      priority={true}
-                                      draggable={false}
-                                    />
-                                  )}
-                                </div>
-                                <span className={styles.m_item_label}>
-                                  {item.bars[0]?.name.length > 20
-                                    ? `${item.bars[0].name.substring(0, 25)}...`
-                                    : item.bars[0]?.name}
-                                </span>
+                          <div
+                            className={
+                              barsData[0]?.sub_columns?.length
+                                ? `${styles.item_content_drop}`
+                                : ""
+                            }
+                            draggable
+                            onDragStart={(e) =>
+                              handleBarDragStart(bar?.id, e, item?.id)
+                            }
+                            onDragEnd={handleBarDragEnd}
+                          >
+                            {item && (
+                              <div className={styles.m_item_keys}>
+                                <div
+                                  className={styles.m_item_thumb}
+                                  style={{
+                                    backgroundImage: bar?.signedUrl
+                                      ? `url(${bar?.signedUrl})`
+                                      : "none",
+                                    backgroundRepeat: "repeat-x",
+                                    backgroundSize: "auto 100%",
+                                  }}
+                                ></div>
+
+                                {bar?.width >= 300 && (
+                                  <div className={styles.m_type_label}>
+                                    <div className={styles.type_icon}>
+                                      {bar?.type in icons && (
+                                        <Image
+                                          src={
+                                            icons[
+                                              bar?.type as keyof typeof icons
+                                            ]
+                                          }
+                                          alt={bar?.type}
+                                          width={10}
+                                          height={10}
+                                          priority={true}
+                                          draggable={false}
+                                        />
+                                      )}
+                                    </div>
+                                    <span className={styles.m_item_label}>
+                                      {bar?.name.length > 20
+                                        ? `${bar?.name.substring(0, 25)}...`
+                                        : bar?.name}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
 
-                      {barsData[0]?.sub_columns?.length ? (
-                        <div
-                          className={styles.bar_arrow}
-                          onMouseDown={(e) =>
-                            startResize(e, "right", item.bars[0]?.id)
-                          }
-                        >
-                          <div className={styles.arrow_div}>
-                            <Image
-                              src="/chevron_right.png"
-                              alt="right_arrow"
-                              width={10}
-                              height={10}
-                              priority={true}
-                              draggable={false}
-                            />
-                          </div>
+                          {barsData[0]?.sub_columns?.length ? (
+                            <div
+                              className={styles.bar_arrow}
+                              onMouseDown={(e) =>
+                                startResize(e, "right", bar?.id)
+                              }
+                            >
+                              <div className={styles.arrow_div}>
+                                <Image
+                                  src="/chevron_right.png"
+                                  alt="right_arrow"
+                                  width={10}
+                                  height={10}
+                                  priority={true}
+                                  draggable={false}
+                                />
+                              </div>
+                            </div>
+                          ) : null}
                         </div>
-                      ) : null}
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  ))
+                ) : (
+                  // this empty bar will be shown when there will be a sub_column without bar i guess and also it checks if there is bar in sub_column than it will show the above truthy structure
+                  <div
+                    className={`${styles.item_box_div} ${styles.m_item_box}`}
+                    style={{ width: "800px", left: "10px" }}
+                  ></div>
+                )}
               </div>
             ))}
           </div>
