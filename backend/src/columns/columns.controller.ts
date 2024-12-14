@@ -11,7 +11,7 @@ import {
 import { ColumnsService } from './columns.service';
 import { Columns } from 'src/models/columns.entity';
 import { CreateColumnDto } from './dto/createDTO';
-import { SubColDto } from './dto/createDTO';
+import { SubColDto, OnlySubColDto, BarData } from './dto/createDTO';
 @Controller('columns')
 export class ColumnsController {
   constructor(private readonly columnsService: ColumnsService) {}
@@ -29,6 +29,13 @@ export class ColumnsController {
     @Param('project_id') project_id: number,
   ): Promise<Columns> {
     return this.columnsService.findOneByProjectId(project_id);
+  }
+
+  @Get('sub-columns/:dragOverSubColId')
+  async subColIdBars(
+    @Param('dragOverSubColId') dragOverSubColId: number,
+  ): Promise<OnlySubColDto> {
+    return this.columnsService.subColIdBars(Number(dragOverSubColId));
   }
 
   @Post(':rootColumnId/sub-columns')
@@ -52,13 +59,20 @@ export class ColumnsController {
     @Param('SubColId') SubColId: number,
     @Param('BarId') BarId: number,
   ) {
-    console.log(SubColId, BarId);
     return this.columnsService.deleteDraggedBar(SubColId, BarId);
   }
 
   @Patch('sub-columns/:id')
   async addBarToSubCol(@Param('id') id: number, @Body() addBarData: any) {
     return this.columnsService.addBarToSubCol(Number(id), addBarData);
+  }
+
+  @Patch('sub-columns/updateBarLP/:dropSubColId')
+  async updateBarLp(
+    @Param('dropSubColId') dropSubColId: number,
+    @Body() lpBars: any,
+  ) {
+    return this.columnsService.updateBarLp(Number(dropSubColId), lpBars);
   }
 
   @Post()
@@ -79,5 +93,19 @@ export class ColumnsController {
     return {
       message: `root column with ID ${project_id} successfully deleted.`,
     };
+  }
+
+  @Delete('/sub-columns/:cmSubColId/bars/:cmBarName')
+  async delCmBar(
+    @Param('cmSubColId') cmSubColId: number,
+    @Param('cmBarName') cmBarName: string,
+  ) {
+    return this.columnsService.delCmBar(cmSubColId, cmBarName);
+  }
+
+  // for deleting the subcol, (similar path have been using in addBarToSubCol)
+  @Delete('/sub-columns/:cmSubColId')
+  async delSubCol(@Param('cmSubColId') cmSubColId: number) {
+    return this.columnsService.delSubCol(cmSubColId);
   }
 }

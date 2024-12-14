@@ -20,6 +20,7 @@ type Bar = {
   type: string;
   signedUrl: string;
   filepath: string;
+  order: number;
 };
 
 type Sub_Column = {

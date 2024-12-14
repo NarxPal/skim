@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Columns } from 'src/models/columns.entity';
 import { CreateColumnDto } from './dto/createDTO';
-import { SubColDto } from './dto/createDTO';
+import { SubColDto, OnlySubColDto, BarData } from './dto/createDTO';
 
 @Injectable()
 export class ColumnsService {
@@ -18,6 +18,21 @@ export class ColumnsService {
 
   findOneByProjectId(project_id: number): Promise<Columns> {
     return this.columnsRepository.findOne({ where: { project_id } });
+  }
+
+  async subColIdBars(
+    dragOverSubColId: number,
+  ): Promise<OnlySubColDto | undefined> {
+    const columns = await this.columnsRepository.find();
+    for (const column of columns) {
+      const subColumn = column.sub_columns?.find(
+        (subCol) => subCol.id === dragOverSubColId,
+      );
+      if (subColumn) {
+        return subColumn;
+      }
+    }
+    return undefined;
   }
 
   // Create a new column (root or sub-column)
@@ -123,9 +138,83 @@ export class ColumnsService {
             if (!subColumn.bars) {
               subColumn.bars = [];
             }
-            subColumn?.bars?.push(addBarData.addBarData);
+
+            const barWithOrder = {
+              ...addBarData.addBarData,
+              order: addBarData.barIndex,
+            };
+
+            subColumn?.bars?.splice(addBarData.barIndex, 0, barWithOrder);
+
+            subColumn?.bars?.forEach((bar, index) => {
+              bar.order = index;
+            });
           }
         });
+      }
+    });
+
+    await this.columnsRepository.save(columns);
+  }
+
+  async updateBarLp(id: number, lpBars: BarData[]) {
+    const columns = await this.columnsRepository.find();
+    let updatedBars: BarData[] = [];
+    columns.forEach((column) => {
+      if (column.sub_columns) {
+        column.sub_columns.forEach((subColumn) => {
+          if (subColumn.id == id) {
+            if (subColumn.bars) {
+              lpBars.forEach((updatedBar) => {
+                // Find the bar in the sub-column that matches the updatedBar ID
+                const bar = subColumn.bars.find((b) => b.id === updatedBar.id);
+                if (bar) {
+                  // Update the bar's left_position
+                  bar.left_position = updatedBar.left_position;
+                  updatedBars.push(bar);
+                }
+              });
+            }
+          }
+        });
+      }
+    });
+
+    await this.columnsRepository.save(columns);
+    return updatedBars;
+  }
+
+  async delCmBar(cmSubColId: number, cmBarName: string): Promise<void> {
+    const columns = await this.columnsRepository.find();
+    columns.forEach((column) => {
+      if (column.sub_columns) {
+        column.sub_columns.forEach((subColumn) => {
+          if (subColumn.id === Number(cmSubColId)) {
+            // Filter out the bar with the given name
+            subColumn.bars = subColumn.bars?.filter(
+              (bar) => bar.name !== cmBarName,
+            );
+            // If no bars are left, set `bars` to undefined
+            if (subColumn.bars && subColumn.bars.length === 0) {
+              subColumn.bars = undefined;
+            }
+          }
+        });
+      }
+    });
+
+    await this.columnsRepository.save(columns);
+  }
+
+  async delSubCol(cmSubColId: number): Promise<void> {
+    const columns = await this.columnsRepository.find();
+
+    columns.forEach((column) => {
+      if (column.sub_columns) {
+        // Filter out the sub-column with the matching ID
+        column.sub_columns = column.sub_columns.filter(
+          (subColumn) => subColumn.id !== Number(cmSubColId),
+        );
       }
     });
 

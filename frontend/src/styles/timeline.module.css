@@ -15,7 +15,7 @@
 }
 
 .media_parent_div {
-  @apply h-full p-2;
+  @apply h-full p-6 overflow-auto;
 }
 
 .tm_m_container_div {
@@ -23,11 +23,19 @@
 }
 
 .tm_media_container {
-  @apply h-full w-full absolute gap-2 overflow-auto;
+  @apply h-fit w-full absolute;
+}
+
+.tm_media {
+  @apply relative;
 }
 
 .sub_col_div {
   @apply relative h-20 mb-2;
+}
+
+.previewBar {
+  @apply absolute  h-[5rem] w-[50px] bg-sm_light_gray p-2 rounded-lg  border-dashed border-2 border-white border-opacity-10 hover:border-opacity-70 hover:border-white;
 }
 
 .item_box_div {
@@ -41,7 +49,7 @@
 .playhead {
 }
 .m_item_box {
-  @apply bg-sm_light_gray p-2 rounded-lg h-12 border-dashed border-2 border-white border-opacity-10 hover:border-opacity-70 hover:border-white text-white text-opacity-50 bg-cover font-semibold text-xs;
+  @apply bg-sm_light_gray p-2 rounded-lg h-[5rem] border-dashed border-2 border-white border-opacity-10 hover:border-opacity-70 hover:border-white text-white text-opacity-50 bg-cover font-semibold text-xs;
 }
 
 .m_item_bar {
@@ -90,4 +98,33 @@
 
 .m_item_label {
   @apply flex items-end text-[0.7rem] bg-white bg-opacity-10 px-1.5 rounded-md;
+}
+
+.add_col_div {
+  @apply h-2 w-full relative  rounded-sm  my-1;
+}
+
+.add_col_btn {
+  @apply w-full hover:bg-blue-500 hover:bg-opacity-70  hover:border-blue-600 hover:border-2 rounded-sm absolute;
+}
+
+/* ******* CONTEXT MENU *********** */
+
+.closeMenuDiv {
+  @apply relative w-full h-full;
+}
+
+.menu_div {
+  @apply absolute bg-editor_bg w-40 text-white font-medium drop-shadow-2xl rounded-md z-50 p-1.5 border-2 border-editor_gray text-xs translate-y-3 transition-opacity;
+}
+
+.cm_option {
+  @apply p-3 cursor-pointer font-semibold rounded-md text-xs;
+}
+.menu_option {
+  @apply hover:bg-gray_col cm_option;
+}
+
+.del_option {
+  @apply cm_option hover:bg-red-500;
 }

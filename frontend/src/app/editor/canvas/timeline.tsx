@@ -5,6 +5,7 @@ import { supabase } from "../../../../supabaseClient";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
+import ContextMenu from "@/components/contextMenu";
 
 type MediaItem = {
   signedUrl: string | null;
@@ -55,13 +56,39 @@ type ColumnsProps = {
 };
 
 const Timeline = ({ prjId }: { prjId: string }) => {
+  // usestate hooks
   const [droppedItem, setDroppedItem] = useState<MediaItem[]>([]); // media items that will be dropped in timeline will be stored in this state variable
-  const [columns, setColumns] = useState<ColumnsProps | undefined>(undefined);
+  const [columns, setColumns] = useState<ColumnsProps | undefined>(undefined); // column and barsdata are having same data
   const [barsData, setBarsData] = useState<BarsProp[]>([]);
 
   const [barDragging, setBarDragging] = useState<boolean>(false);
   const [fetchBars, setFetchBars] = useState<boolean>(false);
+  const [prevBarPosition, setPreviewBarPosition] = useState<number | null>(
+    null
+  );
+  const [draggedOverSubColId, setDraggedOverSubColId] = useState<number | null>(
+    null
+  );
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    id: number | null;
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    id: null,
+  });
+  const [options, setOptions] = useState<
+    { label: string; action: () => void }[]
+  >([]);
 
+  const [barIndex, setBarIndex] = useState<number>();
+  const [droppedBarNewLeft, setDroppedBarNewLeft] = useState<number | null>();
+  const [LPBasedBars, setLPBasedBars] = useState<bar[]>([]);
+
+  // use ref hooks
   const isResizing = useRef(false);
   const resizeDirection = useRef<"left" | "right" | null>(null);
   const startX = useRef(0);
@@ -78,17 +105,15 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     text: "/text.png",
   };
 
+  const subColDivWidths: number[] = [];
+
   // const playheadPosition =
   //   timelineRef.current && duration > 0
   //     ? (currentTime / duration) * timelineRef.current.offsetWidth
   //     : 0;
 
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    // setBarDragging(false);
-  };
-
   const createSubCol = async (parsedItem: MediaItem) => {
+    // parsedItem contains most of the data for bars but keys like left and width are added during handleaddbartocol
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
       {
@@ -104,8 +129,9 @@ const Timeline = ({ prjId }: { prjId: string }) => {
             width: 800, // default value
             project_id: parsedItem.project_id,
             type: parsedItem.type,
-            signedUrl: parsedItem.signedUrl, // we don't have to store signedurl since it will be newly recreated hourly basis
+            signedUrl: parsedItem.signedUrl, // it's just named as signedurl but it's a public url, so permanent
             filepath: parsedItem.filepath,
+            order: 0, // initial value 1 since every new bar will be inside newly created a sub_col first
           },
         ],
       }
@@ -114,6 +140,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     return response;
   };
 
+  // to create/add the bar to bars table
   const handleAddBarToCol = async (
     parseditem: MediaItem,
     subColumnId: number
@@ -247,7 +274,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
       return prevRootColumn.map((rootColumn) => {
         return {
           ...rootColumn,
-          sub_columns: rootColumn.sub_columns.map((subColumn, index) => {
+          sub_columns: rootColumn.sub_columns.map((subColumn) => {
             return {
               ...subColumn,
               bars: subColumn?.bars?.map((bar, barIndex, bars) => {
@@ -391,12 +418,12 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     document.removeEventListener("mouseup", stopResize);
   };
 
+  // remove draggedbar from it's subcol
   const delBarSubCol = async (draggedBarId: number, dragSubColId: number) => {
     try {
       const delBar = await axios.patch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${dragSubColId}/bars/${draggedBarId}`
       );
-
       console.log("del bar res", delBar);
       setFetchBars(true);
     } catch (error) {
@@ -404,26 +431,35 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     }
   };
 
+  // add dragged bar to subcol
   const updateBarSubCol = async (
     draggedBarId: number,
     dropSubColId: number,
-    e: React.DragEvent<HTMLDivElement>
+    e: React.DragEvent<HTMLDivElement>,
+    dragSubColId: number
   ) => {
-    const dragSubColId = e.dataTransfer.getData("dragSubColId");
     try {
       const getBarData = await axios.get(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars/${draggedBarId}`
       );
       console.log(dropSubColId);
-      console.log("dragged bar data bro:", getBarData.data);
-      const addBarData = getBarData.data;
+      // console.log("dragged bar data bro:", getBarData.data);
 
-      const addBarResponse = await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${dropSubColId}`,
-        {
-          addBarData,
-        }
-      );
+      // Update the dragged bar order using targetIndex here and than add it to the dropsubcolid
+
+      const addBarData = getBarData.data;
+      // if drag subcol id equal the drop subcolid than don't add the bar, we will use duplicate feature to add the same bar in the same sub_column
+      if (Number(dragSubColId) !== dropSubColId) {
+        const addBarResponse = await axios.patch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${dropSubColId}`,
+          {
+            addBarData: { ...addBarData, left_position: droppedBarNewLeft }, // Also updating the left position while adding bar to subcol
+            barIndex, // For positioning bars in subcol based upon order values
+          }
+        );
+        setDroppedBarNewLeft(null);
+      }
+
       // don't delete the subcol if drag and drop sub col id for bar is same
       if (Number(dragSubColId) !== dropSubColId) {
         delBarSubCol(Number(draggedBarId), Number(dragSubColId));
@@ -433,7 +469,366 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     }
   };
 
-  const handleBarDragStart = (
+  const updateBarLP = async (
+    draggedBarId: number,
+    dropSubColId: number,
+    e: React.DragEvent<HTMLDivElement>
+  ) => {
+    const dragSubColId = e.dataTransfer.getData("dragSubColId");
+    // here we are saving the left position present in filteredbars into db
+    try {
+      const getDraggedBarData = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars/${draggedBarId}`
+      );
+      console.log(dropSubColId);
+      console.log(
+        "dragged bar data in updateBarLP bro:",
+        getDraggedBarData.data
+      );
+
+      let dragBarLP = getDraggedBarData.data.left_position;
+      let dragBarWidth = getDraggedBarData.data.width;
+
+      let increaseSize = dragBarLP + dragBarWidth;
+      let totalOffset = increaseSize;
+
+      const updateLPBars = LPBasedBars.map((bar, index) => {
+        if (index === 0) {
+          // For the first bar, add the initial offset, which is newlp + width
+          bar.left_position = droppedBarNewLeft + dragBarWidth + 10; // 10 px for gap
+        } else {
+          // For subsequent bars, add the previous bar's left_position + width
+          const previousBar = LPBasedBars[index - 1];
+          totalOffset = previousBar.left_position + previousBar.width + 10;
+          bar.left_position = totalOffset;
+        }
+        return bar;
+      });
+
+      if (Number(dragSubColId) !== dropSubColId) {
+        const updateBarLPRes = await axios.patch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/updateBarLP/${dropSubColId}`,
+          updateLPBars
+        );
+
+        console.log("UpdateBarLP response:", updateBarLPRes.data);
+        updateBarSubCol(
+          Number(draggedBarId),
+          dropSubColId,
+          e,
+          Number(dragSubColId)
+        );
+      }
+    } catch (error) {
+      console.error("Error updating bar left positions:", error);
+    }
+  };
+
+  const getBarsForSubColId = async (dragOverSubColId: number) => {
+    try {
+      const subColIdBars = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${dragOverSubColId}`
+      );
+      // console.log("want BARS", subColIdBars.data);
+      return subColIdBars.data.bars;
+    } catch (error) {
+      console.log("subcolid bars fetching error", error);
+    }
+  };
+
+  const addNewSubCol = async () => {
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
+        {
+          project_id: columns?.project_id,
+          user_id: columns?.user_id,
+          parent_id: columns?.id,
+          // bars will be empty here since this new subcol is for creating subcol having no bars
+          bars: [],
+        }
+      );
+      console.log("sub col created for empty bars :", response.data);
+      setFetchBars(true); // Fetch and show all the sub_col in timeline
+      return response;
+    } catch (error) {
+      console.log("error creating empty subcol", error);
+    }
+  };
+
+  const calcHoverPosition = async (
+    e: React.DragEvent<HTMLDivElement>,
+    dragOverSubColId: number
+  ): Promise<{ targetIndex: number; leftPosition: number } | null> => {
+    const subColElement = document.querySelector(
+      `#subcol-${dragOverSubColId}`
+    ) as HTMLElement;
+
+    if (!subColElement) {
+      console.error("Sub-column element not found");
+      return null;
+    }
+
+    const relativeX = Math.max(
+      0,
+      e.clientX - subColElement.getBoundingClientRect().left
+    );
+    // console.log("relativex", relativeX);
+
+    // Get all the bars data of the dragover sub-column
+    const barsInSubCol = await getBarsForSubColId(dragOverSubColId);
+    let targetIndex = barsInSubCol?.length; // Default targetIndex would be after the last bar
+    let leftPosition = relativeX; // mouse position in sub_col_div
+    const previewBarWidth = 70;
+
+    if (barsInSubCol && barsInSubCol.length > 0) {
+      if (targetIndex !== undefined) {
+        for (let i = 0; i < barsInSubCol.length; i++) {
+          const bar = barsInSubCol[i];
+
+          if (relativeX < bar.left_position) {
+            // Calculation is always before the bar(before the left handle) since we are calculating everything from left
+            targetIndex = i;
+            if (i > 0) {
+              const previousBar = barsInSubCol[i - 1];
+
+              // Check if there is no space between the bars
+              const spaceBetweenBars =
+                bar.left_position -
+                (previousBar.left_position + previousBar.width); // it will caputre the width and left, this way we get to right handle, and bar.left get the left handle so we get the dist bw them (left handle of one bar right handle of another bar)
+
+              console.log("next bar left position", bar.left_position);
+              console.log(
+                "yes bro",
+                previousBar.left_position + previousBar.width
+              );
+
+              // // If no space, create a temporary gap for the preview bar
+              // if (spaceBetweenBars < previewBarWidth) {
+              //   leftPosition =
+              //     previousBar.left_position +
+              //     previousBar.width +
+              //     spaceBetweenBars / 2;
+              //   // console.log("LF FROM CREATE SPACE", leftPosition);
+              // } else {
+              //   // Position the preview bar halfway between the two bars
+              //   leftPosition =
+              //     (previousBar.left_position + bar.left_position) / 2; // Preview bar will have the left position which will be the average left and right bar
+              //   // console.log('LF FROM HALFWAY ', leftPosition)
+              // }
+            } else {
+              // If it's the first bar(when hovered before all the other bars, basically before first bar), place it at the start
+              leftPosition = bar.left_position / 2;
+              // console.log('LF FROM LAST ', leftPosition)
+            }
+            break;
+          }
+        }
+
+        // If hovering after the last bar, place it at the end
+        if (targetIndex === barsInSubCol.length) {
+          const lastBar = barsInSubCol[barsInSubCol.length - 1];
+          leftPosition = lastBar.left_position + lastBar.width; // Place after the last bar
+        }
+      }
+    }
+    console.log("last targetindex", targetIndex);
+    setBarIndex(targetIndex);
+
+    // console.log("bro prev bar left", leftPosition);
+    return { targetIndex, leftPosition };
+  };
+
+  const calcHoverPosition2 = async (
+    e: React.DragEvent<HTMLDivElement>,
+    dragOverSubColId: number
+  ) => {
+    const subColElement = document.querySelector(
+      `#subcol-${dragOverSubColId}`
+    ) as HTMLElement;
+
+    if (!subColElement) {
+      console.error("Sub-column element not found");
+      return null;
+    }
+
+    const relativeX = Math.max(
+      0,
+      e.clientX - subColElement.getBoundingClientRect().left
+    ); // with relativeX is used to know if the dragged bar should occur before or after the existing bar based upon left position
+    // console.log("relativex", relativeX);
+    return relativeX;
+  };
+
+  const createTemporarySpace = async (
+    barsInSubCol: bar[],
+    targetIndex: number,
+    previewBarWidth: number
+  ) => {
+    if (barsInSubCol?.length > 0 && targetIndex < barsInSubCol.length) {
+      // Shift the target bar and all bars after it
+      for (let i = targetIndex; i < barsInSubCol.length; i++) {
+        const barElement = document.querySelector(
+          `#bar-${barsInSubCol[i].id}`
+        ) as HTMLElement;
+        if (barElement) {
+          barElement.style.left = `${
+            barsInSubCol[i].left_position + previewBarWidth
+          }px`;
+        }
+      }
+    }
+  };
+
+  const delCmSubColId = async (subColId: number) => {
+    try {
+      const delSubCol = await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${subColId}`
+      );
+
+      console.log("del bar res", delSubCol);
+      setFetchBars(true);
+    } catch (error) {
+      console.log("error deleting bar", error);
+    }
+  };
+
+  const delCmBarId = async (cmSubColId: number, cmBarName: string) => {
+    console.log("cmsubcolid, cmbarname,", cmSubColId, cmBarName);
+    try {
+      const delBar = await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${cmSubColId}/bars/${cmBarName}`
+      );
+
+      console.log("cm del bar res", delBar);
+      setFetchBars(true);
+    } catch (error) {
+      console.log("error deleting bar", error);
+    }
+  };
+
+  // ********** context menu functions ************
+
+  const handleRightClickBar = (
+    e: React.MouseEvent<HTMLDivElement>,
+    bar: bar,
+    id: number,
+    subColId: number
+  ) => {
+    e.preventDefault();
+    setOptions([
+      { label: "edit", action: () => console.log(`Edit ${bar.name}`) },
+      { label: "delete", action: () => delCmBarId(subColId, bar.name) },
+    ]);
+    const container = e.currentTarget.getBoundingClientRect();
+    setContextMenu({
+      visible: true,
+      x: e.clientX - container.left,
+      y: e.clientY - container.top,
+      id: id,
+    });
+  };
+
+  const handleRightClickSubCol = (
+    e: React.MouseEvent<HTMLDivElement>,
+    subColId: number
+  ) => {
+    e.preventDefault();
+    setOptions([
+      { label: "edit", action: () => console.log(`Edit ${subColId}`) },
+      { label: "delete", action: () => delCmSubColId(subColId) },
+    ]);
+    const container = e.currentTarget.getBoundingClientRect();
+    setContextMenu({
+      visible: true,
+      x: e.clientX - container.left,
+      y: e.clientY - container.top,
+      id: subColId,
+    });
+  };
+
+  const handleOptionClick = (option: {
+    label: string;
+    action: (id: number) => void;
+  }) => {
+    console.log("option click id", contextMenu.id);
+    if (contextMenu.id !== null) {
+      option.action(contextMenu.id);
+      console.log("option click id", contextMenu.id);
+    }
+    setContextMenu({ visible: false, x: 0, y: 0, id: null });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu({ visible: false, x: 0, y: 0, id: null });
+  };
+
+  // *********** drag and drop functions ***************
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    // setBarDragging(false);
+  };
+
+  const handleBarDragOver = async (
+    e: React.DragEvent<HTMLDivElement>,
+    dragOverSubColId: number
+  ) => {
+    // Allow the element to be dropped by preventing the default behavior
+    e.preventDefault();
+    // console.log("draoversubcolid bro,", dragOverSubColId);
+    const relativeX = await calcHoverPosition2(e, dragOverSubColId);
+
+    const draggedBarId = e.dataTransfer.getData("draggedBarId");
+    console.log("draggedbar id bro", draggedBarId);
+
+    if (relativeX) {
+      // const { targetIndex, leftPosition } = result;
+      // if (leftPosition && targetIndex !== null) {
+      //   console.log("bro lf ", leftPosition);
+      //   setPreviewBarPosition(leftPosition);
+      //   const barsInSubCol = await getBarsForSubColId(dragOverSubColId);
+      //   createTemporarySpace(barsInSubCol, targetIndex, 50);
+      // }
+
+      const barsInSubCol: bar[] = await getBarsForSubColId(dragOverSubColId);
+      const leftPositions: number[] = barsInSubCol?.map(
+        (bar: bar) => bar.left_position
+      );
+      // console.log("barsinsubcol", barsInSubCol);
+      let newLeftPosition: number | undefined = undefined;
+
+      for (let i = 0; i < leftPositions?.length; i++) {
+        // relativex is used to find left position for the dropped bar
+        if (relativeX < leftPositions[i]) {
+          newLeftPosition = leftPositions[i];
+          console.log("lp[i]", newLeftPosition);
+          setDroppedBarNewLeft(newLeftPosition);
+          break;
+        }
+      }
+
+      // shift all bars with left_position >= newLeftPosition, until this the dragged bar should not be added into the subcol otherwise it's lp will also be changed (hence we are doing updatebarsubcol after updateBarLP)
+      if (newLeftPosition !== undefined) {
+        const filteredBars = barsInSubCol
+          .filter((bar) => bar.left_position >= newLeftPosition)
+          .map((bar) => ({
+            ...bar,
+            // dragged bar left p. + width, should be added to each bar present in filtered bars
+            // left_position: bar.left_position + 300,
+          }));
+
+        console.log(">= filter bars after lp addition", filteredBars);
+        setLPBasedBars(filteredBars);
+      }
+
+      setPreviewBarPosition(relativeX);
+    } else {
+      console.log(relativeX);
+      console.error("Hover position could not be calculated");
+    }
+  };
+
+  const handleBarDragStart = async (
     draggedBarId: number,
     e: React.DragEvent<HTMLDivElement>,
     dragSubColId: number
@@ -443,12 +838,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     const subColId = JSON.stringify(dragSubColId);
     e.dataTransfer.setData("draggedBarId", BarId); //here converting id(number) to string since setData require data in string
     e.dataTransfer.setData("dragSubColId", subColId);
-    console.log("bar drag started bro");
-  };
-
-  const handleBarDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    // Allow the element to be dropped by preventing the default behavior
-    e.preventDefault();
+    console.log("dragsubcol id", subColId);
   };
 
   const handleBarDrop = (
@@ -456,30 +846,48 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     dropSubColId: number
   ) => {
     const draggedBarId = e.dataTransfer.getData("draggedBarId"); // it is index value since we are passing index of the draggedbar in handleBarDragStart
-    // const dragSubColId = e.dataTransfer.getData("dragSubColId");
 
     console.log(
       "id of drag bar, dropped in subcol :",
       draggedBarId,
       dropSubColId
     );
-
-    // console.log("dragSubcolId bro", dragSubColId);
-
-    updateBarSubCol(Number(draggedBarId), dropSubColId, e);
-    // delBarSubCol(Number(draggedBarId), Number(dragSubColId));
+    updateBarLP(Number(draggedBarId), dropSubColId, e); // this will update all the existing bars lp in subcol which are >= newLeftPosition
 
     setBarDragging(false);
+    setDraggedOverSubColId(null);
   };
 
-  const handleBarDragEnd = () => {
+  const resetBarPositions = async (
+    barsInSubCol: bar[],
+    dragOverSubColId: number,
+    dropSubColId: number
+  ) => {
+    if (
+      dragOverSubColId === dropSubColId &&
+      dragOverSubColId !== null &&
+      dropSubColId !== null
+    ) {
+      barsInSubCol?.forEach((bar) => {
+        const barElement = document.querySelector(
+          `#bar-${bar.id}`
+        ) as HTMLElement;
+        if (barElement) {
+          barElement.style.left = `${bar.left_position}px`;
+        }
+      });
+      setPreviewBarPosition(null);
+      // deleteTemporarySpace();
+    }
+  };
+
+  const handleBarDragEnd = async (dragOverSubColId: number) => {
     setBarDragging(false);
-    // Optionally, you can reset or update styles here
-  };
 
-  // useEffect(() => {
-  //   console.log("barDragging state", barDragging);
-  // }, [barDragging]);
+    // const barsInSubCol = await getBarsForSubColId(dragOverSubColId);
+    // console.log("barsinsubcol bro", barsInSubCol);
+    // resetBarPositions(dragOverSubColId);
+  };
 
   const handleDynamicDrop = (
     e: React.DragEvent<HTMLDivElement>,
@@ -487,17 +895,20 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   ) => {
     console.log("bardragging state:", barDragging);
     if (barDragging) {
-      console.log("u are to run handleBar drop");
       handleBarDrop(e, dropSubColId);
+      // resetBarPositions(dropSubColId)
     } else {
-      console.log("u are to run handleMediaDrop");
       handleMediaDrop(e);
     }
   };
 
-  const handleDynamicDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDynamicDragOver = (
+    e: React.DragEvent<HTMLDivElement>,
+    dragOverSubColId: number
+  ) => {
     if (barDragging) {
-      handleBarDragOver(e);
+      handleBarDragOver(e, dragOverSubColId);
+      setDraggedOverSubColId(dragOverSubColId);
     } else {
       handleDragOver(e);
     }
@@ -539,6 +950,17 @@ const Timeline = ({ prjId }: { prjId: string }) => {
               draggable={false}
             />
           </div>
+
+          <div className={styles.tm_icon} onClick={() => addNewSubCol()}>
+            <Image
+              src="/column.png"
+              width={15}
+              height={15}
+              alt="column"
+              priority={true}
+              draggable={false}
+            />
+          </div>
         </div>
       </div>
 
@@ -548,145 +970,190 @@ const Timeline = ({ prjId }: { prjId: string }) => {
           onMouseMove={(e) => myfunction(e)}
           onMouseOut={clearMyFunction}
         >
-          {/* // here we should map columns table rather than droppedItem */}
-          <div className={styles.tm_media_container} id={"id-1"}>
-            {(barsData && barsData[0]?.sub_columns === null
-              ? new Array(3).fill(null) //now here 3 empty array will be shown when no sub_column will be present(initial state of timeline)
-              : barsData[0]?.sub_columns || []
-            ).map((item, index) => (
-              <div
-                className={styles.sub_col_div}
-                key={index}
-                id={item?.id} // id will contain numeric value for each sub_column
-                onDragOver={(e) => handleDynamicDragOver(e)}
-                onDrop={(e) => handleDynamicDrop(e, item?.id)}
-              >
-                {item?.bars?.length > 0 ? (
-                  item?.bars?.map((bar: bar, barIndex: number) => (
-                    <div
-                      className={styles.item_box_div}
-                      style={{
-                        width: bar?.width ? `${bar.width}px` : "800px",
-                        left: bar?.left_position
-                          ? `${bar.left_position}px`
-                          : "10px",
-                      }}
-                      key={barIndex}
-                    >
-                      <div
-                        className={
-                          barsData[0]?.sub_columns === null
-                            ? `${styles.m_item_box}`
-                            : `${styles.m_item_box_drop}`
-                        }
-                      >
-                        <div className={styles.bar_content}>
-                          {barsData[0]?.sub_columns?.length ? (
-                            <div
-                              className={styles.bar_arrow}
-                              onMouseDown={(e) =>
-                                startResize(e, "left", bar?.id)
-                              }
-                            >
-                              <div className={styles.arrow_div}>
-                                <Image
-                                  src="/left_arrow.png"
-                                  alt="left_arrow"
-                                  width={10}
-                                  height={10}
-                                  priority={true}
-                                  draggable={false}
-                                />
-                              </div>
-                            </div>
-                          ) : null}
-
+          <div
+            onClick={() => closeContextMenu()}
+            className={styles.closeMenuDiv}
+          >
+            <div className={styles.tm_media_container} id={"id-1"}>
+              {((barsData && barsData[0]?.sub_columns === null) ||
+              barsData[0]?.sub_columns.length === 0
+                ? new Array(3).fill(null) //now here 3 empty array will be shown when no sub_column will be present(initial state of timeline)
+                : barsData[0]?.sub_columns || []
+              ).map((item, index) => {
+                return (
+                  <div
+                    className={styles.sub_col_div}
+                    key={index}
+                    id={`subcol-${item?.id}`} // id will contain numeric value for each sub_column
+                    onDragOver={(e) => handleDynamicDragOver(e, item?.id)}
+                    onDrop={(e) => handleDynamicDrop(e, item?.id)}
+                  >
+                    {prevBarPosition !== null &&
+                      draggedOverSubColId === item?.id && (
+                        <div
+                          className={styles.previewBar}
+                          style={{
+                            left: `${prevBarPosition}px`,
+                          }}
+                        />
+                      )}
+                    {item?.bars?.length > 0 ? (
+                      item?.bars?.map((bar: bar, barIndex: number) => (
+                        <div
+                          className={styles.item_box_div}
+                          style={{
+                            width: bar?.width ? `${bar.width}px` : "800px",
+                            left: bar?.left_position
+                              ? `${bar.left_position}px`
+                              : "10px",
+                          }}
+                          key={barIndex}
+                          id={`bar-${bar?.id}`}
+                          onContextMenu={(e) =>
+                            handleRightClickBar(e, bar, bar?.id, item?.id)
+                          } // here we are passing bar info
+                        >
                           <div
                             className={
-                              barsData[0]?.sub_columns?.length
-                                ? `${styles.item_content_drop}`
-                                : ""
+                              barsData[0]?.sub_columns === null
+                                ? `${styles.m_item_box}`
+                                : `${styles.m_item_box_drop}`
                             }
-                            draggable
-                            onDragStart={(e) =>
-                              handleBarDragStart(bar?.id, e, item?.id)
-                            }
-                            onDragEnd={handleBarDragEnd}
                           >
-                            {item && (
-                              <div className={styles.m_item_keys}>
+                            <div className={styles.bar_content}>
+                              {barsData[0]?.sub_columns?.length ? (
                                 <div
-                                  className={styles.m_item_thumb}
-                                  style={{
-                                    backgroundImage: bar?.signedUrl
-                                      ? `url(${bar?.signedUrl})`
-                                      : "none",
-                                    backgroundRepeat: "repeat-x",
-                                    backgroundSize: "auto 100%",
-                                  }}
-                                ></div>
+                                  className={styles.bar_arrow}
+                                  onMouseDown={(e) =>
+                                    startResize(e, "left", bar?.id)
+                                  }
+                                >
+                                  <div className={styles.arrow_div}>
+                                    <Image
+                                      src="/left_arrow.png"
+                                      alt="left_arrow"
+                                      width={10}
+                                      height={10}
+                                      priority={true}
+                                      draggable={false}
+                                    />
+                                  </div>
+                                </div>
+                              ) : null}
 
-                                {bar?.width >= 300 && (
-                                  <div className={styles.m_type_label}>
-                                    <div className={styles.type_icon}>
-                                      {bar?.type in icons && (
-                                        <Image
-                                          src={
-                                            icons[
-                                              bar?.type as keyof typeof icons
-                                            ]
-                                          }
-                                          alt={bar?.type}
-                                          width={10}
-                                          height={10}
-                                          priority={true}
-                                          draggable={false}
-                                        />
-                                      )}
-                                    </div>
-                                    <span className={styles.m_item_label}>
-                                      {bar?.name.length > 20
-                                        ? `${bar?.name.substring(0, 25)}...`
-                                        : bar?.name}
-                                    </span>
+                              <div
+                                className={
+                                  barsData[0]?.sub_columns?.length
+                                    ? `${styles.item_content_drop}`
+                                    : ""
+                                }
+                                draggable
+                                onDragStart={(e) =>
+                                  handleBarDragStart(bar?.id, e, item?.id)
+                                }
+                                onDragEnd={() => handleBarDragEnd(item?.id)}
+                              >
+                                {item && (
+                                  <div className={styles.m_item_keys}>
+                                    <div
+                                      className={styles.m_item_thumb}
+                                      style={{
+                                        backgroundImage: bar?.signedUrl
+                                          ? `url(${bar?.signedUrl})`
+                                          : "none",
+                                        backgroundRepeat: "repeat-x",
+                                        backgroundSize: "auto 100%",
+                                      }}
+                                    ></div>
+
+                                    {bar?.width >= 300 && (
+                                      <div className={styles.m_type_label}>
+                                        <div className={styles.type_icon}>
+                                          {bar?.type in icons && (
+                                            <Image
+                                              src={
+                                                icons[
+                                                  bar?.type as keyof typeof icons
+                                                ]
+                                              }
+                                              alt={bar?.type}
+                                              width={10}
+                                              height={10}
+                                              priority={true}
+                                              draggable={false}
+                                            />
+                                          )}
+                                        </div>
+                                        <span className={styles.m_item_label}>
+                                          {bar?.name.length > 20
+                                            ? `${bar?.name.substring(0, 25)}...`
+                                            : bar?.name}
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
-                            )}
+
+                              {barsData[0]?.sub_columns?.length ? (
+                                <div
+                                  className={styles.bar_arrow}
+                                  onMouseDown={(e) =>
+                                    startResize(e, "right", bar?.id)
+                                  }
+                                >
+                                  <div className={styles.arrow_div}>
+                                    <Image
+                                      src="/chevron_right.png"
+                                      alt="right_arrow"
+                                      width={10}
+                                      height={10}
+                                      priority={true}
+                                      draggable={false}
+                                    />
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
                           </div>
 
-                          {barsData[0]?.sub_columns?.length ? (
-                            <div
-                              className={styles.bar_arrow}
-                              onMouseDown={(e) =>
-                                startResize(e, "right", bar?.id)
-                              }
-                            >
-                              <div className={styles.arrow_div}>
-                                <Image
-                                  src="/chevron_right.png"
-                                  alt="right_arrow"
-                                  width={10}
-                                  height={10}
-                                  priority={true}
-                                  draggable={false}
-                                />
-                              </div>
-                            </div>
-                          ) : null}
+                          {contextMenu.visible && contextMenu.id == bar?.id && (
+                            <ContextMenu
+                              x={contextMenu.x}
+                              y={contextMenu.y}
+                              id={contextMenu.id}
+                              options={options}
+                              onOptionClick={handleOptionClick}
+                              visible={contextMenu.visible}
+                            />
+                          )}
                         </div>
+                      ))
+                    ) : (
+                      // this empty bar will be shown when there will be a sub_column without bar i guess and also it checks if there is bar in sub_column than it will show the above truthy structure
+                      <div
+                        className={`${styles.item_box_div} ${styles.m_item_box}`}
+                        style={{ width: "100%", left: "0px" }}
+                        onContextMenu={(e) =>
+                          handleRightClickSubCol(e, item?.id)
+                        } // id here refers to the sub_col id and not bars id
+                      >
+                        {contextMenu.visible && contextMenu.id == item?.id && (
+                          <ContextMenu
+                            x={contextMenu.x}
+                            y={contextMenu.y}
+                            id={contextMenu.id}
+                            options={options}
+                            onOptionClick={handleOptionClick}
+                            visible={contextMenu.visible}
+                          />
+                        )}
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  // this empty bar will be shown when there will be a sub_column without bar i guess and also it checks if there is bar in sub_column than it will show the above truthy structure
-                  <div
-                    className={`${styles.item_box_div} ${styles.m_item_box}`}
-                    style={{ width: "800px", left: "10px" }}
-                  ></div>
-                )}
-              </div>
-            ))}
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

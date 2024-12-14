@@ -24,6 +24,7 @@ type Bar = {
   type: string;
   signedUrl: string;
   filepath: string;
+  order: number;
 
   // later: not having here column_id since don't know how we will pass it in frontend from handlemediadrop to createsubcol
 };
@@ -56,7 +57,24 @@ export class SubColDto {
   bars: Bar[];
 }
 
+export class OnlySubColDto {
+  id: number;
+  project_id: number;
+  user_id: string;
+  parent_id: number;
+  bars?: Bar[];
+}
+
 // this BarData is for subColumn bars, so here we don't have column_id
 export class BarData {
-  bars: Bar[];
+  id: number;
+  user_id: string;
+  name: string;
+  left_position: number;
+  width: number;
+  project_id: number;
+  type: string;
+  signedUrl: string;
+  filepath: string;
+  order: number;
 }
