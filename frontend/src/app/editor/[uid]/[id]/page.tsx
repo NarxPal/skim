@@ -1,13 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-// import { usePathname } from "next/navigation";
 import styles from "@/styles/dash.module.css";
 import Image from "next/image";
 import Left_pane from "../../sidebar/left_pane";
 import Sm_pane from "../../sidebar/sm_pane";
 import Timeline from "../../canvas/timeline";
-import Project from "@/app/project/[uid]/page";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
@@ -173,8 +171,6 @@ const UserId = () => {
           <div className={styles.right_pane}></div>
         </div>
       </div>
-
-      {/* <Project /> */}
     </div>
   );
 };

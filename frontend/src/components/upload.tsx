@@ -15,7 +15,6 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
   const params = useParams<{ uid: string; id: string }>();
 
   // const [isUploading, setIsUploading] = useState(false);
-  const [uploadMessage, setUploadMessage] = useState("");
 
   fetchUser(params.uid); // calling useeffect to fetch the user_id
 
@@ -45,8 +44,6 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
     } else {
       files = Array.from(eventOrFiles);
     }
-
-    setUploadMessage("");
 
     try {
       // uploading files to media bucket
@@ -79,9 +76,7 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
       });
 
       await Promise.all(fileUploads);
-      setUploadMessage(`${files.length} file(s) uploaded successfully.`);
-    } catch (error: any) {
-      setUploadMessage("Error uploading files: " + error.message);
+    } catch (error: unknown) {
       console.error("Upload error:", error);
     }
   };

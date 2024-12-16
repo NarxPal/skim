@@ -93,10 +93,12 @@ const Project = () => {
         const data = response.data;
         setData(data);
         return response.data;
-      } catch (error: any) {
-        throw new Error(
-          error.response?.data?.message || "failed to fetch projects"
-        );
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error && "response" in error
+            ? (error as any)?.response?.data?.message
+            : "Failed to fetch projects";
+        throw new Error(errorMessage);
       }
     };
     fetchPrjData();

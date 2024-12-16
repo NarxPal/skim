@@ -34,6 +34,10 @@ export class BarsService {
       throw new Error('Bar not found');
     }
 
+    if (updateData.left_position !== undefined) {
+      updateData.left_position = Math.round(updateData.left_position);
+    }
+
     Object.assign(bar, updateData);
 
     return this.barsRepository.save(bar);

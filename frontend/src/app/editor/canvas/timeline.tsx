@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import styles from "@/styles/timeline.module.css";
 import Image from "next/image";
-import { supabase } from "../../../../supabaseClient";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
@@ -230,19 +229,21 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     left_position: number
   ) => {
     try {
+      const roundedWidth = Math.round(width);
+      const roundedLeftPosition = Math.round(left_position);
+
       const subColResponse = await axios.patch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/bars/${id}`,
         {
-          left_position,
-          width,
+          left_position: roundedLeftPosition,
+          width: roundedWidth,
         }
       );
-
       const barResponse = await axios.patch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars/${id}`,
         {
-          width,
-          left_position,
+          width: roundedWidth,
+          left_position: roundedLeftPosition,
         }
       );
     } catch (error) {
@@ -330,7 +331,6 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                     const barRightEdge = newLeft + newWidth; // Calculate the bar's right edge
                     const parentScrollRight =
                       parentElement.scrollLeft + parentElement.offsetWidth;
-
                     const buffer = 50; // Pixels of buffer space around the handle
 
                     if (resizeDirection.current === "right") {
@@ -343,7 +343,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                         parentElement.scrollLeft -=
                           parentElement.scrollLeft - barRightEdge;
                       }
-
+                      // buffer while dragging right handle towards right
                       if (barRightEdge > parentScrollRight - buffer) {
                         parentElement.scrollLeft +=
                           barRightEdge + buffer - parentScrollRight;
@@ -377,6 +377,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                   }
 
                   // Update the database
+                  // console.log(bar.id, newWidth, newLeft);
                   updateItemInDatabase(bar.id, newWidth, newLeft);
 
                   return {
@@ -427,10 +428,11 @@ const Timeline = ({ prjId }: { prjId: string }) => {
       const getBarData = await axios.get(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars/${draggedBarId}`
       );
-      console.log("barindex, droppedbarnewlp bro", barIndex, droppedBarNewLeft);
+      // console.log("barindex, droppedbarnewlp bro", barIndex, droppedBarNewLeft);
       // Update the dragged bar order using targetIndex here and than add it to the dropsubcolid
 
       const addBarData = getBarData.data;
+
       // if drag subcol id equal the drop subcolid than don't add the bar, we will use duplicate feature to add the same bar in the same sub_column
       if (Number(dragSubColId) !== dropSubColId) {
         const addBarResponse = await axios.patch(
@@ -653,8 +655,8 @@ const Timeline = ({ prjId }: { prjId: string }) => {
         }
       }
     }
-    console.log("bro target index", targetIndex);
-    return { relativeX, targetIndex };
+    // math round for relativeX since db doesn't accept integer with decimal
+    return { relativeX: Math.round(relativeX), targetIndex };
   };
 
   const createTemporarySpace = async (
@@ -793,7 +795,6 @@ const Timeline = ({ prjId }: { prjId: string }) => {
       let newLeftPosition: number | undefined = undefined;
 
       if (barsInSubCol === undefined || barsInSubCol?.length === undefined) {
-        console.log("realtivex bro", relativeX);
         setDroppedBarNewLeft(relativeX);
       } else {
         for (let i = 0; i < leftPositions?.length; i++) {
@@ -833,7 +834,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
             // dragged bar left p. + width, should be added to each bar present in filtered bars,done in updateBarLP
           }));
 
-        console.log(">= filter bars after lp addition", filteredBars);
+        // console.log(">= filter bars after lp addition", filteredBars);
         setLPBasedBars(filteredBars);
       }
 
@@ -853,7 +854,6 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     const subColId = JSON.stringify(dragSubColId);
     e.dataTransfer.setData("draggedBarId", BarId); //here converting id(number) to string since setData require data in string
     e.dataTransfer.setData("dragSubColId", subColId);
-    console.log("dragsubcol id", subColId);
   };
 
   const handleBarDrop = (
@@ -903,7 +903,6 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     e: React.DragEvent<HTMLDivElement>,
     dropSubColId: number
   ) => {
-    console.log("bardragging state:", barDragging);
     if (barDragging) {
       handleBarDrop(e, dropSubColId);
       // resetBarPositions(dropSubColId)

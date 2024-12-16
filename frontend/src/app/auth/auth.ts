@@ -15,8 +15,12 @@ export const signUp = async (
       }
     );
     return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Sign up failed");
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error && "response" in error
+        ? (error as any)?.response?.data?.message
+        : "Sign up failed";
+    throw new Error(message);
   }
 };
 
@@ -31,7 +35,11 @@ export const signIn = async (email: string, password: string) => {
       { withCredentials: true }
     );
     return response.data;
-  } catch (error: any) {
-    throw new Error(error.response?.data?.message || "Sign in failed");
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error && "response" in error
+        ? (error as any)?.response?.data?.message
+        : "Sign in failed";
+    throw new Error(message);
   }
 };
