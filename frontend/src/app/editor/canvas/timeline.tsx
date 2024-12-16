@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import styles from "@/styles/timeline.module.css";
 import Image from "next/image";
 import axios from "axios";
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
+// import { useSelector } from "react-redux";
+// import { RootState } from "@/redux/store";
 import ContextMenu from "@/components/contextMenu";
 
 type MediaItem = {
@@ -56,7 +56,6 @@ type ColumnsProps = {
 
 const Timeline = ({ prjId }: { prjId: string }) => {
   // usestate hooks
-  const [droppedItem, setDroppedItem] = useState<MediaItem[]>([]); // media items that will be dropped in timeline will be stored in this state variable
   const [columns, setColumns] = useState<ColumnsProps | undefined>(undefined); // column and barsdata are having same data
   const [barsData, setBarsData] = useState<BarsProp[]>([]);
 
@@ -93,7 +92,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   const startX = useRef(0);
   const activeBarId = useRef<number | null>(null);
 
-  const userId = useSelector((state: RootState) => state.userId.userId); // userid has been set in project/uid
+  // const userId = useSelector((state: RootState) => state.userId.userId); // userid has been set in project/uid
 
   // const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -103,8 +102,6 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     image: "/image.png",
     text: "/text.png",
   };
-
-  const subColDivWidths: number[] = [];
 
   // const playheadPosition =
   //   timelineRef.current && duration > 0
@@ -246,6 +243,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
           left_position: roundedLeftPosition,
         }
       );
+      return { subColResponse, barResponse };
     } catch (error) {
       console.error("Failed to update bar:", error);
       throw error;
@@ -468,10 +466,10 @@ const Timeline = ({ prjId }: { prjId: string }) => {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars/${draggedBarId}`
       );
 
-      let dragBarLP = getDraggedBarData.data.left_position;
-      let dragBarWidth = getDraggedBarData.data.width;
+      const dragBarLP = getDraggedBarData.data.left_position;
+      const dragBarWidth = getDraggedBarData.data.width;
 
-      let increaseSize = dragBarLP + dragBarWidth;
+      const increaseSize = dragBarLP + dragBarWidth;
       let totalOffset = increaseSize;
 
       const updateLPBars = LPBasedBars.map((bar, index) => {
@@ -542,89 +540,6 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   const calcHoverPosition = async (
     e: React.DragEvent<HTMLDivElement>,
     dragOverSubColId: number
-  ): Promise<{ targetIndex: number; leftPosition: number } | null> => {
-    const subColElement = document.querySelector(
-      `#subcol-${dragOverSubColId}`
-    ) as HTMLElement;
-
-    if (!subColElement) {
-      console.error("Sub-column element not found");
-      return null;
-    }
-
-    const relativeX = Math.max(
-      0,
-      e.clientX - subColElement.getBoundingClientRect().left
-    );
-    // console.log("relativex", relativeX);
-
-    // Get all the bars data of the dragover sub-column
-    const barsInSubCol = await getBarsForSubColId(dragOverSubColId);
-    let targetIndex = barsInSubCol?.length; // Default targetIndex would be after the last bar
-    let leftPosition = relativeX; // mouse position in sub_col_div
-    const previewBarWidth = 70;
-
-    if (barsInSubCol && barsInSubCol.length > 0) {
-      if (targetIndex !== undefined) {
-        for (let i = 0; i < barsInSubCol.length; i++) {
-          const bar = barsInSubCol[i];
-
-          if (relativeX < bar.left_position) {
-            // Calculation is always before the bar(before the left handle) since we are calculating everything from left
-            targetIndex = i;
-            if (i > 0) {
-              const previousBar = barsInSubCol[i - 1];
-
-              // Check if there is no space between the bars
-              const spaceBetweenBars =
-                bar.left_position -
-                (previousBar.left_position + previousBar.width); // it will caputre the width and left, this way we get to right handle, and bar.left get the left handle so we get the dist bw them (left handle of one bar right handle of another bar)
-
-              console.log("next bar left position", bar.left_position);
-              console.log(
-                "yes bro",
-                previousBar.left_position + previousBar.width
-              );
-
-              // // If no space, create a temporary gap for the preview bar
-              // if (spaceBetweenBars < previewBarWidth) {
-              //   leftPosition =
-              //     previousBar.left_position +
-              //     previousBar.width +
-              //     spaceBetweenBars / 2;
-              //   // console.log("LF FROM CREATE SPACE", leftPosition);
-              // } else {
-              //   // Position the preview bar halfway between the two bars
-              //   leftPosition =
-              //     (previousBar.left_position + bar.left_position) / 2; // Preview bar will have the left position which will be the average left and right bar
-              //   // console.log('LF FROM HALFWAY ', leftPosition)
-              // }
-            } else {
-              // If it's the first bar(when hovered before all the other bars, basically before first bar), place it at the start
-              leftPosition = bar.left_position / 2;
-              // console.log('LF FROM LAST ', leftPosition)
-            }
-            break;
-          }
-        }
-
-        // If hovering after the last bar, place it at the end
-        if (targetIndex === barsInSubCol.length) {
-          const lastBar = barsInSubCol[barsInSubCol.length - 1];
-          leftPosition = lastBar.left_position + lastBar.width; // Place after the last bar
-        }
-      }
-    }
-    console.log("last targetindex", targetIndex);
-    setBarIndex(targetIndex);
-
-    // console.log("bro prev bar left", leftPosition);
-    return { targetIndex, leftPosition };
-  };
-
-  const calcHoverPosition2 = async (
-    e: React.DragEvent<HTMLDivElement>,
-    dragOverSubColId: number
   ): Promise<{ relativeX: number; targetIndex: number } | null> => {
     const subColElement = document.querySelector(
       `#subcol-${dragOverSubColId}`
@@ -659,25 +574,25 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     return { relativeX: Math.round(relativeX), targetIndex };
   };
 
-  const createTemporarySpace = async (
-    barsInSubCol: bar[],
-    targetIndex: number,
-    previewBarWidth: number
-  ) => {
-    if (barsInSubCol?.length > 0 && targetIndex < barsInSubCol.length) {
-      // Shift the target bar and all bars after it
-      for (let i = targetIndex; i < barsInSubCol.length; i++) {
-        const barElement = document.querySelector(
-          `#bar-${barsInSubCol[i].id}`
-        ) as HTMLElement;
-        if (barElement) {
-          barElement.style.left = `${
-            barsInSubCol[i].left_position + previewBarWidth
-          }px`;
-        }
-      }
-    }
-  };
+  // const createTemporarySpace = async (
+  //   barsInSubCol: bar[],
+  //   targetIndex: number,
+  //   previewBarWidth: number
+  // ) => {
+  //   if (barsInSubCol?.length > 0 && targetIndex < barsInSubCol.length) {
+  //     // Shift the target bar and all bars after it
+  //     for (let i = targetIndex; i < barsInSubCol.length; i++) {
+  //       const barElement = document.querySelector(
+  //         `#bar-${barsInSubCol[i].id}`
+  //       ) as HTMLElement;
+  //       if (barElement) {
+  //         barElement.style.left = `${
+  //           barsInSubCol[i].left_position + previewBarWidth
+  //         }px`;
+  //       }
+  //     }
+  //   }
+  // };
 
   const delCmSubColId = async (subColId: number) => {
     try {
@@ -774,7 +689,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   ) => {
     // Allow the element to be dropped by preventing the default behavior
     e.preventDefault();
-    const result = await calcHoverPosition2(e, dragOverSubColId);
+    const result = await calcHoverPosition(e, dragOverSubColId);
 
     // const draggedBarId = e.dataTransfer.getData("draggedBarId");
     // console.log("draggedbar id bro", draggedBarId);
@@ -868,30 +783,30 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     setDraggedOverSubColId(null);
   };
 
-  const resetBarPositions = async (
-    barsInSubCol: bar[],
-    dragOverSubColId: number,
-    dropSubColId: number
-  ) => {
-    if (
-      dragOverSubColId === dropSubColId &&
-      dragOverSubColId !== null &&
-      dropSubColId !== null
-    ) {
-      barsInSubCol?.forEach((bar) => {
-        const barElement = document.querySelector(
-          `#bar-${bar.id}`
-        ) as HTMLElement;
-        if (barElement) {
-          barElement.style.left = `${bar.left_position}px`;
-        }
-      });
-      setPreviewBarPosition(null);
-      // deleteTemporarySpace();
-    }
-  };
+  // const resetBarPositions = async (
+  //   barsInSubCol: bar[],
+  //   dragOverSubColId: number,
+  //   dropSubColId: number
+  // ) => {
+  //   if (
+  //     dragOverSubColId === dropSubColId &&
+  //     dragOverSubColId !== null &&
+  //     dropSubColId !== null
+  //   ) {
+  //     barsInSubCol?.forEach((bar) => {
+  //       const barElement = document.querySelector(
+  //         `#bar-${bar.id}`
+  //       ) as HTMLElement;
+  //       if (barElement) {
+  //         barElement.style.left = `${bar.left_position}px`;
+  //       }
+  //     });
+  //     setPreviewBarPosition(null);
+  //     // deleteTemporarySpace();
+  //   }
+  // };
 
-  const handleBarDragEnd = async (dragOverSubColId: number) => {
+  const handleBarDragEnd = async () => {
     setBarDragging(false);
 
     // const barsInSubCol = await getBarsForSubColId(dragOverSubColId);
@@ -1052,7 +967,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                               onDragStart={(e) =>
                                 handleBarDragStart(bar?.id, e, item?.id)
                               }
-                              onDragEnd={() => handleBarDragEnd(item?.id)}
+                              onDragEnd={() => handleBarDragEnd()}
                             >
                               {item && (
                                 <div className={styles.m_item_keys}>

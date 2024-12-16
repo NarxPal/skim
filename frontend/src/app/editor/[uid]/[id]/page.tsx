@@ -9,7 +9,7 @@ import Timeline from "../../canvas/timeline";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
-import { fetchUser } from "@/components/fetchUser";
+import { FetchUser } from "@/components/fetchUser";
 
 const UserId = () => {
   const params = useParams<{ uid: string; id: string }>();
@@ -20,7 +20,7 @@ const UserId = () => {
   // const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("upload");
 
-  const { loading } = fetchUser(params.uid); // calling useeffect to fetch the user_id
+  const { loading } = FetchUser(params.uid); // calling useeffect to fetch the user_id
   const userId = useSelector((state: RootState) => state.userId.userId); // userid has been set in project/uid
 
   useEffect(() => {

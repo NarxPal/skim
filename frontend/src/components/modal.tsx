@@ -108,6 +108,7 @@ const Modal: React.FC<ModalProps> = ({
         alert("Project updated successfully!");
         setEditPrjData((prev) => ({ ...prev, filename: "", id: null }));
         setOpenEditModal(false);
+        return response;
       } catch (error) {
         console.error("Error updating project:", error);
         alert("Failed to update project.");

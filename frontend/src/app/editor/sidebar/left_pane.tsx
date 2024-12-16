@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import axios from "axios";
-import { fetchUser } from "@/components/fetchUser";
+import { FetchUser } from "@/components/fetchUser";
 
 type MediaItem = {
   signedUrl: string | null;
@@ -25,7 +25,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
   const [mediaType, setMediaType] = useState<string>("");
   // const [draggedItem, setDraggedItem] = useState(null);
 
-  fetchUser(params.uid); // calling useeffect to fetch the user_id
+  FetchUser(params.uid); // calling useeffect to fetch the user_id
   const userId = useSelector((state: RootState) => state.userId.userId);
 
   useEffect(() => {

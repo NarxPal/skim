@@ -5,7 +5,7 @@ import axios from "axios";
 import { useDispatch } from "react-redux";
 import { setUserId } from "@/redux/userId"; // Adjust import as necessary
 
-export function fetchUser(uid: string | string[] | undefined) {
+export function FetchUser(uid: string | string[] | undefined) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const dispatch = useDispatch();

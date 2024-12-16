@@ -1,12 +1,12 @@
 "use client";
-import React, { ReactNode, useState, useEffect } from "react";
+import React, { ReactNode } from "react";
 import styles from "@/styles/sidebar.module.css";
 import { supabase } from "../../supabaseClient"; // here, supabase used for storage
 import { useParams } from "next/navigation";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import axios from "axios";
-import { fetchUser } from "./fetchUser";
+import { FetchUser } from "./fetchUser";
 interface MediaUploadProps {
   children: ReactNode;
 }
@@ -16,7 +16,7 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
 
   // const [isUploading, setIsUploading] = useState(false);
 
-  fetchUser(params.uid); // calling useeffect to fetch the user_id
+  FetchUser(params.uid); // calling useeffect to fetch the user_id
 
   const userId = useSelector((state: RootState) => state.userId.userId);
 

@@ -13,9 +13,9 @@ interface ContextMenuProps {
 const ContextMenu: React.FC<ContextMenuProps> = ({
   x,
   y,
-  id,
+  // id,
   options,
-  visible, // for having cm transition
+  // visible, // for having cm transition
   onOptionClick,
 }) => {
   return (

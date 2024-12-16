@@ -5,6 +5,7 @@ import Image from "next/image";
 import Modal from "@/components/modal";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
+import { AxiosError } from "axios";
 import Cookies from "js-cookie";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/redux/store";
@@ -94,11 +95,14 @@ const Project = () => {
         setData(data);
         return response.data;
       } catch (error: unknown) {
-        const errorMessage =
-          error instanceof Error && "response" in error
-            ? (error as any)?.response?.data?.message
-            : "Failed to fetch projects";
-        throw new Error(errorMessage);
+        const message =
+          error instanceof AxiosError
+            ? error.response?.data?.message || "Failed to fetch projects"
+            : error instanceof Error
+            ? error.message
+            : "An unexpected error occurred";
+
+        throw new Error(message);
       }
     };
     fetchPrjData();

@@ -18,7 +18,8 @@ export const signUp = async (
   } catch (error: unknown) {
     const message =
       error instanceof Error && "response" in error
-        ? (error as any)?.response?.data?.message
+        ? (error as { response?: { data?: { message?: string } } }).response
+            ?.data?.message || "Sign up failed"
         : "Sign up failed";
     throw new Error(message);
   }
@@ -38,7 +39,8 @@ export const signIn = async (email: string, password: string) => {
   } catch (error: unknown) {
     const message =
       error instanceof Error && "response" in error
-        ? (error as any)?.response?.data?.message
+        ? (error as { response?: { data?: { message?: string } } }).response
+            ?.data?.message || "Sign in failed"
         : "Sign in failed";
     throw new Error(message);
   }
