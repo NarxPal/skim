@@ -1,0 +1,7 @@
+.canvas {
+  @apply h-[40%] w-full flex relative;
+}
+
+.canvas_content {
+  @apply w-full h-full;
+}

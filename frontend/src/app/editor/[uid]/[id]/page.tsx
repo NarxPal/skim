@@ -6,6 +6,7 @@ import Image from "next/image";
 import Left_pane from "../../sidebar/left_pane";
 import Sm_pane from "../../sidebar/sm_pane";
 import Timeline from "../../canvas/timeline";
+import Canvas from "../../canvas/canvas";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
@@ -17,7 +18,6 @@ const UserId = () => {
 
   const [id, setId] = useState<string | null>("");
   const [loadingId, setLoadingId] = useState<boolean>(true);
-  // const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("upload");
 
   const { loading } = FetchUser(params.uid); // calling useeffect to fetch the user_id
@@ -153,18 +153,7 @@ const UserId = () => {
           <Sm_pane onCategorySelect={handleTabClick} />
           <Left_pane selectedCategory={activeTab} />
           <div className={styles.canvas_pane}>
-            <div className={styles.canvas}>
-              {/* {videoPreview && (
-                <div className={styles.video_div}>
-                  <video
-                    src={videoPreview}
-                    controls
-                    width="100%"
-                    className={styles.video_tag}
-                  />
-                </div>
-              )} */}
-            </div>
+            <Canvas />
             <Timeline prjId={params.id} />
           </div>
 

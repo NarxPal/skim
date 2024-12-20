@@ -84,10 +84,6 @@
   @apply h-full w-[55%] rounded-md flex-col gap-3 flex border-r-2 border-editor_gray;
 }
 
-.canvas {
-  @apply h-[40%] w-full flex relative;
-}
-
 .video_div {
   @apply absolute items-center justify-center flex m-auto h-full w-full;
 }

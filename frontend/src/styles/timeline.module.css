@@ -89,7 +89,7 @@
 } */
 
 .m_type_label {
-  @apply flex flex-row gap-2 items-center;
+  @apply flex flex-row gap-2 items-center h-6;
 }
 
 .type_icon {
@@ -127,4 +127,26 @@
 
 .del_option {
   @apply cm_option hover:bg-red-500;
+}
+
+/* ********* TIMELINE RULER STYLES ******************** */
+
+.ruler_div {
+  @apply text-white;
+}
+
+.ruler_content {
+  @apply p-3 border-b-2 border-light_gray bg-editor_gray bg-opacity-20;
+}
+
+.time_ticks {
+  @apply flex flex-col h-full w-full;
+}
+
+.time_div {
+  @apply flex;
+}
+
+.ticks_div {
+  @apply flex;
 }

@@ -6,8 +6,8 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Bars } from './bars.entity';
-import { Projects } from './projects.entity';
+// import { Bars } from './bars.entity';
+// import { Projects } from './projects.entity';
 // import { Expose, Transform } from 'class-transformer';
 
 type Bar = {

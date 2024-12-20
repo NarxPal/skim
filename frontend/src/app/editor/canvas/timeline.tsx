@@ -5,6 +5,7 @@ import axios from "axios";
 // import { useSelector } from "react-redux";
 // import { RootState } from "@/redux/store";
 import ContextMenu from "@/components/contextMenu";
+import TimelineRuler from "@/utils/timeline/timelineRuler";
 
 type MediaItem = {
   signedUrl: string | null;
@@ -888,6 +889,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
         </div>
       </div>
 
+      <TimelineRuler />
       <div className={styles.media_parent_div}>
         <div onClick={() => closeContextMenu()} className={styles.closeMenuDiv}>
           <div className={styles.tm_media_container} id={"id-1"}>

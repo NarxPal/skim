@@ -20,6 +20,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { ProtectedController } from './protected/protected.controller';
+import { FfmpegService } from './ffmpeg/ffmpeg.service';
+import { FfmpegController } from './ffmpeg/ffmpeg.controller';
 
 @Module({
   controllers: [
@@ -29,6 +31,7 @@ import { ProtectedController } from './protected/protected.controller';
     ColumnsController,
     BarsController,
     ProtectedController,
+    FfmpegController,
   ],
   providers: [
     AppService,
@@ -37,6 +40,7 @@ import { ProtectedController } from './protected/protected.controller';
     ColumnsService,
     BarsService,
     JwtService, // since we are using it in user.service file we have to add it in the root provider as well
+    FfmpegService,
   ],
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
