@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as ffmpeg from 'fluent-ffmpeg';
+import axios from 'axios';
 
 @Injectable()
 export class FfmpegService {
@@ -17,6 +18,23 @@ export class FfmpegService {
         })
         .pipe()
         .on('data', (chunk) => buffers.push(chunk)); // Push chunks of image data
+    });
+  }
+
+  async getMediaDuration(filePath: string): Promise<number> {
+    const response = await axios.get(filePath, { responseType: 'stream' });
+
+    return new Promise((resolve, reject) => {
+      ffmpeg()
+        .input(response.data) // Use the stream directly from the URL
+        // .inputFormat('mp4') // Adjust input format based on your file type
+        .ffprobe((err, metadata) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(metadata.format.duration); // Duration in seconds
+          }
+        });
     });
   }
 }

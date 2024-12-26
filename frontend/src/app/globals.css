@@ -8,7 +8,7 @@
 
 /* width */
 ::-webkit-scrollbar {
-  @apply w-1 h-1;
+  @apply w-1.5 h-1.5;
 }
 
 /* Track */
@@ -21,10 +21,10 @@
 }
 /* Handle */
 ::-webkit-scrollbar-thumb {
-  @apply bg-containerGray rounded-lg;
+  @apply bg-scroll_hover rounded-lg;
 }
 
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-scroll_hover;
+  @apply bg-containerGray;
 }

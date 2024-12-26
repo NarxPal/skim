@@ -26,6 +26,8 @@ export class Media {
   @Column({ nullable: true })
   thumbnail_url: string;
 
+  @Column({ nullable: true }) // null true since image media will not have duration
+  duration: number;
   // many to one mean , many project can belong to one user
   // here user property is decorated with @manytoone
   // @ManyToOne(() => User, (user) => user.projects)

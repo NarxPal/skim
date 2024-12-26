@@ -10,12 +10,20 @@
   @apply flex flex-row p-1  border-b-2 border-light_gray;
 }
 
+.top_r_icons {
+  @apply flex ml-auto items-center;
+}
+
 .tm_icon {
   @apply cursor-pointer hover:bg-light_gray p-2 rounded-lg;
 }
 
+.ruler_media {
+  @apply flex flex-col h-full relative;
+}
+
 .media_parent_div {
-  @apply h-full p-6 overflow-auto;
+  @apply h-full p-4 flex-grow overflow-auto;
 }
 
 .tm_m_container_div {
@@ -23,7 +31,7 @@
 }
 
 .tm_media_container {
-  @apply h-fit w-full absolute;
+  @apply h-fit absolute;
 }
 
 .tm_media {
@@ -65,7 +73,7 @@
 }
 
 .bar_arrow {
-  @apply h-full items-center flex px-3 cursor-ew-resize bg-indigo-500 shadow-md rounded-lg;
+  @apply h-full items-center px-3 cursor-ew-resize bg-indigo-500 shadow-md rounded-lg;
 }
 
 .arrow_div {
@@ -132,11 +140,11 @@
 /* ********* TIMELINE RULER STYLES ******************** */
 
 .ruler_div {
-  @apply text-white;
+  @apply text-white relative w-full overflow-hidden  border-light_gray border-b-2 bg-editor_gray bg-opacity-20 p-4 h-[20%] shadow-2xl z-10;
 }
 
 .ruler_content {
-  @apply p-3 border-b-2 border-light_gray bg-editor_gray bg-opacity-20;
+  @apply relative h-full;
 }
 
 .time_ticks {
@@ -144,9 +152,38 @@
 }
 
 .time_div {
-  @apply flex;
+  @apply flex h-full;
 }
 
 .ticks_div {
-  @apply flex;
+  @apply relative h-full;
+}
+
+.tick {
+  @apply absolute opacity-50;
+}
+
+/* **************** PLAYHEAD ************************ */
+.playhead_div {
+  @apply absolute h-full pl-4;
+}
+
+.ph_line_notch {
+  @apply relative h-full;
+}
+
+.ph_line {
+  @apply absolute h-[96.5%] w-0.5 bg-blue_btn z-50 top-2.5;
+}
+
+.ph_rel {
+  @apply relative;
+}
+
+.clip_custom {
+  clip-path: polygon(25% 25%, 75% 25%, 75% 57.81%, 50% 79.07%, 25% 57.81%);
+  background-color: #2a6fff;
+}
+.ph_notch {
+  @apply absolute  clip_custom h-5 w-5 left-[-9px] top-[-10px];
 }

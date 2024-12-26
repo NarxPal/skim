@@ -5,17 +5,13 @@ import { supabase } from "../../supabaseClient"; // here, supabase used for stor
 import { useParams } from "next/navigation";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { FetchUser } from "./fetchUser";
 interface MediaUploadProps {
   children: ReactNode;
 }
 const Upload: React.FC<MediaUploadProps> = ({ children }) => {
   const params = useParams<{ uid: string; id: string }>();
-
-  // const [isUploading, setIsUploading] = useState(false);
-  const [videoFile, setVideoFile] = useState<File[] | null>(null);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
 
   FetchUser(params.uid); // calling useeffect to fetch the user_id
 
@@ -30,6 +26,28 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
     event.preventDefault();
     const files = event.dataTransfer.files;
     if (files) handleFiles(files);
+  };
+
+  const getPublicUrl = async (files: File[], filePath: string) => {
+    if (files.some((file) => file.type.startsWith("video"))) {
+      const { data } = supabase.storage.from("media").getPublicUrl(filePath); // get the video media(not thumbnail)
+      console.log("getpublic url data for video:", data);
+      return data.publicUrl;
+    }
+  };
+
+  const fetchDuration = async (
+    fileType: string,
+    publicUrl: string | undefined
+  ) => {
+    // also post the fffmpeg req to get the duration of the video & audio media
+    if ((fileType === "video" || "audio") && publicUrl) {
+      const durationRes: AxiosResponse<number> = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/ffmpeg/duration/${publicUrl}`
+        // publicUrl here as filepath for video media
+      );
+      return durationRes.data;
+    }
   };
 
   const handleFiles = async (
@@ -59,7 +77,6 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
           formData.append("file", file); // Append each file
         });
 
-        console.log("formdata:", formData);
         const { data: postData } = await axios.post(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/ffmpeg`,
           formData,
@@ -102,7 +119,13 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
             console.log("thumbnail storage data", thumbnailData);
             if (thumbnailError) throw thumbnailError;
           }
-          // also post the fffmpeg req to get the duration of the video & audio media
+
+          console.log("file BRO", files);
+          const publicUrl = await getPublicUrl(files, filePath); // here getting pu
+          console.log("video PU fetched before", publicUrl);
+
+          const duration = await fetchDuration(fileType, publicUrl);
+          const roundedDuration = Math.round(Number(duration));
 
           // inserting metadata of the supabase stored media in media_files table in psql
           const response = await axios.post(
@@ -114,6 +137,7 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
               filepath: filePath,
               type: fileType,
               thumbnail_url: fileType === "video" ? thumbnailPath : "",
+              duration: roundedDuration, // will use it as width for clip
               // not using thumbnail_url here since its specific to video media type only
             }
           );

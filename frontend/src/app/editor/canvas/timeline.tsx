@@ -6,6 +6,7 @@ import axios from "axios";
 // import { RootState } from "@/redux/store";
 import ContextMenu from "@/components/contextMenu";
 import TimelineRuler from "@/utils/timeline/timelineRuler";
+import Playhead from "@/utils/timeline/playhead";
 
 type MediaItem = {
   signedUrl: string | null;
@@ -18,6 +19,7 @@ type MediaItem = {
   left_position: number;
   user_id: string;
   project_id: number;
+  duration: number;
 };
 
 type bar = {
@@ -30,6 +32,7 @@ type bar = {
   type: string;
   user_id: string;
   width: number;
+  duration: number;
 };
 
 type sub_column = {
@@ -86,12 +89,17 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   const [barIndex, setBarIndex] = useState<number>();
   const [droppedBarNewLeft, setDroppedBarNewLeft] = useState<number | null>();
   const [LPBasedBars, setLPBasedBars] = useState<bar[]>([]);
+  const [zoomLevel, setZoomLevel] = useState<number>(10);
+  const [mediaContainerWidth, setMediaContainerWidth] = useState<number>();
+  const [totalMediaDuration, setTotalMediaDuration] = useState<number>();
+  const [scrollPosition, setScrollPosition] = useState(0);
 
   // use ref hooks
   const isResizing = useRef(false);
   const resizeDirection = useRef<"left" | "right" | null>(null);
   const startX = useRef(0);
   const activeBarId = useRef<number | null>(null);
+  const mediaParentRef = useRef<HTMLDivElement | null>(null);
 
   // const userId = useSelector((state: RootState) => state.userId.userId); // userid has been set in project/uid
 
@@ -103,6 +111,23 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     image: "/image.png",
     text: "/text.png",
   };
+
+  const handleScroll = () => {
+    if (mediaParentRef.current) {
+      setScrollPosition(mediaParentRef.current.scrollLeft); // Safe to access scrollLeft
+    }
+  };
+
+  useEffect(() => {
+    if (mediaParentRef.current) {
+      const mediaParent = mediaParentRef.current;
+      mediaParent.addEventListener("scroll", handleScroll);
+
+      return () => {
+        mediaParent.removeEventListener("scroll", handleScroll);
+      };
+    }
+  }, []);
 
   // const playheadPosition =
   //   timelineRef.current && duration > 0
@@ -122,8 +147,9 @@ const Timeline = ({ prjId }: { prjId: string }) => {
             id: Math.floor(Math.random() * 1000000) + (Date.now() % 1000000),
             user_id: parsedItem.user_id,
             name: parsedItem.name,
-            left_position: 10, // default left position
-            width: 800, // default value
+            left_position: 0, // default left position
+            width: parsedItem.duration * zoomLevel, // duration of the media, for zoom level 1 multiplying 10 since each sec would be 10px/sec, this would work well only for zoom level 1
+            duration: parsedItem.duration, // storing duration to use in calcContainerWidth
             project_id: parsedItem.project_id,
             type: parsedItem.type,
             signedUrl: parsedItem.signedUrl, // it's just named as signedurl but it's a public url, so permanent
@@ -151,6 +177,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
           name: parseditem.name,
           left_position: parseditem.left_position,
           width: parseditem.width, // width and left will here be default values and u have to make a req to server to change it
+          duration: parseditem.duration,
           project_id: parseditem.project_id,
           column_id: subColumnId, // this is only in bars table
           type: parseditem.type,
@@ -234,7 +261,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/bars/${id}`,
         {
           left_position: roundedLeftPosition,
-          width: roundedWidth,
+          width: roundedWidth, // make changes to width here during resize when adding zoom functionality
         }
       );
       const barResponse = await axios.patch(
@@ -301,7 +328,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                       }
                     } else {
                       // For the first bar, set left limit and stop increasing width if the left limit is reached
-                      const minLeft = 10; // Prevent moving beyond left limit
+                      const minLeft = 0; // Prevent moving beyond left limit
                       newLeft = Math.max(newLeft, minLeft); // Set minimum left position
                       if (newLeft === minLeft) {
                         newWidth = bar.width;
@@ -373,6 +400,11 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                     }
                   } else if (!parentElement) {
                     console.error("Parent element not found");
+                  }
+
+                  // since zoomLevel decides the width of bar at least for level 10
+                  if (newWidth > bar.duration * zoomLevel) {
+                    newWidth = bar.duration * zoomLevel;
                   }
 
                   // Update the database
@@ -467,26 +499,23 @@ const Timeline = ({ prjId }: { prjId: string }) => {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars/${draggedBarId}`
       );
 
-      const dragBarLP = getDraggedBarData.data.left_position;
       const dragBarWidth = getDraggedBarData.data.width;
+      console.log("draggedbardata bro", getDraggedBarData.data);
 
-      const increaseSize = dragBarLP + dragBarWidth;
-      let totalOffset = increaseSize;
-
+      const BAR_GAP = 10;
       const updateLPBars = LPBasedBars.map((bar, index) => {
-        // LPBasedBars is used to check if there is a single bar or multiple and act accordingly for both
-        if (index === 0) {
-          // For the first bar, add the initial offset, which is newlp + width
-          bar.left_position = droppedBarNewLeft + dragBarWidth + 10; // 10 px for gap
-        } else {
-          // For subsequent bars, add the previous bar's left_position + width
-          const previousBar = LPBasedBars[index - 1];
-          totalOffset = previousBar.left_position + previousBar.width + 10;
-          bar.left_position = totalOffset;
-        }
-        return bar;
-      });
+        const newLeftPosition =
+          index === 0
+            ? // For the first bar, add the initial offset, which is newlp + width
+              droppedBarNewLeft + dragBarWidth + BAR_GAP
+            : // For subsequent bars, add the previous bar's left_position + width
+              LPBasedBars[index - 1].left_position +
+              LPBasedBars[index - 1].width +
+              BAR_GAP;
 
+        return { ...bar, left_position: newLeftPosition };
+      });
+      console.log("updtaelbbar bro", updateLPBars);
       if (Number(dragSubColId) !== dropSubColId) {
         const updateBarLPRes = await axios.patch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/updateBarLP/${dropSubColId}`,
@@ -620,6 +649,63 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     } catch (error) {
       console.log("error deleting bar", error);
     }
+  };
+
+  // ****** zoom in out ***********
+  useEffect(() => {
+    const calcContainerWidth = async () => {
+      console.log("barsdata[0]", barsData);
+      const totalDuration = barsData[0]?.sub_columns.reduce((acc, subCol) => {
+        const subColBars = subCol?.bars || [];
+        return (
+          acc +
+          subColBars.reduce((sum, bar) => {
+            sum += bar.duration || 0;
+            // console.log("acc", acc);
+            // console.log("sum", sum);
+            // console.log("bar duration bro", bar.duration);
+            return sum;
+          }, 0) // sum is reset to 0
+        );
+      }, 0);
+      const containerWidth = totalDuration * zoomLevel;
+      setTotalMediaDuration(totalDuration); // used for timelineRuler
+      console.log("total duration bro", totalDuration);
+      console.log("zoom level bro", zoomLevel);
+      setMediaContainerWidth(containerWidth);
+    };
+    if (barsData && barsData[0]?.sub_columns) {
+      calcContainerWidth();
+    }
+  }, [columns, zoomLevel]); // using columns here since setbarsdata will change everytime during resize bar
+
+  const updateBarsOnZoom = () => {
+    const scaledBars = barsData.flatMap((barsProp) =>
+      barsProp.sub_columns.flatMap((column) =>
+        column.bars?.map((bar: bar) => {
+          const scaledWidth = bar.duration * zoomLevel;
+          console.log("zoom level bro");
+          const scaledPosition = bar.left_position * zoomLevel;
+          return { ...bar, width: scaledWidth, left_position: scaledPosition };
+        })
+      )
+    );
+    console.log("scaled bars bro", scaledBars);
+    // setBarsData(scaledBars);
+  };
+
+  const zoom_In = async () => {
+    const MAX_ZOOM_LEVEL = 10; // Maximum zoom
+    setZoomLevel((prev) => Math.min(prev + 2, MAX_ZOOM_LEVEL));
+    setFetchBars(true); // since we are not saving to db so fetchbars result same data
+    updateBarsOnZoom();
+  };
+
+  const zoom_Out = async () => {
+    const MIN_ZOOM_LEVEL = 1; // Minimum zoom
+    setZoomLevel((prev) => Math.max(prev - 2, MIN_ZOOM_LEVEL));
+    setFetchBars(true);
+    updateBarsOnZoom();
   };
 
   // ********** context menu functions ************
@@ -886,156 +972,225 @@ const Timeline = ({ prjId }: { prjId: string }) => {
               draggable={false}
             />
           </div>
+
+          <div className={styles.top_r_icons}>
+            <div className={styles.tm_icon} onClick={() => zoom_In()}>
+              <Image
+                src="/zoom_in.png"
+                width={15}
+                height={15}
+                alt="zoom"
+                priority={true}
+                draggable={false}
+              />
+            </div>
+
+            <div className={styles.tm_icon} onClick={() => zoom_Out()}>
+              <Image
+                src="/zoom-out.png"
+                width={15}
+                height={15}
+                alt="zoom"
+                priority={true}
+                draggable={false}
+              />
+            </div>
+          </div>
         </div>
       </div>
+      <div className={styles.ruler_media}>
+        {/* <Playhead /> */}
+        <div className={styles.playhead_div}>
+          <div className={styles.ph_line_notch}>
+            <div className={styles.ph_line}>
+              <div className={styles.ph_rel}>
+                <div className={styles.ph_notch} />
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <TimelineRuler />
-      <div className={styles.media_parent_div}>
-        <div onClick={() => closeContextMenu()} className={styles.closeMenuDiv}>
-          <div className={styles.tm_media_container} id={"id-1"}>
-            {((barsData && barsData[0]?.sub_columns === null) ||
-            barsData[0]?.sub_columns.length === 0
-              ? new Array(3).fill(null) //now here 3 empty array will be shown when no sub_column will be present(initial state of timeline)
-              : barsData[0]?.sub_columns || []
-            ).map((item, index) => {
-              return (
-                <div
-                  className={styles.sub_col_div}
-                  key={index}
-                  id={`subcol-${item?.id}`} // id will contain numeric value for each sub_column
-                  onDragOver={(e) => handleDynamicDragOver(e, item?.id)}
-                  onDrop={(e) => handleDynamicDrop(e, item?.id)}
-                >
-                  {prevBarPosition !== null &&
-                    draggedOverSubColId === item?.id && (
-                      <div
-                        className={styles.previewBar}
-                        style={{
-                          left: `${prevBarPosition}px`,
-                        }}
-                      />
-                    )}
-                  {item?.bars?.length > 0 ? (
-                    item?.bars?.map((bar: bar, barIndex: number) => (
-                      <div
-                        className={styles.item_box_div}
-                        style={{
-                          width: bar?.width ? `${bar.width}px` : "800px",
-                          left: bar?.left_position
-                            ? `${bar.left_position}px`
-                            : "10px",
-                        }}
-                        key={barIndex}
-                        id={`bar-${bar?.id}`}
-                        onContextMenu={(e) =>
-                          handleRightClickBar(e, bar, bar?.id, item?.id)
-                        } // here we are passing bar info
-                      >
+        <TimelineRuler
+          totalDuration={totalMediaDuration}
+          zoomLevel={zoomLevel}
+          containerWidth={mediaContainerWidth}
+          scrollPosition={scrollPosition}
+        />
+        <div className={styles.media_parent_div} ref={mediaParentRef}>
+          <div
+            onClick={() => closeContextMenu()}
+            className={styles.closeMenuDiv}
+          >
+            <div
+              className={styles.tm_media_container}
+              id={"id-1"}
+              style={{ width: `${mediaContainerWidth}px` }}
+            >
+              {((barsData && barsData[0]?.sub_columns === null) ||
+              barsData[0]?.sub_columns.length === 0
+                ? new Array(3).fill(null) //now here 3 empty array will be shown when no sub_column will be present(initial state of timeline)
+                : barsData[0]?.sub_columns || []
+              ).map((item, index) => {
+                return (
+                  <div
+                    className={styles.sub_col_div}
+                    key={index}
+                    id={`subcol-${item?.id}`} // id will contain numeric value for each sub_column
+                    onDragOver={(e) => handleDynamicDragOver(e, item?.id)}
+                    onDrop={(e) => handleDynamicDrop(e, item?.id)}
+                  >
+                    {prevBarPosition !== null &&
+                      draggedOverSubColId === item?.id && (
                         <div
-                          className={
-                            barsData[0]?.sub_columns === null
-                              ? `${styles.m_item_box}`
-                              : `${styles.m_item_box_drop}`
-                          }
+                          className={styles.previewBar}
+                          style={{
+                            left: `${prevBarPosition}px`,
+                          }}
+                        />
+                      )}
+                    {item?.bars?.length > 0 ? (
+                      item?.bars?.map((bar: bar, barIndex: number) => (
+                        <div
+                          className={styles.item_box_div}
+                          style={{
+                            width: bar?.width,
+                            left: bar?.left_position,
+                          }}
+                          key={barIndex}
+                          id={`bar-${bar?.id}`}
+                          onContextMenu={(e) =>
+                            handleRightClickBar(e, bar, bar?.id, item?.id)
+                          } // here we are passing bar info
                         >
-                          <div className={styles.bar_content}>
-                            {barsData[0]?.sub_columns?.length ? (
-                              <div
-                                className={styles.bar_arrow}
-                                onMouseDown={(e) =>
-                                  startResize(e, "left", bar?.id)
-                                }
-                              >
-                                <div className={styles.arrow_div}>
-                                  <Image
-                                    src="/left_arrow.png"
-                                    alt="left_arrow"
-                                    width={10}
-                                    height={10}
-                                    priority={true}
-                                    draggable={false}
-                                  />
+                          <div
+                            className={`${
+                              barsData[0]?.sub_columns === null
+                                ? `${styles.m_item_box}`
+                                : `${styles.m_item_box_drop}`
+                            } group`}
+                          >
+                            <div className={styles.bar_content}>
+                              {barsData[0]?.sub_columns?.length ? (
+                                <div
+                                  className={`${styles.bar_arrow} hidden group-hover:flex`}
+                                  onMouseDown={(e) =>
+                                    startResize(e, "left", bar?.id)
+                                  }
+                                >
+                                  <div className={styles.arrow_div}>
+                                    <Image
+                                      src="/left_arrow.png"
+                                      alt="left_arrow"
+                                      width={10}
+                                      height={10}
+                                      priority={true}
+                                      draggable={false}
+                                    />
+                                  </div>
                                 </div>
-                              </div>
-                            ) : null}
+                              ) : null}
 
-                            <div
-                              className={
-                                barsData[0]?.sub_columns?.length
-                                  ? `${styles.item_content_drop}`
-                                  : ""
-                              }
-                              draggable
-                              onDragStart={(e) =>
-                                handleBarDragStart(bar?.id, e, item?.id)
-                              }
-                              onDragEnd={() => handleBarDragEnd()}
-                            >
-                              {item && (
-                                <div className={styles.m_item_keys}>
-                                  <div
-                                    className={styles.m_item_thumb}
-                                    style={{
-                                      backgroundImage: bar?.signedUrl
-                                        ? `url(${bar?.signedUrl})`
-                                        : "none",
-                                      backgroundRepeat: "repeat-x",
-                                      backgroundSize: "auto 100%",
-                                    }}
-                                  ></div>
+                              <div
+                                className={
+                                  barsData[0]?.sub_columns?.length
+                                    ? `${styles.item_content_drop}`
+                                    : ""
+                                }
+                                draggable
+                                onDragStart={(e) =>
+                                  handleBarDragStart(bar?.id, e, item?.id)
+                                }
+                                onDragEnd={() => handleBarDragEnd()}
+                              >
+                                {item && (
+                                  <div className={styles.m_item_keys}>
+                                    <div
+                                      className={styles.m_item_thumb}
+                                      style={{
+                                        backgroundImage: bar?.signedUrl
+                                          ? `url(${bar?.signedUrl})`
+                                          : "none",
+                                        backgroundRepeat: "repeat-x",
+                                        backgroundSize: "auto 100%",
+                                      }}
+                                    ></div>
 
-                                  {bar?.width >= 300 && (
-                                    <div className={styles.m_type_label}>
-                                      <div className={styles.type_icon}>
-                                        {bar?.type in icons && (
-                                          <Image
-                                            src={
-                                              icons[
-                                                bar?.type as keyof typeof icons
-                                              ]
-                                            }
-                                            alt={bar?.type}
-                                            width={10}
-                                            height={10}
-                                            priority={true}
-                                            draggable={false}
-                                          />
-                                        )}
+                                    {bar?.width >= 300 && (
+                                      <div className={styles.m_type_label}>
+                                        <div className={styles.type_icon}>
+                                          {bar?.type in icons && (
+                                            <Image
+                                              src={
+                                                icons[
+                                                  bar?.type as keyof typeof icons
+                                                ]
+                                              }
+                                              alt={bar?.type}
+                                              width={10}
+                                              height={10}
+                                              priority={true}
+                                              draggable={false}
+                                            />
+                                          )}
+                                        </div>
+                                        <span className={styles.m_item_label}>
+                                          {bar?.name.length > 20
+                                            ? `${bar?.name.substring(0, 25)}...`
+                                            : bar?.name}
+                                        </span>
                                       </div>
-                                      <span className={styles.m_item_label}>
-                                        {bar?.name.length > 20
-                                          ? `${bar?.name.substring(0, 25)}...`
-                                          : bar?.name}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-
-                            {barsData[0]?.sub_columns?.length ? (
-                              <div
-                                className={styles.bar_arrow}
-                                onMouseDown={(e) =>
-                                  startResize(e, "right", bar?.id)
-                                }
-                              >
-                                <div className={styles.arrow_div}>
-                                  <Image
-                                    src="/chevron_right.png"
-                                    alt="right_arrow"
-                                    width={10}
-                                    height={10}
-                                    priority={true}
-                                    draggable={false}
-                                  />
-                                </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
-                            ) : null}
-                          </div>
-                        </div>
 
-                        {contextMenu.visible && contextMenu.id == bar?.id && (
+                              {barsData[0]?.sub_columns?.length ? (
+                                <div
+                                  className={`${styles.bar_arrow} hidden group-hover:flex`}
+                                  onMouseDown={(e) =>
+                                    startResize(e, "right", bar?.id)
+                                  }
+                                >
+                                  <div className={styles.arrow_div}>
+                                    <Image
+                                      src="/chevron_right.png"
+                                      alt="right_arrow"
+                                      width={10}
+                                      height={10}
+                                      priority={true}
+                                      draggable={false}
+                                    />
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          {contextMenu.visible && contextMenu.id == bar?.id && (
+                            <ContextMenu
+                              x={contextMenu.x}
+                              y={contextMenu.y}
+                              id={contextMenu.id}
+                              options={options}
+                              onOptionClick={handleOptionClick}
+                              visible={contextMenu.visible}
+                            />
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      // this empty bar will be shown when there will be a sub_column without bar i guess and also it checks if there is bar in sub_column than it will show the above truthy structure
+                      <div
+                        className={`${styles.item_box_div} ${styles.m_item_box}`}
+                        style={{ width: "1000px", left: "0px" }}
+                        onContextMenu={
+                          (e) =>
+                            item?.id !== undefined
+                              ? handleRightClickSubCol(e, item?.id)
+                              : null // don't show cm when sub_col_div have id subcol-undefined
+                        } // id here refers to the sub_col id and not bars id
+                      >
+                        {contextMenu.visible && contextMenu.id == item?.id && (
                           <ContextMenu
                             x={contextMenu.x}
                             y={contextMenu.y}
@@ -1046,34 +1201,11 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                           />
                         )}
                       </div>
-                    ))
-                  ) : (
-                    // this empty bar will be shown when there will be a sub_column without bar i guess and also it checks if there is bar in sub_column than it will show the above truthy structure
-                    <div
-                      className={`${styles.item_box_div} ${styles.m_item_box}`}
-                      style={{ width: "100%", left: "0px" }}
-                      onContextMenu={
-                        (e) =>
-                          item?.id !== undefined
-                            ? handleRightClickSubCol(e, item?.id)
-                            : null // don't show cm when sub_col_div have id subcol-undefined
-                      } // id here refers to the sub_col id and not bars id
-                    >
-                      {contextMenu.visible && contextMenu.id == item?.id && (
-                        <ContextMenu
-                          x={contextMenu.x}
-                          y={contextMenu.y}
-                          id={contextMenu.id}
-                          options={options}
-                          onOptionClick={handleOptionClick}
-                          visible={contextMenu.visible}
-                        />
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

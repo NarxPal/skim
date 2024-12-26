@@ -52,4 +52,7 @@ export class Bars {
 
   @Column()
   filepath: string;
+
+  @Column({ nullable: true }) // null true since image media will not have duration
+  duration: number;
 }
