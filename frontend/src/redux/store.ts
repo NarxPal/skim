@@ -1,9 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
 import userIdReducer from "./userId";
+import phPositionReducer from "./phPosition";
 
 export const store = configureStore({
   reducer: {
     userId: userIdReducer,
+    phPosition: phPositionReducer,
   },
 });
 

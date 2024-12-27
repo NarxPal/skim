@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import styles from "@/styles/timeline.module.css";
+import { useDispatch } from "react-redux";
+import { setPhPosition } from "@/redux/phPosition";
 
 interface TimelineRulerProps {
   totalDuration?: number;
@@ -14,10 +16,12 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   containerWidth,
   scrollPosition,
 }) => {
-  const [tickPos, setTickPos] = useState<number[]>();
+  const [tickPos, setTickPos] = useState<number[]>(); // having array since we are mapping tickpos in dom
   const [tickGap, setTickGap] = useState<number>();
 
   const rulerRef = useRef<HTMLDivElement | null>(null);
+
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (rulerRef.current) {
@@ -53,8 +57,32 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
     calcTicks();
   }, [zoomLevel, containerWidth, totalDuration]);
 
+  const handleMouseMove = (
+    event: React.MouseEvent<HTMLDivElement, MouseEvent>
+  ) => {
+    if (rulerRef.current) {
+      const rulerBounds = rulerRef.current.getBoundingClientRect();
+      const rulerStyle = getComputedStyle(rulerRef.current);
+      const paddingLeft = parseInt(rulerStyle.paddingLeft, 10); // 10 ensure no. is int and not string
+
+      const scrollOffset = rulerRef.current.scrollLeft;
+      const clientX =
+        event.clientX - rulerBounds.left + scrollOffset - paddingLeft;
+      const hoverPosition = Math.max(0, Math.floor(clientX));
+      // Use hoverPosition to update the playhead preview position
+
+      console.log("Hover position:", hoverPosition);
+      dispatch(setPhPosition(hoverPosition));
+    }
+  };
+
   return (
-    <div className={styles.ruler_div} ref={rulerRef}>
+    <div
+      className={styles.ruler_div}
+      ref={rulerRef}
+      onMouseMove={handleMouseMove}
+      onClick={handleMouseMove}
+    >
       <div className={styles.ruler_content}>
         <div className={styles.time_ticks}>
           <div className={styles.time_div}></div>

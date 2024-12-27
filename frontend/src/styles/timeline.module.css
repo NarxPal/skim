@@ -31,7 +31,7 @@
 }
 
 .tm_media_container {
-  @apply h-fit absolute;
+  @apply h-full absolute;
 }
 
 .tm_media {
@@ -54,8 +54,6 @@
   /* @apply  */
 }
 
-.playhead {
-}
 .m_item_box {
   @apply bg-sm_light_gray p-2 rounded-lg h-[5rem] border-dashed border-2 border-white border-opacity-10 hover:border-opacity-70 hover:border-white text-white text-opacity-50 bg-cover font-semibold text-xs;
 }
@@ -164,7 +162,15 @@
 }
 
 /* **************** PLAYHEAD ************************ */
+.ph_container {
+  @apply absolute h-[98.5%] w-full overflow-hidden;
+}
+
 .playhead_div {
+  @apply absolute h-full top-[1.2rem];
+}
+
+.ph_left {
   @apply absolute h-full pl-4;
 }
 
@@ -173,7 +179,7 @@
 }
 
 .ph_line {
-  @apply absolute h-[96.5%] w-0.5 bg-blue_btn z-50 top-2.5;
+  @apply absolute h-full w-0.5 bg-blue_btn z-50;
 }
 
 .ph_rel {

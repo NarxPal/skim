@@ -6,7 +6,10 @@ import axios from "axios";
 // import { RootState } from "@/redux/store";
 import ContextMenu from "@/components/contextMenu";
 import TimelineRuler from "@/utils/timeline/timelineRuler";
-import Playhead from "@/utils/timeline/playhead";
+// import Playhead from "@/utils/timeline/playhead";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "@/redux/store";
+import { setPhPosition } from "@/redux/phPosition";
 
 type MediaItem = {
   signedUrl: string | null;
@@ -59,6 +62,8 @@ type ColumnsProps = {
 };
 
 const Timeline = ({ prjId }: { prjId: string }) => {
+  const dispatch = useDispatch();
+
   // usestate hooks
   const [columns, setColumns] = useState<ColumnsProps | undefined>(undefined); // column and barsdata are having same data
   const [barsData, setBarsData] = useState<BarsProp[]>([]);
@@ -93,6 +98,8 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   const [mediaContainerWidth, setMediaContainerWidth] = useState<number>();
   const [totalMediaDuration, setTotalMediaDuration] = useState<number>();
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [position, setPosition] = useState<number>(0);
 
   // use ref hooks
   const isResizing = useRef(false);
@@ -100,8 +107,14 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   const startX = useRef(0);
   const activeBarId = useRef<number | null>(null);
   const mediaParentRef = useRef<HTMLDivElement | null>(null);
+  const playheadRef = useRef<HTMLDivElement>(null);
+  const phLeftRef = useRef<HTMLDivElement>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   // const userId = useSelector((state: RootState) => state.userId.userId); // userid has been set in project/uid
+  const phPosition = useSelector(
+    (state: RootState) => state.phPosition.phPosition
+  );
 
   // const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -112,9 +125,44 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     text: "/text.png",
   };
 
+  const handlePhScroll = () => {
+    if (playheadRef.current) {
+      setScrollPosition(playheadRef.current.scrollLeft);
+    }
+  };
+
+  // It helps playhead container to scroll along with the media_parent_div
+  useEffect(() => {
+    if (playheadRef.current) {
+      playheadRef.current.scrollLeft = scrollPosition; // Sync scroll position for playhead
+
+      const playhead = playheadRef.current;
+      playhead.addEventListener("scroll", handlePhScroll);
+
+      return () => {
+        playhead.removeEventListener("scroll", handlePhScroll);
+      };
+    }
+  }, [scrollPosition]);
+
+  // Update the scrollleft of media_parent_div when playhead moves out of view
+  useEffect(() => {
+    if (phLeftRef.current && mediaParentRef.current) {
+      const playheadBounds = phLeftRef.current.getBoundingClientRect();
+      const parentBounds = mediaParentRef.current.getBoundingClientRect();
+      if (
+        playheadBounds.left < parentBounds.left ||
+        playheadBounds.right > parentBounds.right
+      ) {
+        const scrollOffset = playheadBounds.left - parentBounds.left;
+        mediaParentRef.current.scrollLeft += scrollOffset;
+      }
+    }
+  }, [phPosition]);
+
   const handleScroll = () => {
     if (mediaParentRef.current) {
-      setScrollPosition(mediaParentRef.current.scrollLeft); // Safe to access scrollLeft
+      setScrollPosition(mediaParentRef.current.scrollLeft);
     }
   };
 
@@ -651,6 +699,38 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     }
   };
 
+  // ********** playhead animation *************
+
+  const movePlayhead = () => {
+    // Adjust increment based on timeline speed
+    // dispatch(setPhPosition(1));
+    setPosition((prev) => prev + 1);
+    animationFrameRef.current = requestAnimationFrame(movePlayhead);
+  };
+
+  const startAnimation = async () => {
+    if (!isPlaying) {
+      setIsPlaying(true);
+      animationFrameRef.current = requestAnimationFrame(movePlayhead);
+    }
+  };
+
+  const stopAnimation = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    setIsPlaying(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
+
   // ****** zoom in out ***********
   useEffect(() => {
     const calcContainerWidth = async () => {
@@ -973,6 +1053,19 @@ const Timeline = ({ prjId }: { prjId: string }) => {
             />
           </div>
 
+          <div className={styles.playback_btns}>
+            {/* <div className={styles.}> */}
+            <button onClick={startAnimation} className="text-white">
+              Play
+            </button>
+
+            <button onClick={stopAnimation} className="text-white">
+              pause
+            </button>
+
+            {/* </div> */}
+          </div>
+
           <div className={styles.top_r_icons}>
             <div className={styles.tm_icon} onClick={() => zoom_In()}>
               <Image
@@ -1000,11 +1093,21 @@ const Timeline = ({ prjId }: { prjId: string }) => {
       </div>
       <div className={styles.ruler_media}>
         {/* <Playhead /> */}
-        <div className={styles.playhead_div}>
-          <div className={styles.ph_line_notch}>
-            <div className={styles.ph_line}>
-              <div className={styles.ph_rel}>
-                <div className={styles.ph_notch} />
+        <div className={styles.ph_container} ref={playheadRef}>
+          <div
+            className={styles.playhead_div}
+            style={{ width: mediaContainerWidth }}
+          >
+            <div
+              className={styles.ph_left}
+              style={{ left: `${position}px` }}
+              ref={phLeftRef}
+            >
+              <div className={styles.ph_line_notch}>
+                <div className={styles.ph_line}>
+                  <div className={styles.ph_rel}></div>
+                  <div className={styles.ph_notch} />
+                </div>
               </div>
             </div>
           </div>
