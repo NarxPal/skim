@@ -154,7 +154,7 @@
 }
 
 .ticks_div {
-  @apply relative h-full;
+  @apply relative h-full cursor-default;
 }
 
 .tick {
@@ -163,11 +163,11 @@
 
 /* **************** PLAYHEAD ************************ */
 .ph_container {
-  @apply absolute h-[98.5%] w-full overflow-hidden;
+  @apply absolute h-[98.5%] w-[99.5%] overflow-hidden;
 }
 
 .playhead_div {
-  @apply absolute h-full top-[1.2rem];
+  @apply absolute h-full top-[1.2rem] pointer-events-none;
 }
 
 .ph_left {
@@ -180,6 +180,10 @@
 
 .ph_line {
   @apply absolute h-full w-0.5 bg-blue_btn z-50;
+}
+
+.ph_line_hover {
+  @apply ph_line opacity-50;
 }
 
 .ph_rel {

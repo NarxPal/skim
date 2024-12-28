@@ -64,6 +64,15 @@ type ColumnsProps = {
 const Timeline = ({ prjId }: { prjId: string }) => {
   const dispatch = useDispatch();
 
+  // redux state hooks
+  // const userId = useSelector((state: RootState) => state.userId.userId); // userid has been set in project/uid
+  const phPosition = useSelector(
+    (state: RootState) => state.phPosition.phPosition
+  );
+  const phPreview = useSelector(
+    (state: RootState) => state.phPreview.phPreview
+  );
+
   // usestate hooks
   const [columns, setColumns] = useState<ColumnsProps | undefined>(undefined); // column and barsdata are having same data
   const [barsData, setBarsData] = useState<BarsProp[]>([]);
@@ -110,13 +119,8 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   const playheadRef = useRef<HTMLDivElement>(null);
   const phLeftRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
-
-  // const userId = useSelector((state: RootState) => state.userId.userId); // userid has been set in project/uid
-  const phPosition = useSelector(
-    (state: RootState) => state.phPosition.phPosition
-  );
-
   // const timelineRef = useRef<HTMLDivElement>(null);
+  const previousPhPositionRef = useRef(phPosition);
 
   const icons: { [key: string]: string } = {
     audio: "/audio.png",
@@ -158,7 +162,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
         mediaParentRef.current.scrollLeft += scrollOffset;
       }
     }
-  }, [phPosition]);
+  }, [phPosition, position]);
 
   const handleScroll = () => {
     if (mediaParentRef.current) {
@@ -701,26 +705,44 @@ const Timeline = ({ prjId }: { prjId: string }) => {
 
   // ********** playhead animation *************
 
-  const movePlayhead = () => {
-    // Adjust increment based on timeline speed
-    // dispatch(setPhPosition(1));
-    setPosition((prev) => prev + 1);
-    animationFrameRef.current = requestAnimationFrame(movePlayhead);
-  };
-
-  const startAnimation = async () => {
-    if (!isPlaying) {
-      setIsPlaying(true);
-      animationFrameRef.current = requestAnimationFrame(movePlayhead);
-    }
-  };
-
   const stopAnimation = () => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
     setIsPlaying(false);
+  };
+
+  const movePlayhead = () => {
+    // Adjust increment based on timeline speed
+    if (phPosition === null) {
+      setPosition((prev) => prev + 1);
+    } else {
+      setPosition((prev) => prev + 1);
+      dispatch(setPhPosition(null));
+    }
+
+    animationFrameRef.current = requestAnimationFrame(movePlayhead);
+  };
+
+  // Stop playhead when clicked over timelineruler, while ph is running
+  useEffect(() => {
+    if (phPosition !== previousPhPositionRef.current) {
+      stopAnimation();
+      return;
+    }
+
+    previousPhPositionRef.current = phPosition;
+  }, [phPosition]);
+
+  const startAnimation = async () => {
+    if (!isPlaying) {
+      setIsPlaying(true);
+      if (phPosition !== null) {
+        setPosition(phPosition);
+      }
+      animationFrameRef.current = requestAnimationFrame(movePlayhead);
+    }
   };
 
   useEffect(() => {
@@ -1100,7 +1122,9 @@ const Timeline = ({ prjId }: { prjId: string }) => {
           >
             <div
               className={styles.ph_left}
-              style={{ left: `${position}px` }}
+              style={{
+                left: `${phPosition !== null ? phPosition : position}px`,
+              }}
               ref={phLeftRef}
             >
               <div className={styles.ph_line_notch}>
@@ -1110,6 +1134,23 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                 </div>
               </div>
             </div>
+
+            {phPreview !== null && (
+              <div
+                className={styles.ph_left}
+                style={{
+                  left: `${phPreview}px`,
+                }}
+                ref={phLeftRef}
+              >
+                <div className={styles.ph_line_notch}>
+                  <div className={styles.ph_line_hover}>
+                    <div className={styles.ph_rel}></div>
+                    <div className={styles.ph_notch} />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

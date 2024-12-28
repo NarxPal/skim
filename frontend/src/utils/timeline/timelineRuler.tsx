@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import styles from "@/styles/timeline.module.css";
 import { useDispatch } from "react-redux";
 import { setPhPosition } from "@/redux/phPosition";
+import { setPhPreview } from "@/redux/phPreview";
 
 interface TimelineRulerProps {
   totalDuration?: number;
@@ -17,7 +18,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   scrollPosition,
 }) => {
   const [tickPos, setTickPos] = useState<number[]>(); // having array since we are mapping tickpos in dom
-  const [tickGap, setTickGap] = useState<number>();
+  // const [tickGap, setTickGap] = useState<number>();
 
   const rulerRef = useRef<HTMLDivElement | null>(null);
 
@@ -57,7 +58,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
     calcTicks();
   }, [zoomLevel, containerWidth, totalDuration]);
 
-  const handleMouseMove = (
+  const getHoverPosition = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) => {
     if (rulerRef.current) {
@@ -69,19 +70,32 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
       const clientX =
         event.clientX - rulerBounds.left + scrollOffset - paddingLeft;
       const hoverPosition = Math.max(0, Math.floor(clientX));
-      // Use hoverPosition to update the playhead preview position
 
-      console.log("Hover position:", hoverPosition);
-      dispatch(setPhPosition(hoverPosition));
+      return hoverPosition;
     }
+  };
+
+  const handleMousePos = (
+    event: React.MouseEvent<HTMLDivElement, MouseEvent>
+  ) => {
+    const hoverPosition = getHoverPosition(event);
+    dispatch(setPhPosition(hoverPosition));
+  };
+
+  const handleMouseHover = async (
+    event: React.MouseEvent<HTMLDivElement, MouseEvent>
+  ) => {
+    const hoverPosition = getHoverPosition(event);
+    dispatch(setPhPreview(hoverPosition));
   };
 
   return (
     <div
       className={styles.ruler_div}
       ref={rulerRef}
-      onMouseMove={handleMouseMove}
-      onClick={handleMouseMove}
+      onMouseMove={handleMouseHover}
+      onClick={handleMousePos}
+      onMouseLeave={() => dispatch(setPhPreview(null))}
     >
       <div className={styles.ruler_content}>
         <div className={styles.time_ticks}>

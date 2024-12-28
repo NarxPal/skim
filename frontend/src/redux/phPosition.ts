@@ -1,11 +1,11 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 type phPosition = {
-  phPosition: number;
+  phPosition: number | null;
 };
 
 const initialState: phPosition = {
-  phPosition: 0,
+  phPosition: null,
 };
 
 const phPositionSlice = createSlice({
@@ -13,7 +13,7 @@ const phPositionSlice = createSlice({
   initialState,
   reducers: {
     setPhPosition: (state, action) => {
-      state.phPosition += action.payload;
+      state.phPosition = action.payload;
     },
   },
 });
