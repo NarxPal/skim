@@ -7,7 +7,7 @@
 }
 
 .top_icons {
-  @apply flex flex-row p-1  border-b-2 border-light_gray;
+  @apply flex flex-row p-1  border-b-2 border-light_gray select-none;
 }
 
 .top_r_icons {
@@ -154,7 +154,7 @@
 }
 
 .ticks_div {
-  @apply relative h-full cursor-default;
+  @apply relative h-full cursor-default select-none;
 }
 
 .tick {
@@ -167,10 +167,18 @@
 }
 
 .playhead_div {
+  @apply absolute h-full top-[1.2rem] pl-4;
+}
+
+.playhead_div_hover {
   @apply absolute h-full top-[1.2rem] pointer-events-none;
 }
 
 .ph_left {
+  @apply absolute h-full pl-4;
+}
+
+.ph_left_hover {
   @apply absolute h-full pl-4;
 }
 
@@ -187,7 +195,15 @@
 }
 
 .ph_rel {
-  @apply relative;
+  @apply relative p-4 h-[17.5%] left-[-15px] top-[-20px];
+}
+
+.ph_rel_grab {
+  @apply ph_rel cursor-grab;
+}
+
+.ph_rel_grabbing {
+  @apply ph_rel cursor-grabbing;
 }
 
 .clip_custom {

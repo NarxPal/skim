@@ -6,10 +6,11 @@ import axios from "axios";
 // import { RootState } from "@/redux/store";
 import ContextMenu from "@/components/contextMenu";
 import TimelineRuler from "@/utils/timeline/timelineRuler";
-// import Playhead from "@/utils/timeline/playhead";
+import Playhead from "@/utils/timeline/playhead";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/redux/store";
 import { setPhPosition } from "@/redux/phPosition";
+import { setIsPhDragging } from "@/redux/isPhDragging";
 
 type MediaItem = {
   signedUrl: string | null;
@@ -71,6 +72,9 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   );
   const phPreview = useSelector(
     (state: RootState) => state.phPreview.phPreview
+  );
+  const isPhDragging = useSelector(
+    (state: RootState) => state.isPhDragging.isPhDragging
   );
 
   // usestate hooks
@@ -1114,45 +1118,13 @@ const Timeline = ({ prjId }: { prjId: string }) => {
         </div>
       </div>
       <div className={styles.ruler_media}>
-        {/* <Playhead /> */}
-        <div className={styles.ph_container} ref={playheadRef}>
-          <div
-            className={styles.playhead_div}
-            style={{ width: mediaContainerWidth }}
-          >
-            <div
-              className={styles.ph_left}
-              style={{
-                left: `${phPosition !== null ? phPosition : position}px`,
-              }}
-              ref={phLeftRef}
-            >
-              <div className={styles.ph_line_notch}>
-                <div className={styles.ph_line}>
-                  <div className={styles.ph_rel}></div>
-                  <div className={styles.ph_notch} />
-                </div>
-              </div>
-            </div>
-
-            {phPreview !== null && (
-              <div
-                className={styles.ph_left}
-                style={{
-                  left: `${phPreview}px`,
-                }}
-                ref={phLeftRef}
-              >
-                <div className={styles.ph_line_notch}>
-                  <div className={styles.ph_line_hover}>
-                    <div className={styles.ph_rel}></div>
-                    <div className={styles.ph_notch} />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <Playhead
+          playheadRef={playheadRef}
+          phLeftRef={phLeftRef}
+          mediaContainerWidth={mediaContainerWidth}
+          position={position}
+          setPosition={setPosition}
+        />
 
         <TimelineRuler
           totalDuration={totalMediaDuration}

@@ -3,7 +3,6 @@ import styles from "@/styles/timeline.module.css";
 import { useDispatch } from "react-redux";
 import { setPhPosition } from "@/redux/phPosition";
 import { setPhPreview } from "@/redux/phPreview";
-
 interface TimelineRulerProps {
   totalDuration?: number;
   zoomLevel: number;
@@ -17,6 +16,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   containerWidth,
   scrollPosition,
 }) => {
+  // usestate hooks
   const [tickPos, setTickPos] = useState<number[]>(); // having array since we are mapping tickpos in dom
   // const [tickGap, setTickGap] = useState<number>();
 
@@ -87,6 +87,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   ) => {
     const hoverPosition = getHoverPosition(event);
     dispatch(setPhPreview(hoverPosition));
+    // preview will not be showing while dragging due to ph_rel and onMouseLeave
   };
 
   return (
