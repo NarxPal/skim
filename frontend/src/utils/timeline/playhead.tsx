@@ -4,21 +4,24 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/redux/store";
 import { setPhPosition } from "@/redux/phPosition";
 import { setIsPhDragging } from "@/redux/isPhDragging";
+import { throttle } from "lodash";
 
 interface PlayheadProps {
-  playheadRef: React.RefObject<HTMLDivElement>;
   phLeftRef: React.RefObject<HTMLDivElement>;
   mediaContainerWidth?: number;
   position: number;
   setPosition: (position: number) => void;
+  scrollPosition: number;
+  setScrollPosition: (position: number) => void;
 }
 
 const Playhead: React.FC<PlayheadProps> = ({
-  playheadRef,
   phLeftRef,
   mediaContainerWidth,
   position,
   setPosition,
+  scrollPosition,
+  setScrollPosition,
 }) => {
   const dispatch = useDispatch();
   //redux state hooks
@@ -33,7 +36,32 @@ const Playhead: React.FC<PlayheadProps> = ({
   );
 
   //useref
-  const phDivRef = useRef<HTMLDivElement | null>(null);
+  const phDivRef = useRef<HTMLDivElement | null>(null); // for calc new position of ph while dragging
+  const playheadRef = useRef<HTMLDivElement>(null);
+  // Here lodash throttle will help to reduce state update to 50ms
+  // to avoid using throttle while not having the error, do this : pass setposition to timelineRuler in and use it in handleMousePos passing hoverPosition
+  const throttledSetPosition = useRef(
+    throttle((position: number) => dispatch(setPhPosition(position)), 50) // Update every 50ms
+  ).current;
+
+  const handlePhScroll = () => {
+    if (playheadRef.current) {
+      setScrollPosition(playheadRef.current.scrollLeft);
+    }
+  };
+
+  // It helps playhead container to scroll along with the media_parent_div
+  useEffect(() => {
+    if (playheadRef.current) {
+      playheadRef.current.scrollLeft = scrollPosition; // Sync scroll position for playhead
+      const playhead = playheadRef.current;
+      playhead.addEventListener("scroll", handlePhScroll);
+
+      return () => {
+        playhead.removeEventListener("scroll", handlePhScroll);
+      };
+    }
+  }, [scrollPosition]);
 
   // new position of ph is being calculated here while dragging
   const handleMousePhHover = (event: MouseEvent): void => {
@@ -48,8 +76,8 @@ const Playhead: React.FC<PlayheadProps> = ({
       const hoverPosition = Math.max(0, Math.floor(clientX));
 
       if (hoverPosition !== undefined) {
-        dispatch(setPhPosition(hoverPosition));
         setPosition(hoverPosition);
+        throttledSetPosition(hoverPosition); // Since redux state setPhPosition is causing state limits error
       }
     }
   };
@@ -71,7 +99,7 @@ const Playhead: React.FC<PlayheadProps> = ({
         window.removeEventListener("mousemove", handleMouseMove);
       };
     }
-  }, [isPhDragging]);
+  }, [isPhDragging, throttledSetPosition]);
 
   const handleMouseDown = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
@@ -148,7 +176,6 @@ const Playhead: React.FC<PlayheadProps> = ({
             style={{
               left: `${phPreview}px`,
             }}
-            ref={phLeftRef}
           >
             <div className={styles.ph_line_notch}>
               <div className={styles.ph_line_hover}>

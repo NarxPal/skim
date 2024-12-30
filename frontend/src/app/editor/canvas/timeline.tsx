@@ -2,15 +2,12 @@ import React, { useState, useRef, useEffect } from "react";
 import styles from "@/styles/timeline.module.css";
 import Image from "next/image";
 import axios from "axios";
-// import { useSelector } from "react-redux";
-// import { RootState } from "@/redux/store";
 import ContextMenu from "@/components/contextMenu";
 import TimelineRuler from "@/utils/timeline/timelineRuler";
 import Playhead from "@/utils/timeline/playhead";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/redux/store";
 import { setPhPosition } from "@/redux/phPosition";
-import { setIsPhDragging } from "@/redux/isPhDragging";
 
 type MediaItem = {
   signedUrl: string | null;
@@ -70,12 +67,6 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   const phPosition = useSelector(
     (state: RootState) => state.phPosition.phPosition
   );
-  const phPreview = useSelector(
-    (state: RootState) => state.phPreview.phPreview
-  );
-  const isPhDragging = useSelector(
-    (state: RootState) => state.isPhDragging.isPhDragging
-  );
 
   // usestate hooks
   const [columns, setColumns] = useState<ColumnsProps | undefined>(undefined); // column and barsdata are having same data
@@ -120,7 +111,6 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   const startX = useRef(0);
   const activeBarId = useRef<number | null>(null);
   const mediaParentRef = useRef<HTMLDivElement | null>(null);
-  const playheadRef = useRef<HTMLDivElement>(null);
   const phLeftRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   // const timelineRef = useRef<HTMLDivElement>(null);
@@ -132,26 +122,6 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     image: "/image.png",
     text: "/text.png",
   };
-
-  const handlePhScroll = () => {
-    if (playheadRef.current) {
-      setScrollPosition(playheadRef.current.scrollLeft);
-    }
-  };
-
-  // It helps playhead container to scroll along with the media_parent_div
-  useEffect(() => {
-    if (playheadRef.current) {
-      playheadRef.current.scrollLeft = scrollPosition; // Sync scroll position for playhead
-
-      const playhead = playheadRef.current;
-      playhead.addEventListener("scroll", handlePhScroll);
-
-      return () => {
-        playhead.removeEventListener("scroll", handlePhScroll);
-      };
-    }
-  }, [scrollPosition]);
 
   // Update the scrollleft of media_parent_div when playhead moves out of view
   useEffect(() => {
@@ -774,7 +744,13 @@ const Timeline = ({ prjId }: { prjId: string }) => {
           }, 0) // sum is reset to 0
         );
       }, 0);
-      const containerWidth = totalDuration * zoomLevel;
+      let containerWidth;
+      if (zoomLevel === 10) {
+        containerWidth = totalDuration * (zoomLevel * 10); // making 100px per sec for zoom level 10
+      } else {
+        containerWidth = totalDuration * zoomLevel;
+      }
+
       setTotalMediaDuration(totalDuration); // used for timelineRuler
       console.log("total duration bro", totalDuration);
       console.log("zoom level bro", zoomLevel);
@@ -1119,7 +1095,8 @@ const Timeline = ({ prjId }: { prjId: string }) => {
       </div>
       <div className={styles.ruler_media}>
         <Playhead
-          playheadRef={playheadRef}
+          setScrollPosition={setScrollPosition}
+          scrollPosition={scrollPosition}
           phLeftRef={phLeftRef}
           mediaContainerWidth={mediaContainerWidth}
           position={position}

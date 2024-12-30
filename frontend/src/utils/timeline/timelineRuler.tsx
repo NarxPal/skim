@@ -100,7 +100,20 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
     >
       <div className={styles.ruler_content}>
         <div className={styles.time_ticks}>
-          <div className={styles.time_div}></div>
+          <div className={styles.time_div}>
+            {totalDuration !== 0
+              ? tickPos &&
+                tickPos.map((pos, index) => (
+                  <div
+                    key={index}
+                    className={styles.time}
+                    style={{ left: `${pos}px` }}
+                  >
+                    {`${index.toString()}s`}
+                  </div>
+                ))
+              : null}
+          </div>
           <div className={styles.ticks_div}>
             {totalDuration !== 0
               ? tickPos &&

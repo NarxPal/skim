@@ -146,15 +146,19 @@
 }
 
 .time_ticks {
-  @apply flex flex-col h-full w-full;
+  @apply flex flex-col h-full w-full select-none;
 }
 
 .time_div {
-  @apply flex h-full;
+  @apply flex h-full text-xs;
 }
 
 .ticks_div {
-  @apply relative h-full cursor-default select-none;
+  @apply relative h-full cursor-default;
+}
+
+.time {
+  @apply absolute opacity-50;
 }
 
 .tick {
