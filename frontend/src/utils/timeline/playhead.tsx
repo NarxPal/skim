@@ -10,9 +10,9 @@ interface PlayheadProps {
   phLeftRef: React.RefObject<HTMLDivElement>;
   mediaContainerWidth?: number;
   position: number;
-  setPosition: (position: number) => void;
+  setPosition: React.Dispatch<React.SetStateAction<number>>;
   scrollPosition: number;
-  setScrollPosition: (position: number) => void;
+  setScrollPosition: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const Playhead: React.FC<PlayheadProps> = ({

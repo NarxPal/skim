@@ -9,6 +9,9 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/redux/store";
 import { setPhPosition } from "@/redux/phPosition";
 
+// types / interfaces import
+import { BarsProp, bar } from "@/interfaces/barsProp";
+
 type MediaItem = {
   signedUrl: string | null;
   name: string;
@@ -21,34 +24,6 @@ type MediaItem = {
   user_id: string;
   project_id: number;
   duration: number;
-};
-
-type bar = {
-  filepath: string;
-  id: number;
-  left_position: number;
-  name: string;
-  project_id: number;
-  signedUrl: string;
-  type: string;
-  user_id: string;
-  width: number;
-  duration: number;
-};
-
-type sub_column = {
-  id: number;
-  parent_id: number;
-  project_id: number;
-  user_id: string;
-  bars: bar[];
-};
-type BarsProp = {
-  id: number;
-  parent_id: number;
-  project_id: number;
-  user_id: string;
-  sub_columns: sub_column[];
 };
 
 type ColumnsProps = {
@@ -70,7 +45,9 @@ const Timeline = ({ prjId }: { prjId: string }) => {
 
   // usestate hooks
   const [columns, setColumns] = useState<ColumnsProps | undefined>(undefined); // column and barsdata are having same data
-  const [barsData, setBarsData] = useState<BarsProp[]>([]);
+  const [barsData, setBarsData] = useState<BarsProp | null>(null);
+  const [barsDataChangeAfterZoom, setBarsDataChangeAfterZoom] =
+    useState<BarsProp | null>(null);
 
   const [barDragging, setBarDragging] = useState<boolean>(false);
   const [fetchBars, setFetchBars] = useState<boolean>(false);
@@ -99,8 +76,8 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   const [droppedBarNewLeft, setDroppedBarNewLeft] = useState<number | null>();
   const [LPBasedBars, setLPBasedBars] = useState<bar[]>([]);
   const [zoomLevel, setZoomLevel] = useState<number>(10);
-  const [mediaContainerWidth, setMediaContainerWidth] = useState<number>();
-  const [totalMediaDuration, setTotalMediaDuration] = useState<number>();
+  const [mediaContainerWidth, setMediaContainerWidth] = useState<number>(0);
+  const [totalMediaDuration, setTotalMediaDuration] = useState<number>(0);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState<number>(0);
@@ -174,7 +151,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
             user_id: parsedItem.user_id,
             name: parsedItem.name,
             left_position: 0, // default left position
-            width: parsedItem.duration * zoomLevel, // duration of the media, for zoom level 1 multiplying 10 since each sec would be 10px/sec, this would work well only for zoom level 1
+            width: parsedItem.duration * zoomLevel * 10, // duration of the media, for zoom level 1 multiplying 10 since each sec would be 10px/sec, this would work well only for zoom level 1
             duration: parsedItem.duration, // storing duration to use in calcContainerWidth
             project_id: parsedItem.project_id,
             type: parsedItem.type,
@@ -249,7 +226,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
         const columnData = response.data;
         setColumns(columnData);
         console.log("root col data", [response.data]);
-        setBarsData([columnData]);
+        setBarsData(columnData);
       } catch (error) {
         console.log(error);
       }
@@ -308,147 +285,146 @@ const Timeline = ({ prjId }: { prjId: string }) => {
     if (!isResizing.current || !resizeDirection.current) return;
     const dx = e.clientX - startX.current; // the e.clientx is the current mouse position during the movement of the mouse and we are subtracting it with initial mouse (starting) position during mousedown
 
-    setBarsData((prevRootColumn: BarsProp[]) => {
-      return prevRootColumn.map((rootColumn) => {
-        return {
-          ...rootColumn,
-          sub_columns: rootColumn.sub_columns.map((subColumn) => {
-            return {
-              ...subColumn,
-              bars: subColumn?.bars?.map((bar, barIndex, bars) => {
-                if (bar.id === activeBarId.current) {
-                  let newWidth = bar.width;
-                  let newLeft = bar.left_position;
+    setBarsData((prevRootColumn: BarsProp | null) => {
+      if (!prevRootColumn) return null;
+      return {
+        ...prevRootColumn,
+        sub_columns: prevRootColumn.sub_columns.map((subColumn) => {
+          return {
+            ...subColumn,
+            bars: subColumn?.bars?.map((bar, barIndex, bars) => {
+              if (bar.id === activeBarId.current) {
+                let newWidth = bar.width;
+                let newLeft = bar.left_position;
 
-                  if (resizeDirection.current === "left") {
-                    const minWidth = 125;
+                if (resizeDirection.current === "left") {
+                  const minWidth = 125;
 
-                    const minLeft =
-                      bar.width === minWidth
-                        ? bar.left_position
-                        : bar.left_position + dx >= 0
-                        ? bar.left_position + dx
-                        : 0; // Prevent moving beyond left limit
+                  const minLeft =
+                    bar.width === minWidth
+                      ? bar.left_position
+                      : bar.left_position + dx >= 0
+                      ? bar.left_position + dx
+                      : 0; // Prevent moving beyond left limit
 
-                    newLeft = minLeft;
+                  newLeft = minLeft;
 
-                    // Ensure the width doesn't grow when reaching the left gap constraint
-                    if (newLeft === 0) {
-                      newWidth = Math.max(bar.width - dx, minWidth); // Stop resizing width if at gap
-                    } else {
-                      newWidth = bar.width - dx;
-                    }
+                  // Ensure the width doesn't grow when reaching the left gap constraint
+                  if (newLeft === 0) {
+                    newWidth = Math.max(bar.width - dx, minWidth); // Stop resizing width if at gap
+                  } else {
+                    newWidth = bar.width - dx;
+                  }
 
-                    // Prevent overlap with the previous bar
-                    if (barIndex > 0) {
-                      for (let i = 0; i < barIndex; i++) {
-                        // Only check for previous bars if it's not the first bar
-                        const prevBar = bars[barIndex - 1];
-                        const minPosition =
-                          prevBar.left_position + prevBar.width + 10;
+                  // Prevent overlap with the previous bar
+                  if (barIndex > 0) {
+                    for (let i = 0; i < barIndex; i++) {
+                      // Only check for previous bars if it's not the first bar
+                      const prevBar = bars[barIndex - 1];
+                      const minPosition =
+                        prevBar.left_position + prevBar.width + 10;
 
-                        if (newLeft < minPosition) {
-                          newLeft = minPosition; // Prevent overlap with previous bar
-                          newWidth = bar.width - (bar.left_position - newLeft); // Adjust width accordingly
-                        }
-                      }
-                    } else {
-                      // For the first bar, set left limit and stop increasing width if the left limit is reached
-                      const minLeft = 0; // Prevent moving beyond left limit
-                      newLeft = Math.max(newLeft, minLeft); // Set minimum left position
-                      if (newLeft === minLeft) {
-                        newWidth = bar.width;
-                      } else {
-                        newWidth = Math.max(newWidth, minWidth); // Ensure minimum width
+                      if (newLeft < minPosition) {
+                        newLeft = minPosition; // Prevent overlap with previous bar
+                        newWidth = bar.width - (bar.left_position - newLeft); // Adjust width accordingly
                       }
                     }
                   } else {
-                    // Right handle: prevent overlap with next bar
-                    newWidth = bar.width + dx;
-
-                    for (let i = barIndex + 1; i < bars.length; i++) {
-                      const nextBar = bars[i];
-                      const maxRightPosition = nextBar.left_position - 10;
-                      if (newWidth + bar.left_position > maxRightPosition) {
-                        newWidth = maxRightPosition - bar.left_position - 10;
-                      }
+                    // For the first bar, set left limit and stop increasing width if the left limit is reached
+                    const minLeft = 0; // Prevent moving beyond left limit
+                    newLeft = Math.max(newLeft, minLeft); // Set minimum left position
+                    if (newLeft === minLeft) {
+                      newWidth = bar.width;
+                    } else {
+                      newWidth = Math.max(newWidth, minWidth); // Ensure minimum width
                     }
                   }
+                } else {
+                  // Right handle: prevent overlap with next bar
+                  newWidth = bar.width + dx;
 
-                  // for scrolling the parent element of bars when bars are resized and get out of view
-                  const parentElement = document.querySelector(
-                    "#id-1"
-                  ) as HTMLElement;
-                  if (parentElement) {
-                    const barRightEdge = newLeft + newWidth; // Calculate the bar's right edge
-                    const parentScrollRight =
-                      parentElement.scrollLeft + parentElement.offsetWidth;
-                    const buffer = 50; // Pixels of buffer space around the handle
-
-                    if (resizeDirection.current === "right") {
-                      if (barRightEdge > parentScrollRight) {
-                        parentElement.scrollLeft +=
-                          barRightEdge - parentScrollRight; // Scroll parent to the right
-                      }
-                      if (barRightEdge < parentElement.scrollLeft) {
-                        // scroll parent to left
-                        parentElement.scrollLeft -=
-                          parentElement.scrollLeft - barRightEdge;
-                      }
-                      // buffer while dragging right handle towards right
-                      if (barRightEdge > parentScrollRight - buffer) {
-                        parentElement.scrollLeft +=
-                          barRightEdge + buffer - parentScrollRight;
-                      }
-                      if (barRightEdge < parentElement.scrollLeft + buffer) {
-                        parentElement.scrollLeft -=
-                          parentElement.scrollLeft - (barRightEdge - buffer);
-                      }
-                    } else if (resizeDirection.current === "left") {
-                      // scroll parent to right
-                      if (newLeft > parentScrollRight) {
-                        parentElement.scrollLeft += newLeft - parentScrollRight;
-                      }
-                      // scroll parent to left
-                      if (newLeft < parentElement.scrollLeft) {
-                        parentElement.scrollLeft -=
-                          parentElement.scrollLeft - newLeft;
-                      }
-
-                      if (newLeft < parentElement.scrollLeft + buffer) {
-                        parentElement.scrollLeft -=
-                          parentElement.scrollLeft - (newLeft - buffer);
-                      }
-                      if (newLeft > parentScrollRight - buffer) {
-                        parentElement.scrollLeft +=
-                          newLeft + buffer - parentScrollRight;
-                      }
+                  for (let i = barIndex + 1; i < bars.length; i++) {
+                    const nextBar = bars[i];
+                    const maxRightPosition = nextBar.left_position - 10;
+                    if (newWidth + bar.left_position > maxRightPosition) {
+                      newWidth = maxRightPosition - bar.left_position - 10;
                     }
-                  } else if (!parentElement) {
-                    console.error("Parent element not found");
                   }
-
-                  // since zoomLevel decides the width of bar at least for level 10
-                  if (newWidth > bar.duration * zoomLevel) {
-                    newWidth = bar.duration * zoomLevel;
-                  }
-
-                  // Update the database
-                  // console.log(bar.id, newWidth, newLeft);
-                  updateItemInDatabase(bar.id, newWidth, newLeft);
-
-                  return {
-                    ...bar,
-                    width: Math.max(newWidth, 125),
-                    left_position: newLeft,
-                  };
                 }
-                return bar;
-              }),
-            };
-          }),
-        };
-      });
+
+                // for scrolling the parent element of bars when bars are resized and get out of view
+                const parentElement = document.querySelector(
+                  "#id-1"
+                ) as HTMLElement;
+                if (parentElement) {
+                  const barRightEdge = newLeft + newWidth; // Calculate the bar's right edge
+                  const parentScrollRight =
+                    parentElement.scrollLeft + parentElement.offsetWidth;
+                  const buffer = 50; // Pixels of buffer space around the handle
+
+                  if (resizeDirection.current === "right") {
+                    if (barRightEdge > parentScrollRight) {
+                      parentElement.scrollLeft +=
+                        barRightEdge - parentScrollRight; // Scroll parent to the right
+                    }
+                    if (barRightEdge < parentElement.scrollLeft) {
+                      // scroll parent to left
+                      parentElement.scrollLeft -=
+                        parentElement.scrollLeft - barRightEdge;
+                    }
+                    // buffer while dragging right handle towards right
+                    if (barRightEdge > parentScrollRight - buffer) {
+                      parentElement.scrollLeft +=
+                        barRightEdge + buffer - parentScrollRight;
+                    }
+                    if (barRightEdge < parentElement.scrollLeft + buffer) {
+                      parentElement.scrollLeft -=
+                        parentElement.scrollLeft - (barRightEdge - buffer);
+                    }
+                  } else if (resizeDirection.current === "left") {
+                    // scroll parent to right
+                    if (newLeft > parentScrollRight) {
+                      parentElement.scrollLeft += newLeft - parentScrollRight;
+                    }
+                    // scroll parent to left
+                    if (newLeft < parentElement.scrollLeft) {
+                      parentElement.scrollLeft -=
+                        parentElement.scrollLeft - newLeft;
+                    }
+
+                    if (newLeft < parentElement.scrollLeft + buffer) {
+                      parentElement.scrollLeft -=
+                        parentElement.scrollLeft - (newLeft - buffer);
+                    }
+                    if (newLeft > parentScrollRight - buffer) {
+                      parentElement.scrollLeft +=
+                        newLeft + buffer - parentScrollRight;
+                    }
+                  }
+                } else if (!parentElement) {
+                  console.error("Parent element not found");
+                }
+
+                // since zoomLevel decides the width of bar at least for level 10
+                if (newWidth > bar.duration * zoomLevel) {
+                  newWidth = bar.duration * zoomLevel;
+                }
+
+                // Update the database
+                // console.log(bar.id, newWidth, newLeft);
+                updateItemInDatabase(bar.id, newWidth, newLeft);
+
+                return {
+                  ...bar,
+                  width: Math.max(newWidth, 125),
+                  left_position: newLeft,
+                };
+              }
+              return bar;
+            }),
+          };
+        }),
+      };
     });
 
     startX.current = e.clientX;
@@ -731,24 +707,29 @@ const Timeline = ({ prjId }: { prjId: string }) => {
   useEffect(() => {
     const calcContainerWidth = async () => {
       console.log("barsdata[0]", barsData);
-      const totalDuration = barsData[0]?.sub_columns.reduce((acc, subCol) => {
-        const subColBars = subCol?.bars || [];
-        return (
-          acc +
-          subColBars.reduce((sum, bar) => {
-            sum += bar.duration || 0;
-            // console.log("acc", acc);
-            // console.log("sum", sum);
-            // console.log("bar duration bro", bar.duration);
-            return sum;
-          }, 0) // sum is reset to 0
-        );
-      }, 0);
-      let containerWidth;
-      if (zoomLevel === 10) {
-        containerWidth = totalDuration * (zoomLevel * 10); // making 100px per sec for zoom level 10
+      const totalDuration =
+        barsData?.sub_columns?.reduce((acc, subCol) => {
+          const subColBars = subCol?.bars || [];
+          return (
+            acc +
+            subColBars.reduce((sum, bar) => {
+              sum += bar.duration || 0;
+              return sum;
+            }, 0) // sum is reset to 0
+          );
+        }, 0) || 0; // if sub_columns is undefined default to 0 value
+      let containerWidth = 0;
+
+      if (zoomLevel >= 10) {
+        containerWidth = totalDuration * 100; // making 100px per sec for zoom level 10
+      } else if (zoomLevel >= 8) {
+        containerWidth = totalDuration * 80;
+      } else if (zoomLevel >= 5) {
+        containerWidth = totalDuration * 80;
+      } else if (zoomLevel >= 2) {
+        containerWidth = totalDuration * 80;
       } else {
-        containerWidth = totalDuration * zoomLevel;
+        containerWidth = totalDuration * 80;
       }
 
       setTotalMediaDuration(totalDuration); // used for timelineRuler
@@ -756,21 +737,17 @@ const Timeline = ({ prjId }: { prjId: string }) => {
       console.log("zoom level bro", zoomLevel);
       setMediaContainerWidth(containerWidth);
     };
-    if (barsData && barsData[0]?.sub_columns) {
-      calcContainerWidth();
-    }
+    calcContainerWidth();
   }, [columns, zoomLevel]); // using columns here since setbarsdata will change everytime during resize bar
 
   const updateBarsOnZoom = () => {
-    const scaledBars = barsData.flatMap((barsProp) =>
-      barsProp.sub_columns.flatMap((column) =>
-        column.bars?.map((bar: bar) => {
-          const scaledWidth = bar.duration * zoomLevel;
-          console.log("zoom level bro");
-          const scaledPosition = bar.left_position * zoomLevel;
-          return { ...bar, width: scaledWidth, left_position: scaledPosition };
-        })
-      )
+    const scaledBars = barsData?.sub_columns?.flatMap((column) =>
+      column.bars?.map((bar: bar) => {
+        const scaledWidth = bar.duration * zoomLevel;
+        console.log("zoom level bro");
+        const scaledPosition = bar.left_position * zoomLevel;
+        return { ...bar, width: scaledWidth, left_position: scaledPosition };
+      })
     );
     console.log("scaled bars bro", scaledBars);
     // setBarsData(scaledBars);
@@ -1108,6 +1085,8 @@ const Timeline = ({ prjId }: { prjId: string }) => {
           zoomLevel={zoomLevel}
           containerWidth={mediaContainerWidth}
           scrollPosition={scrollPosition}
+          setBarsDataChangeAfterZoom={setBarsDataChangeAfterZoom}
+          barsData={barsData}
         />
         <div className={styles.media_parent_div} ref={mediaParentRef}>
           <div
@@ -1119,10 +1098,10 @@ const Timeline = ({ prjId }: { prjId: string }) => {
               id={"id-1"}
               style={{ width: `${mediaContainerWidth}px` }}
             >
-              {((barsData && barsData[0]?.sub_columns === null) ||
-              barsData[0]?.sub_columns.length === 0
+              {((barsData && barsData.sub_columns === null) ||
+              barsData?.sub_columns.length === 0
                 ? new Array(3).fill(null) //now here 3 empty array will be shown when no sub_column will be present(initial state of timeline)
-                : barsData[0]?.sub_columns || []
+                : barsData?.sub_columns || []
               ).map((item, index) => {
                 return (
                   <div
@@ -1157,13 +1136,13 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                         >
                           <div
                             className={`${
-                              barsData[0]?.sub_columns === null
+                              barsData?.sub_columns === null
                                 ? `${styles.m_item_box}`
                                 : `${styles.m_item_box_drop}`
                             } group`}
                           >
                             <div className={styles.bar_content}>
-                              {barsData[0]?.sub_columns?.length ? (
+                              {barsData?.sub_columns?.length ? (
                                 <div
                                   className={`${styles.bar_arrow} hidden group-hover:flex`}
                                   onMouseDown={(e) =>
@@ -1185,7 +1164,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
 
                               <div
                                 className={
-                                  barsData[0]?.sub_columns?.length
+                                  barsData?.sub_columns?.length
                                     ? `${styles.item_content_drop}`
                                     : ""
                                 }
@@ -1237,7 +1216,7 @@ const Timeline = ({ prjId }: { prjId: string }) => {
                                 )}
                               </div>
 
-                              {barsData[0]?.sub_columns?.length ? (
+                              {barsData?.sub_columns?.length ? (
                                 <div
                                   className={`${styles.bar_arrow} hidden group-hover:flex`}
                                   onMouseDown={(e) =>
