@@ -25,6 +25,7 @@ type Bar = {
   signedUrl: string;
   filepath: string;
   order: number;
+  url: string;
 
   // later: not having here column_id since don't know how we will pass it in frontend from handlemediadrop to createsubcol
 };

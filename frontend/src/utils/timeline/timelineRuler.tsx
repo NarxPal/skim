@@ -3,6 +3,7 @@ import styles from "@/styles/timeline.module.css";
 import { useDispatch } from "react-redux";
 import { setPhPosition } from "@/redux/phPosition";
 import { setPhPreview } from "@/redux/phPreview";
+import { setMarkerInterval } from "@/redux/markerInterval";
 
 // types / interfaces import
 import { BarsProp } from "@/interfaces/barsProp";
@@ -51,11 +52,104 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
     return `${hrs}:${mins}:${secs}`;
   };
 
+  function calculateInterval(totalDuration: number, zoomLevel: number): number {
+    console.log("zl lolo", zoomLevel);
+    let interval: number;
+
+    if (totalDuration >= 3600) {
+      interval = 1800; // 30-minute interval for videos >= 1 hour
+    } else if (totalDuration >= 1800) {
+      interval = 900; // 15-minute interval for 30 min to 1 hour
+    } else if (totalDuration >= 900) {
+      interval = 450; // 7.5-minute interval for 15 to 30 min
+    } else if (totalDuration >= 300) {
+      interval = 150; // 2.5-min interval for 5 to 15 min
+    } else {
+      interval = 30; // 30-second interval for videos < 5 min
+    }
+
+    // Adjust interval based on zoom level
+    if (zoomLevel === 10) {
+      if (interval === 30) {
+        interval = 1; // Interval stays at 30 seconds for small videos
+      } else if (interval === 150) {
+        interval = 30; // 2.5 minutes adjusted to 30 seconds
+      } else if (interval === 450) {
+        interval = 60; // 7.5 minutes adjusted to 1 minute
+      } else if (interval === 900) {
+        interval = 120; // 15 minutes adjusted to 2 minutes
+      } else if (interval === 1800) {
+        interval = 300; // 30 minutes adjusted to 5 minutes
+      }
+    } else if (zoomLevel === 8) {
+      if (interval === 30) {
+        interval = 30; // Interval stays at 30 seconds for small videos
+      } else if (interval === 150) {
+        interval = 30; // 2.5 minutes adjusted to 30 seconds
+      } else if (interval === 450) {
+        interval = 60; // 7.5 minutes adjusted to 1 minute
+      } else if (interval === 900) {
+        interval = 120; // 15 minutes adjusted to 2 minutes
+      } else if (interval === 1800) {
+        interval = 300; // 30 minutes adjusted to 5 minutes
+      }
+    } else if (zoomLevel === 6) {
+      if (interval === 30) {
+        interval = 60; // 30 seconds adjusted to 1 minute
+      } else if (interval === 150) {
+        interval = 300; // 2.5 minutes adjusted to 5 minutes
+      } else if (interval === 450) {
+        interval = 600; // 7.5 minutes adjusted to 10 minutes
+      } else if (interval === 900) {
+        interval = 1200; // 15 minutes adjusted to 20 minutes
+      } else if (interval === 1800) {
+        interval = 1800; // 30 minutes stays at 30 minutes
+      }
+    } else if (zoomLevel === 4) {
+      if (interval === 30) {
+        interval = 120; // 30 seconds adjusted to 2 minute
+      } else if (interval === 150) {
+        interval = 300; // 2.5 minutes adjusted to 5 minutes
+      } else if (interval === 450) {
+        interval = 600; // 7.5 minutes adjusted to 10 minutes
+      } else if (interval === 900) {
+        interval = 1200; // 15 minutes adjusted to 20 minutes
+      } else if (interval === 1800) {
+        interval = 1800; // 30 minutes stays at 30 minutes
+      }
+    } else if (zoomLevel === 2) {
+      if (interval === 30) {
+        interval = 150; // 30 seconds adjusted to 2min 30 sec
+      } else if (interval === 150) {
+        interval = 300; // 2.5 minutes adjusted to 5 minutes
+      } else if (interval === 450) {
+        interval = 600; // 7.5 minutes adjusted to 10 minutes
+      } else if (interval === 900) {
+        interval = 1200; // 15 minutes adjusted to 20 minutes
+      } else if (interval === 1800) {
+        interval = 1800; // 30 minutes stays at 30 minutes
+      }
+    } else {
+      if (interval === 30) {
+        interval = 300; // 30 seconds adjusted to 5 minutes
+      } else if (interval === 150) {
+        interval = 300; // 2.5 minutes adjusted to 5 minutes
+      } else if (interval === 450) {
+        interval = 600; // 7.5 minutes adjusted to 10 minutes
+      } else if (interval === 900) {
+        interval = 1200; // 15 minutes adjusted to 20 minutes
+      } else if (interval === 1800) {
+        interval = 2400; // 30 minutes adjusted to 40 minutes
+      }
+    }
+
+    return interval;
+  }
+
   useEffect(() => {
     const calcTicks = async () => {
       // timestep tell after how many seconds u want a tick
       let timeStep = 1; // for zoom level 10, a tick for every second
-      console.log("zl level bro", zoomLevel);
 
       // if (zoomLevel < 10) {
       //   timeStep = 5; // Change based on zoom level (e.g., 5 seconds for higher zoom), tick after every 5s, timestep should be dynamically based upon zoom level and media duration, currently having it 5
@@ -70,63 +164,11 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
       console.log("containerWidth:", containerWidth);
       console.log("totalDuration:", totalDuration);
 
-      let interval: number;
       // let basePxPerSec: number = 10;
       // let pixelsPerSecond: number = zoomLevel * basePxPerSec; // Pixels per second based on zoom level
 
-      if (totalDuration >= 3600) {
-        interval = 1800; // 30-minute interval for videos >= 1 hour
-      } else if (totalDuration >= 1800) {
-        interval = 900; // 15-minute interval for 30 min to 1 hour
-      } else if (totalDuration >= 900) {
-        interval = 450; // 7.5-minute interval for 15 to 30 min
-      } else if (totalDuration >= 300) {
-        interval = 150; // 2.5-min interval for 5 to 15 min
-      } else {
-        interval = 30; // 30-second interval for videos < 5 min
-      }
-
-      // Adjust interval based on zoom level
-      if (zoomLevel >= 8) {
-        // For high zoom levels (8 or more), keep the interval relatively small
-        if (interval === 30) {
-          interval = 30; // Interval stays at 30 seconds for small videos
-        } else if (interval === 150) {
-          interval = 30; // 2.5 minutes adjusted to 30 seconds
-        } else if (interval === 450) {
-          interval = 60; // 7.5 minutes adjusted to 1 minute
-        } else if (interval === 900) {
-          interval = 120; // 15 minutes adjusted to 2 minutes
-        } else if (interval === 1800) {
-          interval = 300; // 30 minutes adjusted to 5 minutes
-        }
-      } else if (zoomLevel >= 5) {
-        // For medium zoom levels (5-7), make the interval larger
-        if (interval === 30) {
-          interval = 60; // 30 seconds adjusted to 1 minute
-        } else if (interval === 150) {
-          interval = 300; // 2.5 minutes adjusted to 5 minutes
-        } else if (interval === 450) {
-          interval = 600; // 7.5 minutes adjusted to 10 minutes
-        } else if (interval === 900) {
-          interval = 1200; // 15 minutes adjusted to 20 minutes
-        } else if (interval === 1800) {
-          interval = 1800; // 30 minutes stays at 30 minutes
-        }
-      } else {
-        // For low zoom levels (less than 5), make the interval even larger
-        if (interval === 30) {
-          interval = 120; // 30 seconds adjusted to 2 minutes
-        } else if (interval === 150) {
-          interval = 300; // 2.5 minutes adjusted to 5 minutes
-        } else if (interval === 450) {
-          interval = 600; // 7.5 minutes adjusted to 10 minutes
-        } else if (interval === 900) {
-          interval = 1200; // 15 minutes adjusted to 20 minutes
-        } else if (interval === 1800) {
-          interval = 2400; // 30 minutes adjusted to 40 minutes
-        }
-      }
+      const interval = calculateInterval(totalDuration, zoomLevel);
+      dispatch(setMarkerInterval(interval));
 
       // To add interval(in hh:mm:ss format) per marker accross container width
       for (let time = 0; time <= containerWidth; time += interval) {
@@ -160,7 +202,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
             return {
               ...subCol, // Retain the original `subCol` structure
               bars: subCol?.bars?.map((bar) => {
-                const duration = bar.duration || 0; // Calculate duration if missing
+                const duration = bar.duration || 0; // Calculate duration if missing, probly for img
                 const width = Math.round(
                   (duration / interval) * singleTickPxValue
                 );
@@ -173,8 +215,9 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
       setBarsDataChangeAfterZoom(barsDurations);
     };
     calcTicks();
-  }, [zoomLevel, containerWidth, totalDuration]);
+  }, [zoomLevel, containerWidth, totalDuration, barsData]); // adding delCmBarId to again map over the data since barsData will be changed
 
+  // Change position of ph during onClick over timeline ruler
   const getHoverPosition = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) => {
@@ -226,9 +269,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
                     className={styles.time}
                     style={{ left: `${pos}px` }}
                   >
-                    {zoomLevel === 10
-                      ? `${index.toString()}s`
-                      : `${formattedMarkers && formattedMarkers[index]}s`}
+                    {formattedMarkers && formattedMarkers[index]}
                   </div>
                 ))
               : null}

@@ -81,13 +81,13 @@
 }
 
 .canvas_pane {
-  @apply h-full w-[55%] rounded-md flex-col gap-3 flex border-r-2 border-editor_gray;
+  @apply h-full w-[55%] rounded-md flex-col flex border-r-2 border-editor_gray;
 }
 
-.video_div {
-  @apply absolute items-center justify-center flex m-auto h-full w-full;
+.resizer {
+  @apply hover:bg-blue_btn h-[4px] cursor-ns-resize relative;
 }
 
-.video_tag {
-  @apply flex rounded-md h-[90%] w-[90%];
+.resizer_pad {
+  @apply absolute h-full w-full p-2 top-[-4px];
 }

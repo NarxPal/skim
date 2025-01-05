@@ -1,7 +1,28 @@
 .canvas {
-  @apply h-[40%] w-full flex relative;
+  @apply w-full flex relative flex-col;
 }
 
 .canvas_content {
-  @apply w-full h-full;
+  @apply w-full h-[90%];
+}
+
+.video_tag {
+  @apply h-full w-full border-white border-2;
+}
+
+.video_btns {
+  @apply flex flex-row items-center;
+}
+
+.vdo_feature_btns {
+  @apply flex flex-row ml-auto gap-2;
+}
+
+/* for playhead time */
+.playback_btns {
+  @apply ml-auto;
+}
+
+.pb_btn {
+  @apply text-white;
 }

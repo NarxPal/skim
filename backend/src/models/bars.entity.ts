@@ -55,4 +55,7 @@ export class Bars {
 
   @Column({ nullable: true }) // null true since image media will not have duration
   duration: number;
+
+  @Column({ nullable: true }) // null true for audio
+  url: string;
 }

@@ -65,8 +65,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/media/${userId}`
       );
 
-      const mediaFiles = res.data;
-      console.log("mediafile bro", mediaFiles);
+      const mediaFiles = res.data; // all the media stored for a userId
 
       const filteredMediaFiles = mediaFiles.filter(
         (file: MediaItem) => file.project_id === Number(params.id)
@@ -88,7 +87,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
           // signedUrl will contain the path that will show the image for any media type
         })
       );
-      return mediaWithUrls;
+      return mediaWithUrls; // signedUrl is not saved into db(for img it contain the img url and for video it contains the thumbnail url)
     } catch (error) {
       console.log("error fetching media", error);
       return [];
@@ -111,8 +110,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
 
   useEffect(() => {
     const loadMedia = async () => {
-      console.log("loadmedia ruan");
-      const media_Items = await fetchUserMediaWithUrls();
+      const media_Items = await fetchUserMediaWithUrls(); // optimize: since i have saved the url for video and image i don't have to do getpublicurl everytime so change this later
       console.log("media items bro:", media_Items);
       setMediaItems(media_Items);
     };
@@ -159,7 +157,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
       <div className={styles.all_media}>
         <div className={styles.media_library}>
           {mediaItems
-            .filter((item) => mediaType === "upload" || item.type === mediaType)
+            .filter((item) => mediaType === "upload" || item.type === mediaType) // show media based upon category selected
             .map((item) => (
               <div
                 key={item.filepath} // this should be name not filepath

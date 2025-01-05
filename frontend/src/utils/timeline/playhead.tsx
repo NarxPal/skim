@@ -38,8 +38,8 @@ const Playhead: React.FC<PlayheadProps> = ({
   //useref
   const phDivRef = useRef<HTMLDivElement | null>(null); // for calc new position of ph while dragging
   const playheadRef = useRef<HTMLDivElement>(null);
+
   // Here lodash throttle will help to reduce state update to 50ms
-  // to avoid using throttle while not having the error, do this : pass setposition to timelineRuler in and use it in handleMousePos passing hoverPosition
   const throttledSetPosition = useRef(
     throttle((position: number) => dispatch(setPhPosition(position)), 50) // Update every 50ms
   ).current;
@@ -108,11 +108,8 @@ const Playhead: React.FC<PlayheadProps> = ({
     dispatch(setIsPhDragging(true));
   };
 
-  const handleMouseUp = async (
-    event: React.MouseEvent<HTMLDivElement, MouseEvent>
-  ) => {
+  const handleMouseUp = async () => {
     dispatch(setIsPhDragging(false));
-    dispatch(setPhPosition(null));
   };
 
   // For stopping ph drag during mousedown outside the ruler div

@@ -29,9 +29,14 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
   };
 
   const getPublicUrl = async (files: File[], filePath: string) => {
-    if (files.some((file) => file.type.startsWith("video"))) {
+    // only get the url for image or video media type
+    if (
+      files.some(
+        (file) => file.type.startsWith("video") || file.type.startsWith("image")
+      )
+    ) {
       const { data } = supabase.storage.from("media").getPublicUrl(filePath); // get the video media(not thumbnail)
-      console.log("getpublic url data for video:", data);
+      console.log("getpublic url data for media:", data);
       return data.publicUrl;
     }
   };
@@ -120,9 +125,8 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
             if (thumbnailError) throw thumbnailError;
           }
 
-          console.log("file BRO", files);
           const publicUrl = await getPublicUrl(files, filePath); // here getting pu
-          console.log("video PU fetched before", publicUrl);
+          console.log("media PU fetched before", publicUrl);
 
           const duration = await fetchDuration(fileType, publicUrl);
           const roundedDuration = Math.round(Number(duration));
@@ -137,8 +141,8 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
               filepath: filePath,
               type: fileType,
               thumbnail_url: fileType === "video" ? thumbnailPath : "",
-              duration: roundedDuration, // will use it as width for clip
-              // not using thumbnail_url here since its specific to video media type only
+              duration: roundedDuration || null, // will use it as width for clip, null for image
+              url: publicUrl || null, // this url would work for video, image media type, null for audio
             }
           );
           console.log("bro media post res", response.data);

@@ -9,6 +9,7 @@ export type bar = {
   user_id: string;
   width: number;
   duration: number;
+  url: string;
 };
 
 export type sub_column = {

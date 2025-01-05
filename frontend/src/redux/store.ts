@@ -3,6 +3,7 @@ import userIdReducer from "./userId";
 import phPositionReducer from "./phPosition";
 import phPreviewReducer from "./phPreview";
 import isPhDraggingReducer from "./isPhDragging";
+import markerIntervalReducer from "./markerInterval";
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     phPosition: phPositionReducer,
     phPreview: phPreviewReducer,
     isPhDragging: isPhDraggingReducer,
+    markerInterval: markerIntervalReducer,
   },
 });
 

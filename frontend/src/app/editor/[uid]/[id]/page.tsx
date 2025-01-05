@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import styles from "@/styles/dash.module.css";
 import Image from "next/image";
@@ -12,15 +12,30 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { FetchUser } from "@/components/fetchUser";
 
+// types / interfaces import
+import { BarsProp, bar } from "@/interfaces/barsProp";
+
 const UserId = () => {
   const params = useParams<{ uid: string; id: string }>();
   const router = useRouter();
 
+  // state hooks
   const [id, setId] = useState<string | null>("");
   const [loadingId, setLoadingId] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<string>("upload");
+  const [canvasHeight, setCanvasHeight] = useState(50);
+  const [barsDataChangeAfterZoom, setBarsDataChangeAfterZoom] =
+    useState<BarsProp | null>(null);
+  const [mediaContainerWidth, setMediaContainerWidth] = useState<number>(0);
+  const [totalMediaDuration, setTotalMediaDuration] = useState<number>(0);
+  const [position, setPosition] = useState<number>(0); // position of ph
+  const [showPhTime, setShowPhTime] = useState<string>("00::00::00");
+
+  // useref hooks
+  const isDragging = useRef(false);
 
   const { loading } = FetchUser(params.uid); // calling useeffect to fetch the user_id
+  // redux hooks
   const userId = useSelector((state: RootState) => state.userId.userId); // userid has been set in project/uid
 
   useEffect(() => {
@@ -61,6 +76,21 @@ const UserId = () => {
 
   const handleTabClick = (tab: string) => {
     setActiveTab(tab);
+  };
+
+  const handleResizeMouseDown = () => {
+    isDragging.current = true;
+  };
+
+  const handleResizeMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging.current) return;
+    const container = e.currentTarget.getBoundingClientRect();
+    const newHeight = ((e.clientY - container.top) / container.height) * 100;
+    setCanvasHeight(Math.max(30, Math.min(80, newHeight))); // min 30, max 80
+  };
+
+  const handleResizeMouseUp = () => {
+    isDragging.current = false;
   };
 
   return (
@@ -152,9 +182,41 @@ const UserId = () => {
         <div className={styles.pane_div}>
           <Sm_pane onCategorySelect={handleTabClick} />
           <Left_pane selectedCategory={activeTab} />
-          <div className={styles.canvas_pane}>
-            <Canvas />
-            <Timeline prjId={params.id} />
+          <div
+            className={styles.canvas_pane}
+            onMouseUp={handleResizeMouseUp}
+            onMouseMove={handleResizeMouseMove}
+          >
+            <Canvas
+              canvasHeight={canvasHeight}
+              barsDataChangeAfterZoom={barsDataChangeAfterZoom}
+              setBarsDataChangeAfterZoom={setBarsDataChangeAfterZoom}
+              mediaContainerWidth={mediaContainerWidth}
+              totalMediaDuration={totalMediaDuration}
+              position={position}
+              setPosition={setPosition}
+              setShowPhTime={setShowPhTime}
+            />
+            <div
+              className={styles.resizer}
+              onMouseDown={handleResizeMouseDown}
+              onMouseUp={handleResizeMouseUp}
+            >
+              <div className={styles.resizer_pad} />
+            </div>
+            <Timeline
+              prjId={params.id}
+              canvasHeight={canvasHeight}
+              barsDataChangeAfterZoom={barsDataChangeAfterZoom}
+              setBarsDataChangeAfterZoom={setBarsDataChangeAfterZoom}
+              mediaContainerWidth={mediaContainerWidth}
+              setMediaContainerWidth={setMediaContainerWidth}
+              totalMediaDuration={totalMediaDuration}
+              setTotalMediaDuration={setTotalMediaDuration}
+              position={position}
+              setPosition={setPosition}
+              showPhTime={showPhTime}
+            />
           </div>
 
           <div className={styles.right_pane}></div>
