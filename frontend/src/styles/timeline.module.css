@@ -110,11 +110,19 @@
 } */
 
 .m_type_label {
-  @apply gap-2 items-center h-6 mt-auto mr-auto mb-[0.5rem];
+  @apply gap-2 items-center h-full;
+}
+
+.type_label_content {
+  @apply flex flex-row mb-[0.5rem] mt-auto w-full;
 }
 
 .type_icon {
   @apply bg-indigo-600 p-1 shadow-xl rounded-md;
+}
+
+.clip_center {
+  @apply h-full w-full;
 }
 
 .m_item_label {
@@ -194,7 +202,7 @@
 }
 
 .ph_left {
-  @apply absolute h-full pl-4;
+  @apply absolute h-full z-50;
 }
 
 .ph_left_hover {

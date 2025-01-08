@@ -4,6 +4,7 @@ import phPositionReducer from "./phPosition";
 import phPreviewReducer from "./phPreview";
 import isPhDraggingReducer from "./isPhDragging";
 import markerIntervalReducer from "./markerInterval";
+import currentClipReducer from "./currentClip";
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     phPreview: phPreviewReducer,
     isPhDragging: isPhDraggingReducer,
     markerInterval: markerIntervalReducer,
+    currentClip: currentClipReducer,
   },
 });
 

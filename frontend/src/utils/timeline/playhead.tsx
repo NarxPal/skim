@@ -8,11 +8,14 @@ import { throttle } from "lodash";
 
 interface PlayheadProps {
   phLeftRef: React.RefObject<HTMLDivElement>;
-  mediaContainerWidth?: number;
+  mediaContainerWidth: number;
   position: number;
   setPosition: React.Dispatch<React.SetStateAction<number>>;
   scrollPosition: number;
   setScrollPosition: React.Dispatch<React.SetStateAction<number>>;
+  videoRef: React.RefObject<HTMLVideoElement>;
+  totalDuration: number;
+  setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const Playhead: React.FC<PlayheadProps> = ({
@@ -22,6 +25,9 @@ const Playhead: React.FC<PlayheadProps> = ({
   setPosition,
   scrollPosition,
   setScrollPosition,
+  videoRef,
+  totalDuration,
+  setShowPhTime,
 }) => {
   const dispatch = useDispatch();
   //redux state hooks
@@ -34,10 +40,41 @@ const Playhead: React.FC<PlayheadProps> = ({
   const isPhDragging = useSelector(
     (state: RootState) => state.isPhDragging.isPhDragging
   );
+  const markerInterval = useSelector(
+    (state: RootState) => state.markerInterval.markerInterval
+  );
 
   //useref
   const phDivRef = useRef<HTMLDivElement | null>(null); // for calc new position of ph while dragging
   const playheadRef = useRef<HTMLDivElement>(null);
+
+  // for converting ph position px value to time in seconds
+  const positionToTime = (pos: number) => {
+    const pxValueDiffPerMarker = mediaContainerWidth / totalDuration; // calculating px value which position the marker
+    const pixelValuePerStep = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
+
+    return pos / pixelValuePerStep;
+  };
+
+  // todo: throttledShowPhTimeUpdate formatTime are used in playhead, phanimation and timelineRuler file so optimize it
+  const formatTime = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = (seconds % 60).toFixed(2); // sec with upto two decimal places
+
+    const paddedHrs = hrs < 10 ? `0${hrs}` : hrs;
+    const paddedMins = mins < 10 ? `0${mins}` : mins;
+    const formattedTime = `${paddedHrs}::${paddedMins}::${secs}`;
+
+    return formattedTime;
+  };
+
+  const throttledShowPhTimeUpdate = useRef(
+    throttle(async (currentTime) => {
+      const formattedTime = formatTime(currentTime);
+      setShowPhTime(formattedTime);
+    }, 500) // Throttle updates every 500ms
+  ).current;
 
   // Here lodash throttle will help to reduce state update to 50ms
   const throttledSetPosition = useRef(
@@ -78,6 +115,11 @@ const Playhead: React.FC<PlayheadProps> = ({
       if (hoverPosition !== undefined) {
         setPosition(hoverPosition);
         throttledSetPosition(hoverPosition); // Since redux state setPhPosition is causing state limits error
+        if (videoRef.current && hoverPosition) {
+          const time = positionToTime(hoverPosition);
+          videoRef.current.currentTime = time || 0; // in case there is no clip the time would return nothing so fall to 0
+          throttledShowPhTimeUpdate(time);
+        }
       }
     }
   };
@@ -140,9 +182,16 @@ const Playhead: React.FC<PlayheadProps> = ({
         ref={phDivRef}
       >
         <div
+          // className={styles.ph_left}
+          // style={{
+          //   left: `${phPosition !== null ? phPosition : position}px`,
+          // }}
+
           className={styles.ph_left}
           style={{
-            left: `${phPosition !== null ? phPosition : position}px`,
+            transform: `translateX(${
+              phPosition !== null ? phPosition : position
+            }px)`,
           }}
           ref={phLeftRef}
         >

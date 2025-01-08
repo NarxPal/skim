@@ -33,6 +33,7 @@ const UserId = () => {
 
   // useref hooks
   const isDragging = useRef(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const { loading } = FetchUser(params.uid); // calling useeffect to fetch the user_id
   // redux hooks
@@ -196,6 +197,7 @@ const UserId = () => {
               position={position}
               setPosition={setPosition}
               setShowPhTime={setShowPhTime}
+              videoRef={videoRef}
             />
             <div
               className={styles.resizer}
@@ -215,7 +217,9 @@ const UserId = () => {
               setTotalMediaDuration={setTotalMediaDuration}
               position={position}
               setPosition={setPosition}
+              setShowPhTime={setShowPhTime}
               showPhTime={showPhTime}
+              videoRef={videoRef}
             />
           </div>
 

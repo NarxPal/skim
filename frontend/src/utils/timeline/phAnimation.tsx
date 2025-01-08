@@ -3,16 +3,46 @@ import styles from "@/styles/canvas.module.css";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/redux/store";
 import { setPhPosition } from "@/redux/phPosition";
+import { setCurrentClip } from "@/redux/currentClip";
+import Image from "next/image";
+import { throttle } from "lodash";
+
+// types / interfaces import
+import { BarsProp, bar } from "@/interfaces/barsProp";
+
+type Clip = {
+  startTime: number;
+  endTime: number;
+  videoUrl: string;
+};
 
 interface PhAnimationProps {
   setPosition: React.Dispatch<React.SetStateAction<number>>;
+  videoRef: React.RefObject<HTMLVideoElement>;
+  mediaContainerWidth: number;
+  totalMediaDuration: number;
+  barsDataChangeAfterZoom: BarsProp | null;
+  position: number;
+  setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
 }
-const PhAnimation: React.FC<PhAnimationProps> = ({ setPosition }) => {
+const PhAnimation: React.FC<PhAnimationProps> = ({
+  setPosition,
+  videoRef,
+  totalMediaDuration,
+  mediaContainerWidth,
+  barsDataChangeAfterZoom,
+  position,
+  setShowPhTime,
+}) => {
   const dispatch = useDispatch();
 
   //redux state hooks
   const phPosition = useSelector(
     (state: RootState) => state.phPosition.phPosition
+  );
+
+  const markerInterval = useSelector(
+    (state: RootState) => state.markerInterval.markerInterval
   );
 
   // state hooks
@@ -24,24 +54,105 @@ const PhAnimation: React.FC<PhAnimationProps> = ({ setPosition }) => {
 
   // ********** playhead animation *************
 
+  // position playhead (basically lp of ph)
+  const timeToPosition = (currentTime: number) => {
+    // console.log((currentTime / totalMediaDuration) * mediaContainerWidth);
+    // return (currentTime / totalMediaDuration) * mediaContainerWidth;
+
+    const pxValueDiffPerMarker = mediaContainerWidth / totalMediaDuration; // calculating px value which position the marker
+    const pixelValuePerStep = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
+    const pixelsPerSecond = currentTime * pixelValuePerStep;
+    return pixelsPerSecond;
+  };
+
+  const fetchVideoData = async (pixelValuePerStep: number): Promise<Clip[]> => {
+    const clips = barsDataChangeAfterZoom?.sub_columns?.flatMap((subCol) => {
+      return subCol.bars?.map((bar) => {
+        const startTime = bar.left_position / pixelValuePerStep; // Convert left position to time
+        const endTime = startTime + (bar.duration || 0);
+        return {
+          startTime,
+          endTime,
+          videoUrl: bar.url,
+        };
+      });
+    });
+
+    // console.log("Generated Clips:", clips);
+    return clips ?? []; // fallback to empty array if undefined
+  };
+
+  // todo: throttledShowPhTimeUpdate formatTime are used in playhead, phanimation and timelineRuler file so optimize it
+  const formatTime = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = (seconds % 60).toFixed(2); // sec with upto two decimal places
+
+    const paddedHrs = hrs < 10 ? `0${hrs}` : hrs;
+    const paddedMins = mins < 10 ? `0${mins}` : mins;
+    const formattedTime = `${paddedHrs}::${paddedMins}::${secs}`;
+
+    return formattedTime;
+  };
+
+  const throttledShowPhTimeUpdate = useRef(
+    throttle(async (currentTime) => {
+      const formattedTime = formatTime(currentTime);
+      setShowPhTime(formattedTime);
+    }, 500) // Throttle updates every 500ms
+  ).current;
+
   const stopAnimation = () => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
+      if (videoRef.current) {
+        videoRef.current.pause(); //pause video
+      }
     }
+    animationFrameRef.current = null;
     setIsPlaying(false);
   };
 
-  const movePlayhead = () => {
-    // Adjust increment based on timeline speed
-    if (phPosition === null) {
-      setPosition((prev) => prev + 1);
-    } else {
-      setPosition((prev) => prev + 1);
-      dispatch(setPhPosition(null));
-    }
+  const chooseClip = async () => {
+    // pxValueDiffPerMarker gives px value showing diff bw each marker, its gap bw marker in px
+    const pxValueDiffPerMarker = mediaContainerWidth / totalMediaDuration; // calculating px value which position the marker
 
-    animationFrameRef.current = requestAnimationFrame(movePlayhead);
+    // pixelValuePerStep is the movement with px value at each step
+    const pixelValuePerStep = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
+    //pixelValuePerStep is px value based upon diff / time interval, for eg 80 / 2.6 = 30 sec, it would take 2.6px value per step to reach 80px where marker would have 30 sec diff
+
+    const pixelsPerSecond = pixelValuePerStep * markerInterval;
+
+    // phTime is no. of sec the ph have moved
+    const phTime = position / pixelValuePerStep;
+    // console.log("phtime", phTime);
+
+    const clips = await fetchVideoData(pixelValuePerStep);
+    const activeClip = clips.find(
+      // .find will find and return the first clip which match the condition
+      (clip) => phTime >= clip?.startTime && phTime < clip?.endTime // should not the current time be based upon ph and not the video tag?
+    );
+    if (activeClip) {
+      dispatch(setCurrentClip(activeClip));
+      if (videoRef.current) {
+        videoRef.current.play();
+        const time = timeToPosition(videoRef.current.currentTime); // change sec into px for playhead move
+        if (phPosition === null) {
+          setPosition(time);
+        } else {
+          setPosition(time);
+          dispatch(setPhPosition(null));
+        }
+        throttledShowPhTimeUpdate(videoRef.current.currentTime);
+      }
+    } else {
+      stopAnimation(); // stop after reaching end of the clip
+    }
+  };
+
+  const syncPlayhead = () => {
+    chooseClip();
+    animationFrameRef.current = requestAnimationFrame(syncPlayhead);
   };
 
   // Stop playhead when clicked over timelineruler, while ph is running
@@ -60,7 +171,7 @@ const PhAnimation: React.FC<PhAnimationProps> = ({ setPosition }) => {
       if (phPosition !== null) {
         setPosition(phPosition);
       }
-      animationFrameRef.current = requestAnimationFrame(movePlayhead);
+      animationFrameRef.current = requestAnimationFrame(syncPlayhead);
     }
   };
 
@@ -74,13 +185,16 @@ const PhAnimation: React.FC<PhAnimationProps> = ({ setPosition }) => {
 
   return (
     <div className={styles.playback_btns}>
-      <button className={styles.pb_btn} onClick={startAnimation}>
-        Play
-      </button>
-
-      <button className={styles.pb_btn} onClick={stopAnimation}>
-        pause
-      </button>
+      <div onClick={isPlaying ? stopAnimation : startAnimation}>
+        <Image
+          src={isPlaying ? "/pause.png" : "/play.png"}
+          width={25}
+          height={25}
+          alt={isPlaying ? "pause" : "play"}
+          priority={true}
+          draggable={false}
+        />
+      </div>
     </div>
   );
 };

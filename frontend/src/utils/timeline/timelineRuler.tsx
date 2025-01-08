@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import styles from "@/styles/timeline.module.css";
-import { useDispatch } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "@/redux/store";
 import { setPhPosition } from "@/redux/phPosition";
 import { setPhPreview } from "@/redux/phPreview";
 import { setMarkerInterval } from "@/redux/markerInterval";
-
+import { throttle } from "lodash";
 // types / interfaces import
 import { BarsProp } from "@/interfaces/barsProp";
 interface TimelineRulerProps {
@@ -16,6 +17,8 @@ interface TimelineRulerProps {
     React.SetStateAction<BarsProp | null>
   >;
   barsData: BarsProp | null;
+  videoRef: React.RefObject<HTMLVideoElement>;
+  setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const TimelineRuler: React.FC<TimelineRulerProps> = ({
@@ -25,6 +28,8 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   scrollPosition,
   setBarsDataChangeAfterZoom,
   barsData,
+  videoRef,
+  setShowPhTime,
 }) => {
   // usestate hooks
   const [tickPos, setTickPos] = useState<number[]>(); // having array since we are mapping tickpos in dom
@@ -32,6 +37,11 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   const [formattedMarkers, setFormattedMarkers] = useState<string[]>([]);
 
   const rulerRef = useRef<HTMLDivElement | null>(null);
+
+  // redux state hooks
+  const markerInterval = useSelector(
+    (state: RootState) => state.markerInterval.markerInterval
+  );
 
   const dispatch = useDispatch();
 
@@ -41,15 +51,28 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
     }
   }, [scrollPosition]);
 
-  const formatTime = (seconds: number): string => {
-    const hrs = Math.floor(seconds / 3600)
-      .toString()
-      .padStart(2, "0");
-    const mins = Math.floor((seconds % 3600) / 60)
-      .toString()
-      .padStart(2, "0");
-    const secs = (seconds % 60).toString().padStart(2, "0");
-    return `${hrs}:${mins}:${secs}`;
+  // const formatTime = (seconds: number): string => {
+  //   const hrs = Math.floor(seconds / 3600)
+  //     .toString()
+  //     .padStart(2, "0");
+  //   const mins = Math.floor((seconds % 3600) / 60)
+  //     .toString()
+  //     .padStart(2, "0");
+  //   const secs = (seconds % 60).toString().padStart(2, "0");
+  //   return `${hrs}:${mins}:${secs}`;
+  // };
+
+  // todo: throttledShowPhTimeUpdate formatTime are used in playhead, phanimation and timelineRuler file so optimize it
+  const formatTime = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = (seconds % 60).toFixed(2); // sec with upto two decimal places
+
+    const paddedHrs = hrs < 10 ? `0${hrs}` : hrs;
+    const paddedMins = mins < 10 ? `0${mins}` : mins;
+    const formattedTime = `${paddedHrs}::${paddedMins}::${secs}`;
+
+    return formattedTime;
   };
 
   function calculateInterval(totalDuration: number, zoomLevel: number): number {
@@ -148,18 +171,9 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
 
   useEffect(() => {
     const calcTicks = async () => {
-      // timestep tell after how many seconds u want a tick
-      let timeStep = 1; // for zoom level 10, a tick for every second
-
-      // if (zoomLevel < 10) {
-      //   timeStep = 5; // Change based on zoom level (e.g., 5 seconds for higher zoom), tick after every 5s, timestep should be dynamically based upon zoom level and media duration, currently having it 5
-      // }
       const positions: number[] = [];
       const markers: number[] = [];
       const formattedMarkersArray: string[] = [];
-
-      const numTicks = Math.ceil(totalDuration / timeStep);
-      // numTicks tell how many total ticks will be present
 
       console.log("containerWidth:", containerWidth);
       console.log("totalDuration:", totalDuration);
@@ -170,7 +184,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
       const interval = calculateInterval(totalDuration, zoomLevel);
       dispatch(setMarkerInterval(interval));
 
-      // To add interval(in hh:mm:ss format) per marker accross container width
+      // To add interval(in hh:mm:ss format), per marker accross container width
       for (let time = 0; time <= containerWidth; time += interval) {
         markers.push(time); // Add the current time to markers
         formattedMarkersArray.push(formatTime(time));
@@ -202,10 +216,10 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
             return {
               ...subCol, // Retain the original `subCol` structure
               bars: subCol?.bars?.map((bar) => {
-                const duration = bar.duration || 0; // Calculate duration if missing, probly for img
+                const duration = bar.duration || 0; // zero probly for img
                 const width = Math.round(
                   (duration / interval) * singleTickPxValue
-                );
+                ); // width being calculated here on the fly though we are saving in db through barsData hook
                 return { ...bar, width };
               }),
             };
@@ -234,12 +248,30 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
       return hoverPosition;
     }
   };
+  const positionToTime = (pos: number) => {
+    const pxValueDiffPerMarker = containerWidth / totalDuration; // calculating px value which position the marker
+    const pixelValuePerStep = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
+
+    return pos / pixelValuePerStep;
+  };
+
+  const throttledShowPhTimeUpdate = useRef(
+    throttle(async (currentTime) => {
+      const formattedTime = formatTime(currentTime);
+      setShowPhTime(formattedTime);
+    }, 500) // Throttle updates every 500ms
+  ).current;
 
   const handleMousePos = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) => {
     const hoverPosition = getHoverPosition(event);
     dispatch(setPhPosition(hoverPosition));
+    if (videoRef.current && hoverPosition) {
+      const time = positionToTime(hoverPosition);
+      videoRef.current.currentTime = time || 0; // in case there is no clip the time would return nothing so fall to 0
+      throttledShowPhTimeUpdate(time);
+    }
   };
 
   const handleMouseHover = async (

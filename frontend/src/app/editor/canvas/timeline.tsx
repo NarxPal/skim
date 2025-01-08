@@ -48,6 +48,8 @@ interface TimelineProps {
   position: number;
   setPosition: React.Dispatch<React.SetStateAction<number>>;
   showPhTime: string;
+  setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
+  videoRef: React.RefObject<HTMLVideoElement>;
 }
 
 const Timeline: React.FC<TimelineProps> = ({
@@ -62,6 +64,8 @@ const Timeline: React.FC<TimelineProps> = ({
   position,
   setPosition,
   showPhTime,
+  setShowPhTime,
+  videoRef,
 }) => {
   // redux state hooks
   // const userId = useSelector((state: RootState) => state.userId.userId); // userid has been set in project/uid
@@ -171,7 +175,7 @@ const Timeline: React.FC<TimelineProps> = ({
             user_id: parsedItem.user_id,
             name: parsedItem.name,
             left_position: 0, // default left position
-            width: parsedItem.duration * zoomLevel * 10, // duration of the media, for zoom level 1 multiplying 10 since each sec would be 10px/sec, this would work well only for zoom level 1
+            width: 0, // duration of the media, for zoom level 1 multiplying 10 since each sec would be 10px/sec, this would work well only for zoom level 1
             duration: parsedItem.duration, // storing duration to use in calcContainerWidth
             project_id: parsedItem.project_id,
             type: parsedItem.type,
@@ -712,31 +716,16 @@ const Timeline: React.FC<TimelineProps> = ({
     calcContainerWidth();
   }, [columns, zoomLevel]); // using columns here since setbarsdata will change everytime during resize bar
 
-  const updateBarsOnZoom = () => {
-    const scaledBars = barsData?.sub_columns?.flatMap((column) =>
-      column.bars?.map((bar: bar) => {
-        const scaledWidth = bar.duration * zoomLevel;
-        console.log("zoom level bro");
-        const scaledPosition = bar.left_position * zoomLevel;
-        return { ...bar, width: scaledWidth, left_position: scaledPosition };
-      })
-    );
-    console.log("scaled bars bro", scaledBars);
-    // setBarsData(scaledBars);
-  };
-
   const zoom_In = async () => {
     const MAX_ZOOM_LEVEL = 10; // Maximum zoom
     setZoomLevel((prev) => Math.min(prev + 2, MAX_ZOOM_LEVEL));
     setFetchBars(true); // it will fetch the barsData which will run the useEffect calcTicks in timelineruler file
-    updateBarsOnZoom();
   };
 
   const zoom_Out = async () => {
     const MIN_ZOOM_LEVEL = 0; // Minimum zoom
     setZoomLevel((prev) => Math.max(prev - 2, MIN_ZOOM_LEVEL));
     setFetchBars(true);
-    updateBarsOnZoom();
   };
 
   // ********** context menu functions ************
@@ -885,6 +874,7 @@ const Timeline: React.FC<TimelineProps> = ({
     setBarDragging(true);
     const BarId = JSON.stringify(draggedBarId);
     const subColId = JSON.stringify(dragSubColId);
+    console.log("bro drabar id ", BarId);
     e.dataTransfer.setData("draggedBarId", BarId); //here converting id(number) to string since setData require data in string
     e.dataTransfer.setData("dragSubColId", subColId);
   };
@@ -1046,6 +1036,9 @@ const Timeline: React.FC<TimelineProps> = ({
           mediaContainerWidth={mediaContainerWidth}
           position={position}
           setPosition={setPosition}
+          videoRef={videoRef}
+          totalDuration={totalMediaDuration}
+          setShowPhTime={setShowPhTime}
         />
 
         <TimelineRuler
@@ -1055,6 +1048,8 @@ const Timeline: React.FC<TimelineProps> = ({
           scrollPosition={scrollPosition}
           setBarsDataChangeAfterZoom={setBarsDataChangeAfterZoom}
           barsData={barsData}
+          videoRef={videoRef}
+          setShowPhTime={setShowPhTime}
         />
         <div className={styles.media_parent_div} ref={mediaParentRef}>
           <div
@@ -1124,11 +1119,6 @@ const Timeline: React.FC<TimelineProps> = ({
                                     ? `${styles.item_content_drop}`
                                     : ""
                                 }
-                                draggable
-                                onDragStart={(e) =>
-                                  handleBarDragStart(bar?.id, e, item?.id)
-                                }
-                                onDragEnd={() => handleBarDragEnd()}
                               >
                                 {item && (
                                   <div className={styles.m_item_keys}>
@@ -1173,29 +1163,44 @@ const Timeline: React.FC<TimelineProps> = ({
 
                                   {barWidth >= 300 && (
                                     <div
-                                      className={`${styles.m_type_label} hidden group-hover:flex`}
+                                      className={styles.clip_center}
+                                      draggable
+                                      onDragStart={(e) =>
+                                        handleBarDragStart(bar?.id, e, item?.id)
+                                      }
+                                      onDragEnd={() => handleBarDragEnd()}
                                     >
-                                      <div className={styles.type_icon}>
-                                        {bar?.type in icons && (
-                                          <Image
-                                            src={
-                                              icons[
-                                                bar?.type as keyof typeof icons
-                                              ]
-                                            }
-                                            alt={bar?.type}
-                                            width={10}
-                                            height={10}
-                                            priority={true}
-                                            draggable={false}
-                                          />
-                                        )}
+                                      <div
+                                        className={`${styles.m_type_label} hidden group-hover:flex`}
+                                      >
+                                        <div
+                                          className={styles.type_label_content}
+                                        >
+                                          <div className={styles.type_icon}>
+                                            {bar?.type in icons && (
+                                              <Image
+                                                src={
+                                                  icons[
+                                                    bar?.type as keyof typeof icons
+                                                  ]
+                                                }
+                                                alt={bar?.type}
+                                                width={10}
+                                                height={10}
+                                                priority={true}
+                                              />
+                                            )}
+                                          </div>
+                                          <span className={styles.m_item_label}>
+                                            {bar?.name.length > 20
+                                              ? `${bar?.name.substring(
+                                                  0,
+                                                  25
+                                                )}...`
+                                              : bar?.name}
+                                          </span>
+                                        </div>
                                       </div>
-                                      <span className={styles.m_item_label}>
-                                        {bar?.name.length > 20
-                                          ? `${bar?.name.substring(0, 25)}...`
-                                          : bar?.name}
-                                      </span>
                                     </div>
                                   )}
                                   {barsData?.sub_columns?.length ? ( // length check if there are bars in sub_columns
