@@ -1,7 +1,6 @@
 "use client";
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import styles from "@/styles/sidebar.module.css";
-import { supabase } from "../../supabaseClient"; // here, supabase used for storage
 import { useParams } from "next/navigation";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
@@ -17,6 +16,8 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
 
   const userId = useSelector((state: RootState) => state.userId.userId);
 
+  const [uploadingMedia, setUploadingMedia] = useState<boolean>(false);
+
   // Handle drag and drop
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -26,19 +27,6 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
     event.preventDefault();
     const files = event.dataTransfer.files;
     if (files) handleFiles(files);
-  };
-
-  const getPublicUrl = async (files: File[], filePath: string) => {
-    // only get the url for image or video media type
-    if (
-      files.some(
-        (file) => file.type.startsWith("video") || file.type.startsWith("image")
-      )
-    ) {
-      const { data } = supabase.storage.from("media").getPublicUrl(filePath); // get the video media(not thumbnail)
-      console.log("getpublic url data for media:", data);
-      return data.publicUrl;
-    }
   };
 
   const fetchDuration = async (
@@ -63,38 +51,20 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
     let files: File[] = [];
 
     if ("target" in eventOrFiles) {
+      // for input img
       files = eventOrFiles.target.files
         ? Array.from(eventOrFiles.target.files)
         : [];
     } else {
+      // for drag and drop
       files = Array.from(eventOrFiles);
     }
 
     if (!files || files.length === 0) {
-      console.log("bro return");
       return;
     } else {
+      setUploadingMedia(true);
       try {
-        const formData = new FormData();
-
-        // Loop through the array of files and append them to FormData
-        files.forEach((file) => {
-          formData.append("file", file); // Append each file
-        });
-
-        const { data: postData } = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/ffmpeg`,
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-
-        console.log("upload thumbnail success file bro:", postData); // upload postdata to supa storage
-
-        // uploading files to media bucket
         const fileUploads = files.map(async (file) => {
           const fileType = file.type.startsWith("image")
             ? "image"
@@ -102,47 +72,72 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
             ? "video"
             : "audio";
 
-          const thumbnailPath = `${userId}/${file.type}/thumbnail_${file.name}`; // for thumbnail along with the filename, make sure to have it only for video media type
+          const formData = new FormData();
+          formData.append("file", file); // only single file
 
-          const filePath = `${userId}/${file.type}/${file.name}`;
-
-          // storing the media in supabase storage
-          const { data, error: uploadError } = await supabase.storage
-            .from("media")
-            .upload(filePath, file);
-          console.log("storage data bro", data);
-          if (uploadError) throw uploadError;
-
+          let postData;
           if (fileType === "video") {
-            // to have thumbnailData only during video media type
-            const { data: thumbnailData, error: thumbnailError } =
-              await supabase.storage
-                .from("thumbnail")
-                .upload(thumbnailPath, Buffer.from(postData.data), {
-                  contentType: "image/jpeg",
-                });
-            console.log("thumbnail storage data", thumbnailData);
-            if (thumbnailError) throw thumbnailError;
+            // using first frame from video as img for thumbnail
+            const ffmpegRes = await axios.post(
+              `${process.env.NEXT_PUBLIC_API_BASE_URL}/ffmpeg`,
+              formData,
+              { responseType: "arraybuffer" }
+            );
+            postData = ffmpegRes.data; // using byte array only present inside data
           }
 
-          const publicUrl = await getPublicUrl(files, filePath); // here getting pu
-          console.log("media PU fetched before", publicUrl);
+          const { data: uploadRes } = await axios.post(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/cloudinary/file/${userId}`,
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
 
-          const duration = await fetchDuration(fileType, publicUrl);
+          let thumbnailUrl;
+          if (fileType === "video") {
+            // to have thumbnailData only during video media type
+
+            const bufferFormData = new FormData();
+            const Thumbfile = new File([postData], `${file.name}.jpg`, {
+              type: "image/jpeg",
+            });
+            bufferFormData.append("file", Thumbfile);
+            bufferFormData.append("userId", userId);
+
+            try {
+              const { data: uploadThumbnailRes } = await axios.post(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/cloudinary/thumbnail`,
+                bufferFormData,
+                {
+                  headers: {
+                    "Content-Type": "multipart/form-data",
+                  },
+                }
+              );
+              thumbnailUrl = uploadThumbnailRes.url;
+            } catch (error: unknown) {
+              console.error("error uploading thumbnail", error);
+            }
+          }
+
+          const duration = await fetchDuration(fileType, uploadRes.url);
           const roundedDuration = Math.round(Number(duration));
 
-          // inserting metadata of the supabase stored media in media_files table in psql
+          // inserting metadata of the cloudinary stored media in media_files table in psql
           const response = await axios.post(
             `${process.env.NEXT_PUBLIC_API_BASE_URL}/media`,
             {
               user_id: userId,
               project_id: params.id,
               name: file.name,
-              filepath: filePath,
+              filepath: "", // check and remove filepath since it's of no use while using cloudinary
               type: fileType,
-              thumbnail_url: fileType === "video" ? thumbnailPath : "",
+              thumbnail_url: fileType === "video" ? thumbnailUrl : "",
               duration: roundedDuration || null, // will use it as width for clip, null for image
-              url: publicUrl || null, // this url would work for video, image media type, null for audio
+              url: uploadRes.url || null, // this url would work for video, image media type, null for audio
             }
           );
           console.log("bro media post res", response.data);
@@ -154,6 +149,14 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
       }
     }
   };
+
+  useEffect(() => {
+    if (uploadingMedia) {
+      console.log("uploading  bro", uploadingMedia);
+    } else {
+      console.log("upload bro fasle", uploadingMedia);
+    }
+  }, [uploadingMedia]);
 
   return (
     <div

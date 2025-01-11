@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import styles from "@/styles/sidebar.module.css";
 import Upload from "@/components/upload";
 import Image from "next/image";
-import { supabase } from "../../../../supabaseClient"; // here, supabase is used for storage
 import { useParams } from "next/navigation";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
@@ -10,13 +9,13 @@ import axios from "axios";
 import { FetchUser } from "@/components/fetchUser";
 
 type MediaItem = {
-  signedUrl: string;
   project_id: number;
   name: string;
   filepath: string;
   id: number;
   type: string;
   thumbnail_url: string; // for video path
+  url: string;
 };
 
 const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
@@ -39,25 +38,6 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
     fetchMedia();
   }, [selectedCategory]);
 
-  async function getPublicUrl(
-    file: MediaItem,
-    filePath: string,
-    thumbnailUrl: string
-  ) {
-    if (file.type === "video") {
-      const { data } = supabase.storage
-        .from("thumbnail")
-        .getPublicUrl(thumbnailUrl);
-      console.log("getpublic url data for video:", data);
-      return data.publicUrl;
-    } else {
-      const { data } = supabase.storage.from("media").getPublicUrl(filePath);
-
-      console.log("getpublic url data for media:", data);
-      return data.publicUrl;
-    }
-  }
-
   async function fetchUserMediaWithUrls(): Promise<MediaItem[]> {
     // Fetch metadata from the media_files table
     try {
@@ -66,28 +46,10 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
       );
 
       const mediaFiles = res.data; // all the media stored for a userId
-
       const filteredMediaFiles = mediaFiles.filter(
         (file: MediaItem) => file.project_id === Number(params.id)
       );
-
-      // Generate signed URLs for each file
-      const mediaWithUrls = await Promise.all(
-        filteredMediaFiles.map(async (file: MediaItem) => {
-          // mapping to generate signed url for every media file
-          const signedUrl = await getPublicUrl(
-            file,
-            file.filepath,
-            file.thumbnail_url
-          ); // here getting public url through filepath present in db
-          return {
-            ...file,
-            signedUrl, // this is public url and is permanent, named as signedUrl everywhere
-          };
-          // signedUrl will contain the path that will show the image for any media type
-        })
-      );
-      return mediaWithUrls; // signedUrl is not saved into db(for img it contain the img url and for video it contains the thumbnail url)
+      return filteredMediaFiles;
     } catch (error) {
       console.log("error fetching media", error);
       return [];
@@ -166,9 +128,15 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
                 onDragStart={(e) => handleDragStart(e, item)}
                 onDragEnd={handleDragEnd}
               >
-                {item.signedUrl && (
+                {item.type === "video" && item.thumbnail_url ? (
                   <img
-                    src={item.signedUrl}
+                    src={item.thumbnail_url}
+                    alt={item.name}
+                    className={styles.media_preview}
+                  />
+                ) : (
+                  <img
+                    src={item.url} // for img media
                     alt={item.name}
                     className={styles.media_preview}
                   />

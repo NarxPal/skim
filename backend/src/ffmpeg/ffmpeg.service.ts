@@ -1,16 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import * as ffmpeg from 'fluent-ffmpeg';
 import axios from 'axios';
+import { Response } from 'express';
 
 @Injectable()
 export class FfmpegService {
   async extractFirstFrame(videoPath: string): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
+    return  new Promise<Buffer>((resolve, reject) => {
       const buffers: Buffer[] = [];
 
       ffmpeg(videoPath)
         .outputOptions('-vframes', '1') // Extract one frame
-        .outputFormat('image2pipe') // output the img data as stream, instead of saving it as a file
+        .outputFormat('image2') // output the img data as stream, instead of saving it as a file
+        .outputOptions('-f', 'image2pipe')
+        .outputOptions('-vcodec', 'mjpeg')
         .on('error', (err) => reject(err))
         .on('end', () => {
           const imageBuffer = Buffer.concat(buffers); // Combine data chunks
