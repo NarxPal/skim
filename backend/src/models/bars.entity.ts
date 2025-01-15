@@ -48,7 +48,7 @@ export class Bars {
   type: string;
 
   @Column()
-  signedUrl: string;
+  thumbnail_url: string;
 
   @Column()
   filepath: string;

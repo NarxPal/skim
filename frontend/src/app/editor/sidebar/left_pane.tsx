@@ -23,7 +23,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
 
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [mediaType, setMediaType] = useState<string>("");
-  // const [draggedItem, setDraggedItem] = useState(null);
+  const [uploadingMedia, setUploadingMedia] = useState<boolean>(false);
 
   FetchUser(params.uid); // calling useeffect to fetch the user_id
   const userId = useSelector((state: RootState) => state.userId.userId);
@@ -72,16 +72,16 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
 
   useEffect(() => {
     const loadMedia = async () => {
-      const media_Items = await fetchUserMediaWithUrls(); // optimize: since i have saved the url for video and image i don't have to do getpublicurl everytime so change this later
+      const media_Items = await fetchUserMediaWithUrls();
       console.log("media items bro:", media_Items);
       setMediaItems(media_Items);
     };
     loadMedia();
-  }, [selectedCategory, userId]);
+  }, [selectedCategory, userId, uploadingMedia]);
 
   return (
-    <div className={styles.pane_sidebar}>
-      <Upload>
+    <div className={styles.left_pane_container}>
+      <Upload setUploadingMedia={setUploadingMedia} mediaItems={mediaItems}>
         <div className={styles.icon_text}>
           <Image
             src="/upload.png"
@@ -96,6 +96,10 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
           </span>
         </div>
       </Upload>
+
+      <div className={styles.text_head}>
+        <h2>Uploaded Media</h2>
+      </div>
 
       {/* <div className={styles.search_bar_div}>
         <div className={styles.search_bar}>
@@ -113,47 +117,54 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
         </div>
       </div> */}
 
-      <div className={styles.text_head}>
-        <h2>Uploaded Media</h2>
-      </div>
-      <div className={styles.all_media}>
-        <div className={styles.media_library}>
-          {mediaItems
-            .filter((item) => mediaType === "upload" || item.type === mediaType) // show media based upon category selected
-            .map((item) => (
-              <div
-                key={item.filepath} // this should be name not filepath
-                className={styles.media_item}
-                draggable
-                onDragStart={(e) => handleDragStart(e, item)}
-                onDragEnd={handleDragEnd}
-              >
-                {item.type === "video" && item.thumbnail_url ? (
-                  <img
-                    src={item.thumbnail_url}
-                    alt={item.name}
-                    className={styles.media_preview}
-                  />
-                ) : (
-                  <img
-                    src={item.url} // for img media
-                    alt={item.name}
-                    className={styles.media_preview}
-                  />
-                )}
-                <p className={styles.media_name}>
-                  {item.name.length > 20
-                    ? item.name.substring(0, 20) + "..."
-                    : item.name}
-                </p>
-              </div>
-            ))}
+      <div className={styles.pane_sidebar}>
+        <div className={styles.all_media}>
+          <div className={styles.media_library}>
+            {mediaItems
+              .filter(
+                (item) => mediaType === "upload" || item.type === mediaType
+              ) // show media based upon category selected
+              .map((item) => (
+                <div
+                  key={item.id} // this should be name not filepath
+                  className={styles.media_item}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, item)}
+                  onDragEnd={handleDragEnd}
+                >
+                  {item.type === "video" && item.thumbnail_url ? (
+                    <img
+                      src={item.thumbnail_url}
+                      alt={item.name}
+                      className={styles.media_preview}
+                    />
+                  ) : (
+                    <img
+                      src={item.url} // for img media
+                      alt={item.name}
+                      className={styles.media_preview}
+                    />
+                  )}
+                  {/* <p className={styles.media_name}>
+                    {item.name.length > 20
+                      ? item.name.substring(0, 20) + "..."
+                      : item.name}
+                  </p> */}
+                </div>
+              ))}
+          </div>
         </div>
       </div>
 
       <div className={styles.up_btn_div}>
         <button className={styles.up_btn}>Upload Media</button>
       </div>
+
+      {uploadingMedia && (
+        <div className={styles.overlay}>
+          <div className={styles.loader}></div>
+        </div>
+      )}
     </div>
   );
 };

@@ -6,17 +6,32 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import axios, { AxiosResponse } from "axios";
 import { FetchUser } from "./fetchUser";
+import toast from "react-hot-toast";
+
+type MediaItem = {
+  project_id: number;
+  name: string;
+  filepath: string;
+  id: number;
+  type: string;
+  thumbnail_url: string; // for video path
+  url: string;
+};
 interface MediaUploadProps {
   children: ReactNode;
+  setUploadingMedia: React.Dispatch<React.SetStateAction<boolean>>;
+  mediaItems: MediaItem[];
 }
-const Upload: React.FC<MediaUploadProps> = ({ children }) => {
+const Upload: React.FC<MediaUploadProps> = ({
+  children,
+  setUploadingMedia,
+  mediaItems,
+}) => {
   const params = useParams<{ uid: string; id: string }>();
 
   FetchUser(params.uid); // calling useeffect to fetch the user_id
 
   const userId = useSelector((state: RootState) => state.userId.userId);
-
-  const [uploadingMedia, setUploadingMedia] = useState<boolean>(false);
 
   // Handle drag and drop
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
@@ -66,97 +81,99 @@ const Upload: React.FC<MediaUploadProps> = ({ children }) => {
       setUploadingMedia(true);
       try {
         const fileUploads = files.map(async (file) => {
-          const fileType = file.type.startsWith("image")
-            ? "image"
-            : file.type.startsWith("video")
-            ? "video"
-            : "audio";
-
-          const formData = new FormData();
-          formData.append("file", file); // only single file
-
-          let postData;
-          if (fileType === "video") {
-            // using first frame from video as img for thumbnail
-            const ffmpegRes = await axios.post(
-              `${process.env.NEXT_PUBLIC_API_BASE_URL}/ffmpeg`,
-              formData,
-              { responseType: "arraybuffer" }
-            );
-            postData = ffmpegRes.data; // using byte array only present inside data
-          }
-
-          const { data: uploadRes } = await axios.post(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/cloudinary/file/${userId}`,
-            formData,
-            {
-              headers: {
-                "Content-Type": "multipart/form-data",
-              },
-            }
+          const isDuplicate = mediaItems.some(
+            (media) => media.name === file.name
           );
+          if (isDuplicate) {
+            toast.error("media already present");
+            return;
+          } else {
+            const fileType = file.type.startsWith("image")
+              ? "image"
+              : file.type.startsWith("video")
+              ? "video"
+              : "audio";
 
-          let thumbnailUrl;
-          if (fileType === "video") {
-            // to have thumbnailData only during video media type
+            const formData = new FormData();
+            formData.append("file", file); // only single file
 
-            const bufferFormData = new FormData();
-            const Thumbfile = new File([postData], `${file.name}.jpg`, {
-              type: "image/jpeg",
-            });
-            bufferFormData.append("file", Thumbfile);
-            bufferFormData.append("userId", userId);
-
-            try {
-              const { data: uploadThumbnailRes } = await axios.post(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL}/cloudinary/thumbnail`,
-                bufferFormData,
-                {
-                  headers: {
-                    "Content-Type": "multipart/form-data",
-                  },
-                }
+            let postData;
+            if (fileType === "video") {
+              // using first frame from video as img for thumbnail
+              const ffmpegRes = await axios.post(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/ffmpeg`,
+                formData,
+                { responseType: "arraybuffer" }
               );
-              thumbnailUrl = uploadThumbnailRes.url;
-            } catch (error: unknown) {
-              console.error("error uploading thumbnail", error);
+              postData = ffmpegRes.data; // using byte array only present inside data
             }
+
+            const { data: uploadRes } = await axios.post(
+              `${process.env.NEXT_PUBLIC_API_BASE_URL}/cloudinary/file/${userId}`,
+              formData,
+              {
+                headers: {
+                  "Content-Type": "multipart/form-data",
+                },
+              }
+            );
+
+            let thumbnailUrl;
+            if (fileType === "video") {
+              // to have thumbnailData only during video media type
+
+              const bufferFormData = new FormData();
+              const Thumbfile = new File([postData], `${file.name}.jpg`, {
+                type: "image/jpeg",
+              });
+              bufferFormData.append("file", Thumbfile);
+              bufferFormData.append("userId", userId);
+
+              try {
+                const { data: uploadThumbnailRes } = await axios.post(
+                  `${process.env.NEXT_PUBLIC_API_BASE_URL}/cloudinary/thumbnail`,
+                  bufferFormData,
+                  {
+                    headers: {
+                      "Content-Type": "multipart/form-data",
+                    },
+                  }
+                );
+                thumbnailUrl = uploadThumbnailRes.url;
+              } catch (error: unknown) {
+                console.error("error uploading thumbnail", error);
+              }
+            }
+
+            const duration = await fetchDuration(fileType, uploadRes.url);
+            const roundedDuration = Math.round(Number(duration));
+
+            // inserting metadata of the cloudinary stored media in media_files table in psql
+            const response = await axios.post(
+              `${process.env.NEXT_PUBLIC_API_BASE_URL}/media`,
+              {
+                user_id: userId,
+                project_id: params.id,
+                name: file.name,
+                filepath: "", // check and remove filepath since it's of no use while using cloudinary
+                type: fileType,
+                thumbnail_url: fileType === "video" ? thumbnailUrl : "",
+                duration: roundedDuration || null, // will use it as width for clip, null for image
+                url: uploadRes.url || null, // this url would work for video, image media type, null for audio
+              }
+            );
+            console.log("bro media post res", response.data);
           }
-
-          const duration = await fetchDuration(fileType, uploadRes.url);
-          const roundedDuration = Math.round(Number(duration));
-
-          // inserting metadata of the cloudinary stored media in media_files table in psql
-          const response = await axios.post(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/media`,
-            {
-              user_id: userId,
-              project_id: params.id,
-              name: file.name,
-              filepath: "", // check and remove filepath since it's of no use while using cloudinary
-              type: fileType,
-              thumbnail_url: fileType === "video" ? thumbnailUrl : "",
-              duration: roundedDuration || null, // will use it as width for clip, null for image
-              url: uploadRes.url || null, // this url would work for video, image media type, null for audio
-            }
-          );
-          console.log("bro media post res", response.data);
         });
 
         await Promise.all(fileUploads);
+        setUploadingMedia(false);
       } catch (error: unknown) {
         console.error("Upload error:", error);
+        setUploadingMedia(false);
       }
     }
   };
-
-  useEffect(() => {
-    if (uploadingMedia) {
-      console.log("uploading  bro", uploadingMedia);
-    } else {
-      console.log("upload bro fasle", uploadingMedia);
-    }
-  }, [uploadingMedia]);
 
   return (
     <div

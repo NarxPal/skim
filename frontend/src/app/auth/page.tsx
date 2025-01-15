@@ -4,6 +4,7 @@ import styles from "@/styles/auth.module.css";
 import { useRouter } from "next/navigation";
 import { signUp, signIn } from "./auth";
 import Cookies from "js-cookie";
+import toast from "react-hot-toast";
 
 const Auth = () => {
   const router = useRouter();
@@ -42,6 +43,7 @@ const Auth = () => {
       if (userCredential && uid) {
         router.push(`/project/${uid}`);
       }
+      toast.success("Successfully signedUp");
     } catch (error) {
       console.error("Error signing up:", error);
     }
@@ -61,9 +63,10 @@ const Auth = () => {
         sameSite: "Lax", // For cross-origin support
         priority: "High",
       });
-
+      toast.success("Successfully loggedIn");
       router.push(`/project/${uid}`);
     } catch (error) {
+      toast.error("Check your email or password");
       console.error("Error signing in:", error);
     }
   };

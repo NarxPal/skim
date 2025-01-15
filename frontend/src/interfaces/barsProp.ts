@@ -4,12 +4,14 @@ export type bar = {
   left_position: number;
   name: string;
   project_id: number;
-  signedUrl: string;
   type: string;
   user_id: string;
   width: number;
   duration: number;
   url: string;
+  thumbnail_url: string;
+  start_time: number;
+  end_time: number;
 };
 
 export type sub_column = {

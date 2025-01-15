@@ -11,6 +11,7 @@ import { throttle } from "lodash";
 import { BarsProp, bar } from "@/interfaces/barsProp";
 
 type Clip = {
+  leftPos: number;
   startTime: number;
   endTime: number;
   videoUrl: string;
@@ -68,9 +69,13 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
   const fetchVideoData = async (pixelValuePerStep: number): Promise<Clip[]> => {
     const clips = barsDataChangeAfterZoom?.sub_columns?.flatMap((subCol) => {
       return subCol.bars?.map((bar) => {
+        const leftPos = bar.left_position;
+        // here startTime and endTime would mean diff than resizebar func in timeline
         const startTime = bar.left_position / pixelValuePerStep; // Convert left position to time
-        const endTime = startTime + (bar.duration || 0);
+        // const endTime = startTime + (bar.duration || 0); //  isn't this wrong here
+        const endTime = bar.width / pixelValuePerStep;
         return {
+          leftPos,
           startTime,
           endTime,
           videoUrl: bar.url,
@@ -121,16 +126,10 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
     const pixelValuePerStep = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
     //pixelValuePerStep is px value based upon diff / time interval, for eg 80 / 2.6 = 30 sec, it would take 2.6px value per step to reach 80px where marker would have 30 sec diff
 
-    const pixelsPerSecond = pixelValuePerStep * markerInterval;
-
-    // phTime is no. of sec the ph have moved
-    const phTime = position / pixelValuePerStep;
-    // console.log("phtime", phTime);
-
     const clips = await fetchVideoData(pixelValuePerStep);
     const activeClip = clips.find(
       // .find will find and return the first clip which match the condition
-      (clip) => phTime >= clip?.startTime && phTime < clip?.endTime // should not the current time be based upon ph and not the video tag?
+      (clip) => clip.leftPos >= clip?.startTime && clip.leftPos < clip?.endTime // should not the current time be based upon ph and not the video tag?
     );
     if (activeClip) {
       dispatch(setCurrentClip(activeClip));

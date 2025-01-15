@@ -171,6 +171,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
 
   useEffect(() => {
     const calcTicks = async () => {
+      console.log("ran bro");
       const positions: number[] = [];
       const markers: number[] = [];
       const formattedMarkersArray: string[] = [];
@@ -201,8 +202,6 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
         positions.push(tickPosition);
       }
       setTickPos(positions);
-      const newBarWidth = (175 / interval) * singleTickPxValue;
-      // console.log("new bar width bro", newBarWidth);
 
       // Loop through barsData to calculate each bar's duration and width
       const barsDurations: BarsProp = {
@@ -229,7 +228,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
       setBarsDataChangeAfterZoom(barsDurations);
     };
     calcTicks();
-  }, [zoomLevel, containerWidth, totalDuration, barsData]); // adding delCmBarId to again map over the data since barsData will be changed
+  }, [zoomLevel, containerWidth, totalDuration]); // adding delCmBarId to again map over the data since barsData will be changed
 
   // Change position of ph during onClick over timeline ruler
   const getHoverPosition = (
@@ -251,7 +250,6 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   const positionToTime = (pos: number) => {
     const pxValueDiffPerMarker = containerWidth / totalDuration; // calculating px value which position the marker
     const pixelValuePerStep = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
-
     return pos / pixelValuePerStep;
   };
 
@@ -266,6 +264,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) => {
     const hoverPosition = getHoverPosition(event);
+    console.log("hp", hoverPosition);
     dispatch(setPhPosition(hoverPosition));
     if (videoRef.current && hoverPosition) {
       const time = positionToTime(hoverPosition);

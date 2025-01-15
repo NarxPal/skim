@@ -1,6 +1,10 @@
 /* left_pane.tsx content */
+.left_pane_container {
+  @apply flex flex-col gap-2 w-1/5 h-full border-r-2 border-editor_gray p-6 relative;
+}
+
 .pane_sidebar {
-  @apply flex flex-col gap-2 w-1/5 h-full border-r-2 border-editor_gray p-6;
+  @apply h-full w-full overflow-auto;
 }
 
 .upload_box {
@@ -35,7 +39,7 @@
 }
 
 .media_item {
-  @apply p-2 bg-light_gray rounded-lg flex gap-2 flex-col;
+  @apply p-2  rounded-lg flex gap-2 flex-col;
 }
 
 .media_preview {
@@ -85,4 +89,12 @@
 
 .input_bar {
   @apply bg-transparent focus:outline-none w-full;
+}
+
+.overlay {
+  @apply absolute top-0 left-0 right-0 bottom-0  backdrop-blur-lg;
+}
+
+.loader {
+  @apply h-[40px] w-[40px] animate-spin;
 }

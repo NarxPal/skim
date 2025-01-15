@@ -12,7 +12,8 @@ import { FfmpegService } from './ffmpeg.service';
 import * as multer from 'multer';
 import * as path from 'path';
 import * as fs from 'fs';
-import { Response } from 'express'; 
+import { Response } from 'express';
+
 @Controller('ffmpeg')
 export class FfmpegController {
   constructor(private readonly ffmpegService: FfmpegService) {}
@@ -20,17 +21,19 @@ export class FfmpegController {
   // post req for fetching first frame of the file
   @Post()
   @UseInterceptors(FileInterceptor('file', { storage: multer.diskStorage({}) }))
-  async uploadVideo(@UploadedFile() file: Express.Multer.File
-  , @Res() res: Response
-) {
-  try{
-
-    const imageBuffer = await this.ffmpegService.extractFirstFrame(file.path);
-    res.set('Content-Type', 'image/jpeg');  
-    res.send(imageBuffer); 
-  } catch(err){
-    res.status(500).json({ error: 'Error extracting frame', message: err.message });
-  }
+  async uploadVideo(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response,
+  ) {
+    try {
+      const imageBuffer = await this.ffmpegService.extractFirstFrame(file.path);
+      res.set('Content-Type', 'image/jpeg'); // inform client to take binary data as image
+      res.send(imageBuffer);
+    } catch (err) {
+      res
+        .status(500)
+        .json({ error: 'Error extracting frame', message: err.message });
+    }
   }
 
   @Get('duration/*')

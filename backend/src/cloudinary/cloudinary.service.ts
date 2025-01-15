@@ -45,26 +45,12 @@ export class CloudinaryService {
     try {
       const thumbnailPath = `thumbnail/${userId}/${postData.mimetype.split('/')[0]}/${postData.originalname}`;
 
-      console.log(
-        'Buffer Content (Hex):',
-        postData.buffer.toString('hex').slice(0, 20),
-      );
-
-      console.log('File MIME Type:', postData.mimetype);
-
-      const resourceType = postData.mimetype.startsWith('image/')
-        ? 'image'
-        : postData.mimetype.startsWith('video/')
-          ? 'video'
-          : 'raw';
-
       const thumbResult: UploadApiResponse = await new Promise(
         (resolve, reject) => {
-
           const uploadStream = cloudinary.uploader.upload_stream(
             {
               public_id: thumbnailPath,
-              resource_type: "image",
+              resource_type: 'image',
             },
             (error, result) => {
               if (error) {
@@ -74,7 +60,6 @@ export class CloudinaryService {
               }
             },
           );
-          // bufferStream.pipe(uploadStream);
           uploadStream.end(postData.buffer);
         },
       );

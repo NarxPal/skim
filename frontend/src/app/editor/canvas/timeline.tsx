@@ -12,7 +12,6 @@ import { RootState } from "@/redux/store";
 import { BarsProp, bar } from "@/interfaces/barsProp";
 
 type MediaItem = {
-  signedUrl: string | null;
   name: string;
   filepath: string;
   type: string;
@@ -24,6 +23,7 @@ type MediaItem = {
   project_id: number;
   duration: number;
   url: string;
+  thumbnail_url: string;
 };
 
 type ColumnsProps = {
@@ -104,7 +104,6 @@ const Timeline: React.FC<TimelineProps> = ({
   const [LPBasedBars, setLPBasedBars] = useState<bar[]>([]);
   const [zoomLevel, setZoomLevel] = useState<number>(10);
   const [scrollPosition, setScrollPosition] = useState<number>(0);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   // use ref hooks
   const isResizing = useRef(false);
@@ -113,9 +112,11 @@ const Timeline: React.FC<TimelineProps> = ({
   const activeBarId = useRef<number | null>(null);
   const mediaParentRef = useRef<HTMLDivElement | null>(null);
   const phLeftRef = useRef<HTMLDivElement>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  // const timelineRef = useRef<HTMLDivElement>(null);
-  const previousPhPositionRef = useRef(phPosition);
+
+  // redux hooks
+  const markerInterval = useSelector(
+    (state: RootState) => state.markerInterval.markerInterval
+  );
 
   const icons: { [key: string]: string } = {
     audio: "/audio.png",
@@ -156,13 +157,11 @@ const Timeline: React.FC<TimelineProps> = ({
     }
   }, []);
 
-  // const playheadPosition =
-  //   timelineRef.current && duration > 0
-  //     ? (currentTime / duration) * timelineRef.current.offsetWidth
-  //     : 0;
-
   const createSubCol = async (parsedItem: MediaItem) => {
     // parsedItem contains most of the data for bars but keys like left and width are added during handleaddbartocol
+
+    const singleTickPxValue = mediaContainerWidth / totalMediaDuration; // equal px value for each marker, it changes based upon zoom level
+
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
       {
@@ -175,14 +174,16 @@ const Timeline: React.FC<TimelineProps> = ({
             user_id: parsedItem.user_id,
             name: parsedItem.name,
             left_position: 0, // default left position
-            width: 0, // duration of the media, for zoom level 1 multiplying 10 since each sec would be 10px/sec, this would work well only for zoom level 1
+            width: (parsedItem.duration / markerInterval) * singleTickPxValue, // duration of the media, for zoom level 1 multiplying 10 since each sec would be 10px/sec, this would work well only for zoom level 1
             duration: parsedItem.duration, // storing duration to use in calcContainerWidth
             project_id: parsedItem.project_id,
             type: parsedItem.type,
-            signedUrl: parsedItem.signedUrl, // it's just named as signedurl but it's a public url, so permanent
+            thumbnail_url: parsedItem.thumbnail_url,
             filepath: parsedItem.filepath,
             order: 0, // initial value 0 since every new bar will be inside newly created sub_col first
             url: parsedItem.url,
+            start_time: 0,
+            end_time: parsedItem.duration,
           },
         ],
       }
@@ -197,6 +198,7 @@ const Timeline: React.FC<TimelineProps> = ({
     subColumnId: number
   ) => {
     try {
+      const singleTickPxValue = mediaContainerWidth / totalMediaDuration; // equal px value for each marker, it changes based upon zoom level
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars`,
         {
@@ -204,14 +206,16 @@ const Timeline: React.FC<TimelineProps> = ({
           user_id: parseditem.user_id,
           name: parseditem.name,
           left_position: parseditem.left_position,
-          width: parseditem.width, // width and left will here be default values and u have to make a req to server to change it
+          width: (parseditem.duration / markerInterval) * singleTickPxValue, // width and left will here be default values and u have to make a req to server to change it
           duration: parseditem.duration,
           project_id: parseditem.project_id,
           column_id: subColumnId, // this is only in bars table
           type: parseditem.type,
-          signedUrl: parseditem.signedUrl,
+          thumbnail_url: parseditem.thumbnail_url,
           filepath: parseditem.filepath,
           url: parseditem.url,
+          start_time: 0,
+          end_time: parseditem.duration,
         }
       );
       console.log("add bar to col res bro", response.data);
@@ -286,21 +290,27 @@ const Timeline: React.FC<TimelineProps> = ({
       const roundedWidth = Math.round(width);
       const roundedLeftPosition = Math.round(left_position);
 
-      const subColResponse = await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/bars/${id}`,
-        {
-          left_position: roundedLeftPosition,
-          width: roundedWidth, // make changes to width here during resize when adding zoom functionality
-        }
-      );
-      const barResponse = await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars/${id}`,
-        {
-          width: roundedWidth,
-          left_position: roundedLeftPosition,
-        }
-      );
-      return { subColResponse, barResponse };
+      setBarsData((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          sub_columns: prev.sub_columns?.map((subCol) => {
+            return {
+              ...subCol,
+              bars: subCol?.bars?.map((bar) => {
+                if (bar.id === id) {
+                  return {
+                    ...bar,
+                    left_position: roundedLeftPosition,
+                    width: roundedWidth,
+                  };
+                }
+                return bar;
+              }),
+            };
+          }),
+        };
+      });
     } catch (error) {
       console.error("Failed to update bar:", error);
       throw error;
@@ -310,12 +320,11 @@ const Timeline: React.FC<TimelineProps> = ({
   const resizeBar = (e: MouseEvent) => {
     if (!isResizing.current || !resizeDirection.current) return;
     const dx = e.clientX - startX.current; // the e.clientx is the current mouse position during the movement of the mouse and we are subtracting it with initial mouse (starting) position during mousedown
-
-    setBarsData((prevRootColumn: BarsProp | null) => {
+    setBarsDataChangeAfterZoom((prevRootColumn: BarsProp | null) => {
       if (!prevRootColumn) return null;
       return {
         ...prevRootColumn,
-        sub_columns: prevRootColumn.sub_columns.map((subColumn) => {
+        sub_columns: prevRootColumn.sub_columns?.map((subColumn) => {
           return {
             ...subColumn,
             bars: subColumn?.bars?.map((bar, barIndex, bars) => {
@@ -323,6 +332,18 @@ const Timeline: React.FC<TimelineProps> = ({
                 let newWidth = bar.width;
                 let newLeft = bar.left_position;
 
+                let startTime = 0; // to newly created media from 0
+                let endTime = 0; // value for end clip
+
+                // singleTickPxValue used in newWidth variable
+                const singleTickPxValue =
+                  mediaContainerWidth / totalMediaDuration; // equal px value for each marker, it changes based upon zoom level
+                const pixelValuePerStep = singleTickPxValue / markerInterval;
+
+                const maxWidth =
+                  (bar.duration / markerInterval) * singleTickPxValue;
+
+                // LEFT HANDLE:
                 if (resizeDirection.current === "left") {
                   const minWidth = 125;
 
@@ -337,9 +358,18 @@ const Timeline: React.FC<TimelineProps> = ({
 
                   // Ensure the width doesn't grow when reaching the left gap constraint
                   if (newLeft === 0) {
-                    newWidth = Math.max(bar.width - dx, minWidth); // Stop resizing width if at gap
+                    newWidth = Math.max(bar.width - dx, minWidth);
+                    startTime = 0; // for first clip media start time duration falls to zero if newleft eq zero
                   } else {
-                    newWidth = bar.width - dx;
+                    newWidth = Math.min(
+                      Math.max(bar.width - dx, minWidth),
+                      maxWidth
+                    );
+                    // only calc startime when width is availbale, based upon duration
+                    if (bar.width !== maxWidth) {
+                      // startTime = bar.start_time + dx; //its px value but we want time in sec
+                      startTime = bar.left_position / pixelValuePerStep;
+                    }
                   }
 
                   // Prevent overlap with the previous bar
@@ -356,7 +386,7 @@ const Timeline: React.FC<TimelineProps> = ({
                       }
                     }
                   } else {
-                    // For the first bar, set left limit and stop increasing width if the left limit is reached
+                    // For the first bar, set left limit and stop increasing width(showing effect where right handle increases) if the left limit is reached
                     const minLeft = 0; // Prevent moving beyond left limit
                     newLeft = Math.max(newLeft, minLeft); // Set minimum left position
                     if (newLeft === minLeft) {
@@ -365,11 +395,26 @@ const Timeline: React.FC<TimelineProps> = ({
                       newWidth = Math.max(newWidth, minWidth); // Ensure minimum width
                     }
                   }
-                } else {
-                  // Right handle: prevent overlap with next bar
-                  newWidth = bar.width + dx;
 
+                  if (newWidth === maxWidth) {
+                    // if width equals duration than don't grow the clip
+                    newLeft = bar.left_position; // fallback to last lp
+                  }
+                }
+
+                // RIGHT HANDLE :
+                else {
+                  newWidth = Math.min(bar.width + dx, maxWidth);
+                  if (bar.width !== maxWidth) {
+                    // only calc endtime when width is avilable based upon duration
+                    // endTime = bar.end_time - dx; // neg for pointer moving left for right handle
+                    endTime = bar.width / pixelValuePerStep;
+                    console.log("media clip end duration", endTime);
+                  }
+
+                  // Right handle: prevent overlap with next bar
                   for (let i = barIndex + 1; i < bars.length; i++) {
+                    // +1 for working with next bar
                     const nextBar = bars[i];
                     const maxRightPosition = nextBar.left_position - 10;
                     if (newWidth + bar.left_position > maxRightPosition) {
@@ -377,73 +422,13 @@ const Timeline: React.FC<TimelineProps> = ({
                     }
                   }
                 }
-
-                // for scrolling the parent element of bars when bars are resized and get out of view
-                const parentElement = document.querySelector(
-                  "#id-1"
-                ) as HTMLElement;
-                if (parentElement) {
-                  const barRightEdge = newLeft + newWidth; // Calculate the bar's right edge
-                  const parentScrollRight =
-                    parentElement.scrollLeft + parentElement.offsetWidth;
-                  const buffer = 50; // Pixels of buffer space around the handle
-
-                  if (resizeDirection.current === "right") {
-                    if (barRightEdge > parentScrollRight) {
-                      parentElement.scrollLeft +=
-                        barRightEdge - parentScrollRight; // Scroll parent to the right
-                    }
-                    if (barRightEdge < parentElement.scrollLeft) {
-                      // scroll parent to left
-                      parentElement.scrollLeft -=
-                        parentElement.scrollLeft - barRightEdge;
-                    }
-                    // buffer while dragging right handle towards right
-                    if (barRightEdge > parentScrollRight - buffer) {
-                      parentElement.scrollLeft +=
-                        barRightEdge + buffer - parentScrollRight;
-                    }
-                    if (barRightEdge < parentElement.scrollLeft + buffer) {
-                      parentElement.scrollLeft -=
-                        parentElement.scrollLeft - (barRightEdge - buffer);
-                    }
-                  } else if (resizeDirection.current === "left") {
-                    // scroll parent to right
-                    if (newLeft > parentScrollRight) {
-                      parentElement.scrollLeft += newLeft - parentScrollRight;
-                    }
-                    // scroll parent to left
-                    if (newLeft < parentElement.scrollLeft) {
-                      parentElement.scrollLeft -=
-                        parentElement.scrollLeft - newLeft;
-                    }
-
-                    if (newLeft < parentElement.scrollLeft + buffer) {
-                      parentElement.scrollLeft -=
-                        parentElement.scrollLeft - (newLeft - buffer);
-                    }
-                    if (newLeft > parentScrollRight - buffer) {
-                      parentElement.scrollLeft +=
-                        newLeft + buffer - parentScrollRight;
-                    }
-                  }
-                } else if (!parentElement) {
-                  console.error("Parent element not found");
-                }
-
-                // since zoomLevel decides the width of bar at least for level 10
-                if (newWidth > bar.duration * zoomLevel) {
-                  newWidth = bar.duration * zoomLevel;
-                }
-
-                // Update the database
-                // console.log(bar.id, newWidth, newLeft);
-                updateItemInDatabase(bar.id, newWidth, newLeft);
-
+                console.log("start time bro", startTime);
                 return {
                   ...bar,
                   width: Math.max(newWidth, 125),
                   left_position: newLeft,
+                  start_time: startTime,
+                  end_time: endTime,
                 };
               }
               return bar;
@@ -459,6 +444,7 @@ const Timeline: React.FC<TimelineProps> = ({
   const stopResize = () => {
     isResizing.current = false;
     resizeDirection.current = null;
+    console.log("barsdataaz resize bro", barsDataChangeAfterZoom); // save into  db add here
     document.removeEventListener("mousemove", resizeBar);
     document.removeEventListener("mouseup", stopResize);
   };
@@ -1062,7 +1048,7 @@ const Timeline: React.FC<TimelineProps> = ({
               style={{ width: `${mediaContainerWidth}px` }}
             >
               {((barsData && barsData.sub_columns === null) ||
-              barsData?.sub_columns.length === 0
+              barsData?.sub_columns?.length === 0
                 ? new Array(3).fill(null) //now here 3 empty array will be shown when no sub_column will be present(initial state of timeline)
                 : barsData?.sub_columns || []
               ).map((item, index) => {
@@ -1093,12 +1079,21 @@ const Timeline: React.FC<TimelineProps> = ({
                               .find((zoomBar) => zoomBar?.id === bar.id)
                               ?.width) ||
                           bar.width;
+
+                        const barLP =
+                          (barsDataChangeAfterZoom &&
+                            barsDataChangeAfterZoom.sub_columns
+                              .flatMap((subCol) => subCol.bars)
+                              .find((zoomBar) => zoomBar?.id === bar.id)
+                              ?.left_position) ||
+                          bar.left_position;
+
                         return (
                           <div
                             className={styles.item_box_div}
                             style={{
                               width: barWidth, // width according to stored in db and zoom level
-                              left: bar?.left_position,
+                              left: barLP,
                             }}
                             key={barIndex}
                             id={`bar-${bar?.id}`}
@@ -1125,8 +1120,8 @@ const Timeline: React.FC<TimelineProps> = ({
                                     <div
                                       className={styles.m_item_thumb}
                                       style={{
-                                        backgroundImage: bar?.signedUrl
-                                          ? `url(${bar?.signedUrl})`
+                                        backgroundImage: bar?.thumbnail_url
+                                          ? `url(${bar?.thumbnail_url})`
                                           : "none",
                                         backgroundRepeat: "repeat-x",
                                         backgroundSize: "auto 100%",

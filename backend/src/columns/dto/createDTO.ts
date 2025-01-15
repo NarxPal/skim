@@ -22,7 +22,7 @@ type Bar = {
   width: number;
   project_id: number;
   type: string;
-  signedUrl: string;
+  thumbnail_url: string;
   filepath: string;
   order: number;
   url: string;
@@ -75,7 +75,7 @@ export class BarData {
   width: number;
   project_id: number;
   type: string;
-  signedUrl: string;
+  thumbnail_url: string;
   filepath: string;
   order: number;
 }

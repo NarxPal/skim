@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import styles from "@/styles/modal.module.css";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 type EditPrjData = {
   filename: string;
@@ -62,19 +63,18 @@ const Modal: React.FC<ModalProps> = ({
 
   const deleteRootColumn = async (projectId: number | null) => {
     try {
-      const response = await axios.delete(
+      await axios.delete(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${projectId}`
       );
       setDelPrjData((prev) => ({ ...prev, filename: "", id: null }));
-      console.log("deleted root column:", response.data);
     } catch (error) {
-      console.log("error deleting root column", error);
+      toast.error("error deleting project");
     }
   };
 
   const handlePrjName = async () => {
     if ((openCreateModal && !filename) || (!openCreateModal && !editPrjData)) {
-      alert("Project name cannot be empty!");
+      toast.error("Project name cannot be empty!");
       return;
     }
 
@@ -88,30 +88,27 @@ const Modal: React.FC<ModalProps> = ({
             name: filename,
           }
         );
-        alert("Project created successfully!");
         setFilename("");
         setOpenCreateModal(false);
         console.log("response bru", response.data);
         createRootColumn(response.data);
       } catch (error) {
         console.error("Error inserting project:", error);
-        alert("Failed to create project.");
+        toast.error("Failed to create project");
       }
     } else {
       try {
-        const response = await axios.patch(
+        await axios.patch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/projects/${editPrjData.id}`,
           {
             name: editPrjData.filename,
           }
         );
-        alert("Project updated successfully!");
         setEditPrjData((prev) => ({ ...prev, filename: "", id: null }));
         setOpenEditModal(false);
-        return response;
       } catch (error) {
         console.error("Error updating project:", error);
-        alert("Failed to update project.");
+        toast.error("Failed to update project.");
       }
     }
   };
