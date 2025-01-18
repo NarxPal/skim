@@ -35,6 +35,21 @@ export class ColumnsService {
     return undefined;
   }
 
+  async dragBarId(subColId: number, id: number): Promise<BarData | undefined> {
+    const columns = await this.columnsRepository.find();
+    let getBar: BarData;
+    columns.forEach((column) => {
+      if (column.sub_columns) {
+        column.sub_columns.forEach((subColumn) => {
+          if (subColumn.id === Number(subColId)) {
+            getBar = subColumn.bars?.find((bar) => bar.id === Number(id));
+          }
+        });
+      }
+    });
+    return getBar;
+  }
+
   // Create a new column (root or sub-column)
   async create(createColumnDto: CreateColumnDto) {
     const column = this.columnsRepository.create(createColumnDto);

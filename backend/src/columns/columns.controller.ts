@@ -38,6 +38,15 @@ export class ColumnsController {
     return this.columnsService.subColIdBars(Number(dragOverSubColId));
   }
 
+  // filter to get dragged bar id
+  @Get(':subColId/bars/:id')
+  async dragBarId(
+    @Param('subColId') subColId: number,
+    @Param('id') id: number,
+  ): Promise<BarData> {
+    return this.columnsService.dragBarId(subColId, Number(id));
+  }
+
   @Post(':rootColumnId/sub-columns')
   async addSubColToRoot(
     @Param('rootColumnId') rootColumnId: number,

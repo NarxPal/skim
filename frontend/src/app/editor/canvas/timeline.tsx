@@ -102,7 +102,7 @@ const Timeline: React.FC<TimelineProps> = ({
   const [barIndex, setBarIndex] = useState<number>();
   const [droppedBarNewLeft, setDroppedBarNewLeft] = useState<number | null>();
   const [LPBasedBars, setLPBasedBars] = useState<bar[]>([]);
-  const [zoomLevel, setZoomLevel] = useState<number>(10);
+  const [zoomLevel, setZoomLevel] = useState<number>(0);
   const [scrollPosition, setScrollPosition] = useState<number>(0);
 
   // use ref hooks
@@ -157,6 +157,7 @@ const Timeline: React.FC<TimelineProps> = ({
     }
   }, []);
 
+  // create sub col for columns entity in db
   const createSubCol = async (parsedItem: MediaItem) => {
     // parsedItem contains most of the data for bars but keys like left and width are added during handleaddbartocol
 
@@ -192,39 +193,6 @@ const Timeline: React.FC<TimelineProps> = ({
     return response;
   };
 
-  // to create/add the bar to bars table
-  const handleAddBarToCol = async (
-    parseditem: MediaItem,
-    subColumnId: number
-  ) => {
-    try {
-      const singleTickPxValue = mediaContainerWidth / totalMediaDuration; // equal px value for each marker, it changes based upon zoom level
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars`,
-        {
-          id: parseditem.id,
-          user_id: parseditem.user_id,
-          name: parseditem.name,
-          left_position: parseditem.left_position,
-          width: (parseditem.duration / markerInterval) * singleTickPxValue, // width and left will here be default values and u have to make a req to server to change it
-          duration: parseditem.duration,
-          project_id: parseditem.project_id,
-          column_id: subColumnId, // this is only in bars table
-          type: parseditem.type,
-          thumbnail_url: parseditem.thumbnail_url,
-          filepath: parseditem.filepath,
-          url: parseditem.url,
-          start_time: 0,
-          end_time: parseditem.duration,
-        }
-      );
-      console.log("add bar to col res bro", response.data);
-      return response;
-    } catch (error) {
-      console.log("bar not added to column", error);
-    }
-  };
-
   const handleMediaDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const dropped_Item = event.dataTransfer.getData("text/plain"); // the data here is passed from leftpane.tsx using .setData
@@ -233,11 +201,7 @@ const Timeline: React.FC<TimelineProps> = ({
 
     // adding the dropped bar to root column, currently each dropped bar will create it's own sub-column
     try {
-      const subColumnResponse = await createSubCol(parsedItem);
-      const subColumnId = subColumnResponse.data.id;
-      console.log("subcol res", subColumnResponse.data);
-
-      await handleAddBarToCol(subColumnResponse.data.bars[0], subColumnId);
+      await createSubCol(parsedItem);
       setFetchBars(true);
     } catch (error) {
       console.error("Error in handling drop:", error);
@@ -441,10 +405,13 @@ const Timeline: React.FC<TimelineProps> = ({
     startX.current = e.clientX;
   };
 
+  const updateBarAfterResize = async () => {};
+
   const stopResize = () => {
     isResizing.current = false;
     resizeDirection.current = null;
     console.log("barsdataaz resize bro", barsDataChangeAfterZoom); // save into  db add here
+    updateBarAfterResize();
     document.removeEventListener("mousemove", resizeBar);
     document.removeEventListener("mouseup", stopResize);
   };
@@ -471,11 +438,10 @@ const Timeline: React.FC<TimelineProps> = ({
   ) => {
     try {
       const getBarData = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars/${draggedBarId}`
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${dragSubColId}/bars/${draggedBarId}`
       );
       // console.log("barindex, droppedbarnewlp bro", barIndex, droppedBarNewLeft);
       // Update the dragged bar order using targetIndex here and than add it to the dropsubcolid
-
       const addBarData = getBarData.data;
 
       // if drag subcol id equal the drop subcolid than don't add the bar, we will use duplicate feature to add the same bar in the same sub_column
@@ -500,7 +466,7 @@ const Timeline: React.FC<TimelineProps> = ({
     }
   };
 
-  // updatebarlp updates the left position of the existing bars in sub_col
+  // updatebarlp updates the left position of the existing bars in sub_col during bar drop from subcol
   const updateBarLP = async (
     draggedBarId: number,
     dropSubColId: number,
@@ -510,7 +476,7 @@ const Timeline: React.FC<TimelineProps> = ({
     // here we are saving the left position present in filteredbars into db
     try {
       const getDraggedBarData = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/bars/${draggedBarId}`
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${dragSubColId}/bars/${draggedBarId}`
       );
 
       const dragBarWidth = getDraggedBarData.data.width;
@@ -703,17 +669,19 @@ const Timeline: React.FC<TimelineProps> = ({
   }, [columns, zoomLevel]); // using columns here since setbarsdata will change everytime during resize bar
 
   const zoom_In = async () => {
-    const MIN_ZOOM_LEVEL = 0; // Maximum zoom
+    const MAX_ZOOM_LEVEL = 0; // Max zoom is 0
     if (zoomLevel !== 0) {
-      setZoomLevel((prev) => Math.max(prev + 2, MIN_ZOOM_LEVEL));
+      console.log("zooom in", zoomLevel);
+      setZoomLevel((prev) => Math.max(prev - 2, MAX_ZOOM_LEVEL));
       setFetchBars(true); // it will fetch the barsData which will run the useEffect calcTicks in timelineruler file
     }
   };
 
   const zoom_Out = async () => {
-    const MAX_ZOOM_LEVEL = 10; // Minimum zoom
-    if (zoomLevel >= 0 && zoomLevel <= 10) {
-      setZoomLevel((prev) => Math.min(prev - 2, MAX_ZOOM_LEVEL));
+    const MIN_ZOOM_LEVEL = 10; // High value mean less zoom
+    if (zoomLevel >= 0 && zoomLevel < 10) {
+      console.log("zooom out", zoomLevel);
+      setZoomLevel((prev) => Math.min(prev + 2, MIN_ZOOM_LEVEL));
       setFetchBars(true);
     }
   };
@@ -996,7 +964,7 @@ const Timeline: React.FC<TimelineProps> = ({
           <div className={styles.top_r_icons}>
             <div
               className={`${styles.tm_icon} ${
-                zoomLevel == 10 ? "opacity-50" : ""
+                zoomLevel == 0 ? "opacity-50" : ""
               }`}
               onClick={() => zoom_In()}
             >
@@ -1012,7 +980,7 @@ const Timeline: React.FC<TimelineProps> = ({
 
             <div
               className={`${styles.tm_icon} ${
-                zoomLevel == 0 ? "opacity-50" : ""
+                zoomLevel == 10 ? "opacity-50" : ""
               }`}
               onClick={() => zoom_Out()}
             >

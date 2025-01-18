@@ -5,7 +5,6 @@ import { User } from './models/user.entity';
 import { Projects } from './models/projects.entity';
 import { Media } from './models/media.entity';
 import { Columns } from './models/columns.entity';
-import { Bars } from './models/bars.entity';
 
 @Module({
   imports: [
@@ -20,7 +19,7 @@ import { Bars } from './models/bars.entity';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         // entities: [__dirname + '/../**/*.entity{.ts,.js}'], // Adjust as per your structure
-        entities: [User, Projects, Media, Columns, Bars],
+        entities: [User, Projects, Media, Columns],
         synchronize: true, // Auto sync entities with the database
       }),
     }),

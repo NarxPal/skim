@@ -26,7 +26,8 @@ type Bar = {
   filepath: string;
   order: number;
   url: string;
-
+  start_time: number;
+  end_time: number;
   // later: not having here column_id since don't know how we will pass it in frontend from handlemediadrop to createsubcol
 };
 
@@ -78,4 +79,7 @@ export class BarData {
   thumbnail_url: string;
   filepath: string;
   order: number;
+  url: string;
+  start_time: number;
+  end_time: number;
 }

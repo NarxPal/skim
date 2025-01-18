@@ -22,6 +22,8 @@ type Bar = {
   filepath: string;
   order: number;
   url: string;
+  start_time: number;
+  end_time: number;
 };
 
 type Sub_Column = {
