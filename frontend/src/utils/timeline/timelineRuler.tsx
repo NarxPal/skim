@@ -51,17 +51,6 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
     }
   }, [scrollPosition]);
 
-  // const formatTime = (seconds: number): string => {
-  //   const hrs = Math.floor(seconds / 3600)
-  //     .toString()
-  //     .padStart(2, "0");
-  //   const mins = Math.floor((seconds % 3600) / 60)
-  //     .toString()
-  //     .padStart(2, "0");
-  //   const secs = (seconds % 60).toString().padStart(2, "0");
-  //   return `${hrs}:${mins}:${secs}`;
-  // };
-
   // todo: throttledShowPhTimeUpdate formatTime are used in playhead, phanimation and timelineRuler file so optimize it
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -77,96 +66,16 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
 
   function calculateInterval(totalDuration: number, zoomLevel: number): number {
     console.log("zl lolo", zoomLevel);
-    let interval: number;
+    let baseInterval: number;
 
-    if (totalDuration >= 3600) {
-      interval = 1800; // 30-minute interval for videos >= 1 hour
-    } else if (totalDuration >= 1800) {
-      interval = 900; // 15-minute interval for 30 min to 1 hour
-    } else if (totalDuration >= 900) {
-      interval = 450; // 7.5-minute interval for 15 to 30 min
-    } else if (totalDuration >= 300) {
-      interval = 150; // 2.5-min interval for 5 to 15 min
-    } else {
-      interval = 30; // 30-second interval for videos < 5 min
-    }
+    if (totalDuration >= 3600) baseInterval = 1800;
+    else if (totalDuration >= 1800) baseInterval = 900;
+    else if (totalDuration >= 900) baseInterval = 450;
+    else if (totalDuration >= 300) baseInterval = 150;
+    else baseInterval = 30;
 
-    // Adjust interval based on zoom level
-    if (zoomLevel === 10) {
-      if (interval === 30) {
-        interval = 1; // Interval stays at 30 seconds for small videos
-      } else if (interval === 150) {
-        interval = 30; // 2.5 minutes adjusted to 30 seconds
-      } else if (interval === 450) {
-        interval = 60; // 7.5 minutes adjusted to 1 minute
-      } else if (interval === 900) {
-        interval = 120; // 15 minutes adjusted to 2 minutes
-      } else if (interval === 1800) {
-        interval = 300; // 30 minutes adjusted to 5 minutes
-      }
-    } else if (zoomLevel === 8) {
-      if (interval === 30) {
-        interval = 30; // Interval stays at 30 seconds for small videos
-      } else if (interval === 150) {
-        interval = 30; // 2.5 minutes adjusted to 30 seconds
-      } else if (interval === 450) {
-        interval = 60; // 7.5 minutes adjusted to 1 minute
-      } else if (interval === 900) {
-        interval = 120; // 15 minutes adjusted to 2 minutes
-      } else if (interval === 1800) {
-        interval = 300; // 30 minutes adjusted to 5 minutes
-      }
-    } else if (zoomLevel === 6) {
-      if (interval === 30) {
-        interval = 60; // 30 seconds adjusted to 1 minute
-      } else if (interval === 150) {
-        interval = 300; // 2.5 minutes adjusted to 5 minutes
-      } else if (interval === 450) {
-        interval = 600; // 7.5 minutes adjusted to 10 minutes
-      } else if (interval === 900) {
-        interval = 1200; // 15 minutes adjusted to 20 minutes
-      } else if (interval === 1800) {
-        interval = 1800; // 30 minutes stays at 30 minutes
-      }
-    } else if (zoomLevel === 4) {
-      if (interval === 30) {
-        interval = 120; // 30 seconds adjusted to 2 minute
-      } else if (interval === 150) {
-        interval = 300; // 2.5 minutes adjusted to 5 minutes
-      } else if (interval === 450) {
-        interval = 600; // 7.5 minutes adjusted to 10 minutes
-      } else if (interval === 900) {
-        interval = 1200; // 15 minutes adjusted to 20 minutes
-      } else if (interval === 1800) {
-        interval = 1800; // 30 minutes stays at 30 minutes
-      }
-    } else if (zoomLevel === 2) {
-      if (interval === 30) {
-        interval = 150; // 30 seconds adjusted to 2min 30 sec
-      } else if (interval === 150) {
-        interval = 300; // 2.5 minutes adjusted to 5 minutes
-      } else if (interval === 450) {
-        interval = 600; // 7.5 minutes adjusted to 10 minutes
-      } else if (interval === 900) {
-        interval = 1200; // 15 minutes adjusted to 20 minutes
-      } else if (interval === 1800) {
-        interval = 1800; // 30 minutes stays at 30 minutes
-      }
-    } else {
-      if (interval === 30) {
-        interval = 300; // 30 seconds adjusted to 5 minutes
-      } else if (interval === 150) {
-        interval = 300; // 2.5 minutes adjusted to 5 minutes
-      } else if (interval === 450) {
-        interval = 600; // 7.5 minutes adjusted to 10 minutes
-      } else if (interval === 900) {
-        interval = 1200; // 15 minutes adjusted to 20 minutes
-      } else if (interval === 1800) {
-        interval = 2400; // 30 minutes adjusted to 40 minutes
-      }
-    }
-
-    return interval;
+    const zoomFactor = Math.pow(2, (10 - zoomLevel) / 2);
+    return Math.round(baseInterval / zoomFactor);
   }
 
   useEffect(() => {
@@ -268,6 +177,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
     dispatch(setPhPosition(hoverPosition));
     if (videoRef.current && hoverPosition) {
       const time = positionToTime(hoverPosition);
+      console.log("time bro", time);
       videoRef.current.currentTime = time || 0; // in case there is no clip the time would return nothing so fall to 0
       throttledShowPhTimeUpdate(time);
     }

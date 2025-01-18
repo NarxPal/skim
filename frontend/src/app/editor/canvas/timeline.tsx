@@ -378,7 +378,7 @@ const Timeline: React.FC<TimelineProps> = ({
                       // Only check for previous bars if it's not the first bar
                       const prevBar = bars[barIndex - 1];
                       const minPosition =
-                        prevBar.left_position + prevBar.width + 10;
+                        prevBar.left_position + prevBar.width + 2;
 
                       if (newLeft < minPosition) {
                         newLeft = minPosition; // Prevent overlap with previous bar
@@ -416,9 +416,9 @@ const Timeline: React.FC<TimelineProps> = ({
                   for (let i = barIndex + 1; i < bars.length; i++) {
                     // +1 for working with next bar
                     const nextBar = bars[i];
-                    const maxRightPosition = nextBar.left_position - 10;
+                    const maxRightPosition = nextBar.left_position - 2;
                     if (newWidth + bar.left_position > maxRightPosition) {
-                      newWidth = maxRightPosition - bar.left_position - 10;
+                      newWidth = maxRightPosition - bar.left_position - 2;
                     }
                   }
                 }
@@ -703,15 +703,19 @@ const Timeline: React.FC<TimelineProps> = ({
   }, [columns, zoomLevel]); // using columns here since setbarsdata will change everytime during resize bar
 
   const zoom_In = async () => {
-    const MAX_ZOOM_LEVEL = 10; // Maximum zoom
-    setZoomLevel((prev) => Math.min(prev + 2, MAX_ZOOM_LEVEL));
-    setFetchBars(true); // it will fetch the barsData which will run the useEffect calcTicks in timelineruler file
+    const MIN_ZOOM_LEVEL = 0; // Maximum zoom
+    if (zoomLevel !== 0) {
+      setZoomLevel((prev) => Math.max(prev + 2, MIN_ZOOM_LEVEL));
+      setFetchBars(true); // it will fetch the barsData which will run the useEffect calcTicks in timelineruler file
+    }
   };
 
   const zoom_Out = async () => {
-    const MIN_ZOOM_LEVEL = 0; // Minimum zoom
-    setZoomLevel((prev) => Math.max(prev - 2, MIN_ZOOM_LEVEL));
-    setFetchBars(true);
+    const MAX_ZOOM_LEVEL = 10; // Minimum zoom
+    if (zoomLevel >= 0 && zoomLevel <= 10) {
+      setZoomLevel((prev) => Math.min(prev - 2, MAX_ZOOM_LEVEL));
+      setFetchBars(true);
+    }
   };
 
   // ********** context menu functions ************
@@ -990,7 +994,12 @@ const Timeline: React.FC<TimelineProps> = ({
           </div>
 
           <div className={styles.top_r_icons}>
-            <div className={styles.tm_icon} onClick={() => zoom_In()}>
+            <div
+              className={`${styles.tm_icon} ${
+                zoomLevel == 10 ? "opacity-50" : ""
+              }`}
+              onClick={() => zoom_In()}
+            >
               <Image
                 src="/zoom_in.png"
                 width={15}
@@ -1001,7 +1010,12 @@ const Timeline: React.FC<TimelineProps> = ({
               />
             </div>
 
-            <div className={styles.tm_icon} onClick={() => zoom_Out()}>
+            <div
+              className={`${styles.tm_icon} ${
+                zoomLevel == 0 ? "opacity-50" : ""
+              }`}
+              onClick={() => zoom_Out()}
+            >
               <Image
                 src="/zoom-out.png"
                 width={15}

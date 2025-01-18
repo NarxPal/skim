@@ -25,6 +25,9 @@ interface PhAnimationProps {
   barsDataChangeAfterZoom: BarsProp | null;
   position: number;
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
+  // isPlaying: boolean;
+  // setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+  canvasRef: React.RefObject<HTMLCanvasElement>;
 }
 const PhAnimation: React.FC<PhAnimationProps> = ({
   setPosition,
@@ -34,6 +37,9 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
   barsDataChangeAfterZoom,
   position,
   setShowPhTime,
+  // isPlaying,
+  // setIsPlaying,
+  canvasRef,
 }) => {
   const dispatch = useDispatch();
 
@@ -123,13 +129,14 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
     const pxValueDiffPerMarker = mediaContainerWidth / totalMediaDuration; // calculating px value which position the marker
 
     // pixelValuePerStep is the movement with px value at each step
-    const pixelValuePerStep = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
-    //pixelValuePerStep is px value based upon diff / time interval, for eg 80 / 2.6 = 30 sec, it would take 2.6px value per step to reach 80px where marker would have 30 sec diff
+    // markerinterval is basically gap bw markers in sec
+    //pixelValuePerStep is px value, for eg 80 / 2.6 = 30 sec, it would take 2.6px value per step to reach 80px where marker would have 30 sec diff
+    const pixelValuePerStep = pxValueDiffPerMarker / markerInterval;
 
     const clips = await fetchVideoData(pixelValuePerStep);
     const activeClip = clips.find(
       // .find will find and return the first clip which match the condition
-      (clip) => clip.leftPos >= clip?.startTime && clip.leftPos < clip?.endTime // should not the current time be based upon ph and not the video tag?
+      (clip) => 0 >= clip?.startTime && 0 < clip?.endTime
     );
     if (activeClip) {
       dispatch(setCurrentClip(activeClip));

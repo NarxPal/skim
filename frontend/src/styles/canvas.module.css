@@ -3,7 +3,11 @@
 }
 
 .canvas_content {
-  @apply w-full h-[90%];
+  @apply w-full h-[90%] absolute;
+}
+
+.canvas_tag {
+  @apply relative h-full w-full;
 }
 
 .video_tag {
@@ -11,7 +15,7 @@
 }
 
 .video_btns {
-  @apply flex flex-row items-center h-[10%] select-none;
+  @apply flex flex-row items-center h-[10%] select-none mt-auto;
 }
 
 .vdo_feature_btns {
