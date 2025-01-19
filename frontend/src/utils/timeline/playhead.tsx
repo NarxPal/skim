@@ -156,7 +156,7 @@ const Playhead: React.FC<PlayheadProps> = ({
 
   // For stopping ph drag during mousedown outside the ruler div
   useEffect(() => {
-    const handleWindowMouseUp = async (event: MouseEvent) => {
+    const handleWindowMouseUp = async () => {
       if (isPhDragging) {
         dispatch(setIsPhDragging(false));
         dispatch(setPhPosition(null));

@@ -67,7 +67,7 @@ const Modal: React.FC<ModalProps> = ({
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${projectId}`
       );
       setDelPrjData((prev) => ({ ...prev, filename: "", id: null }));
-    } catch (error) {
+    } catch {
       toast.error("error deleting project");
     }
   };

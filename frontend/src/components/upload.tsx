@@ -1,5 +1,5 @@
 "use client";
-import React, { ReactNode, useEffect, useState } from "react";
+import React, { ReactNode } from "react";
 import styles from "@/styles/sidebar.module.css";
 import { useParams } from "next/navigation";
 import { useSelector } from "react-redux";

@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useRef } from "react";
 import styles from "@/styles/canvas.module.css";
 import Image from "next/image";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import PhAnimation from "@/utils/timeline/phAnimation";
-import { throttle } from "lodash";
+// import { throttle } from "lodash";
 
 // types / interfaces import
-import { BarsProp, bar } from "@/interfaces/barsProp";
+import { BarsProp } from "@/interfaces/barsProp";
 interface CanvasProps {
   canvasHeight: number;
   barsDataChangeAfterZoom: BarsProp | null;
@@ -31,7 +31,6 @@ type Clip = {
 const Canvas: React.FC<CanvasProps> = ({
   canvasHeight,
   barsDataChangeAfterZoom,
-  setBarsDataChangeAfterZoom, // remove if don't require here
   mediaContainerWidth,
   totalMediaDuration,
   position,
@@ -39,15 +38,7 @@ const Canvas: React.FC<CanvasProps> = ({
   setShowPhTime,
   videoRef,
 }) => {
-  const dispatch = useDispatch();
-
   // redux state hooks
-  const markerInterval = useSelector(
-    (state: RootState) => state.markerInterval.markerInterval
-  );
-  const phPosition = useSelector(
-    (state: RootState) => state.phPosition.phPosition
-  );
   const currentClip = useSelector(
     (state: RootState) => state.currentClip.currentClip
   );
@@ -55,28 +46,27 @@ const Canvas: React.FC<CanvasProps> = ({
   // usestate hooks
   // const [currentClip, setCurrentClip] = useState<Clip | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   // useRef hooks
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const fetchVideoData = async (pixelsPerSecond: number): Promise<Clip[]> => {
-    const clips = barsDataChangeAfterZoom?.sub_columns?.flatMap((subCol) => {
-      return subCol.bars?.map((bar) => {
-        const startTime = bar.left_position / pixelsPerSecond; // Convert left position to time
-        const endTime = startTime + (bar.duration || 0);
+  // const fetchVideoData = async (pixelsPerSecond: number): Promise<Clip[]> => {
+  //   const clips = barsDataChangeAfterZoom?.sub_columns?.flatMap((subCol) => {
+  //     return subCol.bars?.map((bar) => {
+  //       const startTime = bar.left_position / pixelsPerSecond; // Convert left position to time
+  //       const endTime = startTime + (bar.duration || 0);
 
-        return {
-          startTime,
-          endTime,
-          videoUrl: bar.url,
-        };
-      });
-    });
+  //       return {
+  //         startTime,
+  //         endTime,
+  //         videoUrl: bar.url,
+  //       };
+  //     });
+  //   });
 
-    // console.log("Generated Clips:", clips);
-    return clips ?? []; // fallback to empty array if undefined
-  };
+  //   // console.log("Generated Clips:", clips);
+  //   return clips ?? []; // fallback to empty array if undefined
+  // };
 
   const handleMuteToggle = () => {
     const video = videoRef.current;
@@ -111,8 +101,6 @@ const Canvas: React.FC<CanvasProps> = ({
           totalMediaDuration={totalMediaDuration}
           barsDataChangeAfterZoom={barsDataChangeAfterZoom}
           setShowPhTime={setShowPhTime}
-          // isPlaying={isPlaying}
-          // setIsPlaying={setIsPlaying}
           canvasRef={canvasRef}
         />
 

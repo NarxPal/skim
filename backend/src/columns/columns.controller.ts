@@ -58,7 +58,13 @@ export class ColumnsController {
   @Patch('sub-columns/bars/:id')
   async updateBar(
     @Param('id') id: number,
-    @Body() updateBarData: { left_position: number; width: number },
+    @Body()
+    updateBarData: {
+      left_position: number;
+      width: number;
+      start_time: number;
+      end_time: number;
+    },
   ) {
     return this.columnsService.updateBar(Number(id), updateBarData);
   }

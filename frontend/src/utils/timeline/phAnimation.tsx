@@ -8,7 +8,7 @@ import Image from "next/image";
 import { throttle } from "lodash";
 
 // types / interfaces import
-import { BarsProp, bar } from "@/interfaces/barsProp";
+import { BarsProp } from "@/interfaces/barsProp";
 
 type Clip = {
   leftPos: number;
@@ -35,11 +35,11 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
   totalMediaDuration,
   mediaContainerWidth,
   barsDataChangeAfterZoom,
-  position,
+  // position,
   setShowPhTime,
   // isPlaying,
   // setIsPlaying,
-  canvasRef,
+  // canvasRef,
 }) => {
   const dispatch = useDispatch();
 

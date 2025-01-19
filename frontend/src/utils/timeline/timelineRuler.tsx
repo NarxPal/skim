@@ -33,7 +33,6 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
 }) => {
   // usestate hooks
   const [tickPos, setTickPos] = useState<number[]>(); // having array since we are mapping tickpos in dom
-  const [tickInterval, setTickInterval] = useState<number[]>();
   const [formattedMarkers, setFormattedMarkers] = useState<string[]>([]);
 
   const rulerRef = useRef<HTMLDivElement | null>(null);
@@ -66,21 +65,16 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
 
   function calculateInterval(totalDuration: number, zoomLevel: number): number {
     console.log("zl lolo", zoomLevel);
-    let baseInterval: number;
-
-    if (totalDuration >= 3600) baseInterval = 1800;
-    else if (totalDuration >= 1800) baseInterval = 900;
-    else if (totalDuration >= 900) baseInterval = 450;
-    else if (totalDuration >= 300) baseInterval = 150;
-    else baseInterval = 30;
-
+    const baseInterval = Math.max(
+      30,
+      Math.pow(2, Math.ceil(Math.log2(totalDuration / 300))) * 30
+    );
     const zoomFactor = Math.pow(2, (10 - zoomLevel) / 2);
     return Math.round(baseInterval / zoomFactor);
   }
 
   useEffect(() => {
     const calcTicks = async () => {
-      console.log("ran bro");
       const positions: number[] = [];
       const markers: number[] = [];
       const formattedMarkersArray: string[] = [];
@@ -93,18 +87,17 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
 
       const interval = calculateInterval(totalDuration, zoomLevel);
       dispatch(setMarkerInterval(interval));
+      console.log("interval", interval);
 
       // To add interval(in hh:mm:ss format), per marker accross container width
       for (let time = 0; time <= containerWidth; time += interval) {
         markers.push(time); // Add the current time to markers
         formattedMarkersArray.push(formatTime(time));
       }
-      setTickInterval(markers);
       setFormattedMarkers(formattedMarkersArray);
 
       // totalduration contains sum of all media clips
-      // to add px value per marker
-      const singleTickPxValue = containerWidth / totalDuration; // equal px value for each marker, it changes based upon zoom level
+      const singleTickPxValue = containerWidth / totalDuration; // equal px value for each marker
 
       for (let i = 0; i <= totalDuration; i++) {
         const tickPosition = i * singleTickPxValue; //value for left position of each individual tick
@@ -128,7 +121,8 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
                 const width = Math.round(
                   (duration / interval) * singleTickPxValue
                 ); // width being calculated here on the fly though we are saving in db through barsData hook
-                return { ...bar, width };
+                const left_position = bar.left_position;
+                return { ...bar, width, left_position };
               }),
             };
           }) || [],

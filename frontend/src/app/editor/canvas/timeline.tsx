@@ -5,7 +5,7 @@ import axios from "axios";
 import ContextMenu from "@/components/contextMenu";
 import TimelineRuler from "@/utils/timeline/timelineRuler";
 import Playhead from "@/utils/timeline/playhead";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 
 // types / interfaces import
@@ -175,7 +175,7 @@ const Timeline: React.FC<TimelineProps> = ({
             user_id: parsedItem.user_id,
             name: parsedItem.name,
             left_position: 0, // default left position
-            width: (parsedItem.duration / markerInterval) * singleTickPxValue, // duration of the media, for zoom level 1 multiplying 10 since each sec would be 10px/sec, this would work well only for zoom level 1
+            width: (parsedItem.duration / markerInterval) * singleTickPxValue,
             duration: parsedItem.duration, // storing duration to use in calcContainerWidth
             project_id: parsedItem.project_id,
             type: parsedItem.type,
@@ -245,40 +245,23 @@ const Timeline: React.FC<TimelineProps> = ({
     document.addEventListener("mouseup", stopResize);
   };
 
-  const updateItemInDatabase = async (
-    id: number,
-    width: number,
-    left_position: number
-  ) => {
-    try {
-      const roundedWidth = Math.round(width);
-      const roundedLeftPosition = Math.round(left_position);
-
-      setBarsData((prev) => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          sub_columns: prev.sub_columns?.map((subCol) => {
-            return {
-              ...subCol,
-              bars: subCol?.bars?.map((bar) => {
-                if (bar.id === id) {
-                  return {
-                    ...bar,
-                    left_position: roundedLeftPosition,
-                    width: roundedWidth,
-                  };
-                }
-                return bar;
-              }),
-            };
-          }),
-        };
-      });
-    } catch (error) {
-      console.error("Failed to update bar:", error);
-      throw error;
-    }
+  const updateBarAfterResize = async (bar: bar) => {
+    barsDataChangeAfterZoom?.sub_columns?.map((subcol) => {
+      const targetBar = subcol.bars?.find((b) => b.id === bar.id);
+      if (targetBar) {
+        axios.patch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/bars/${targetBar.id}`,
+          {
+            ...bar,
+            left_position: bar.left_position,
+            width: bar.width,
+            start_time: bar.start_time,
+            end_time: bar.end_time, // chaning this makes start_time 0
+          }
+        );
+      }
+      return subcol;
+    });
   };
 
   const resizeBar = (e: MouseEvent) => {
@@ -386,7 +369,7 @@ const Timeline: React.FC<TimelineProps> = ({
                     }
                   }
                 }
-                console.log("start time bro", startTime);
+                updateBarAfterResize(bar);
                 return {
                   ...bar,
                   width: Math.max(newWidth, 125),
@@ -401,17 +384,12 @@ const Timeline: React.FC<TimelineProps> = ({
         }),
       };
     });
-
     startX.current = e.clientX;
   };
-
-  const updateBarAfterResize = async () => {};
 
   const stopResize = () => {
     isResizing.current = false;
     resizeDirection.current = null;
-    console.log("barsdataaz resize bro", barsDataChangeAfterZoom); // save into  db add here
-    updateBarAfterResize();
     document.removeEventListener("mousemove", resizeBar);
     document.removeEventListener("mouseup", stopResize);
   };
@@ -447,6 +425,7 @@ const Timeline: React.FC<TimelineProps> = ({
       // if drag subcol id equal the drop subcolid than don't add the bar, we will use duplicate feature to add the same bar in the same sub_column
       if (Number(dragSubColId) !== dropSubColId) {
         const addBarResponse = await axios.patch(
+          // sub-columns/:id - patch in backend
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${dropSubColId}`,
           {
             addBarData: { ...addBarData, left_position: droppedBarNewLeft }, // Also updating the left position while adding bar to subcol

@@ -13,7 +13,7 @@ import { RootState } from "@/redux/store";
 import { FetchUser } from "@/components/fetchUser";
 
 // types / interfaces import
-import { BarsProp, bar } from "@/interfaces/barsProp";
+import { BarsProp } from "@/interfaces/barsProp";
 
 const UserId = () => {
   const params = useParams<{ uid: string; id: string }>();

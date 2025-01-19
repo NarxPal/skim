@@ -90,7 +90,12 @@ export class ColumnsService {
 
   async updateBar(
     id: number,
-    updateBarData: { left_position: number; width: number },
+    updateBarData: {
+      left_position: number;
+      width: number;
+      start_time: number;
+      end_time: number;
+    },
   ) {
     const columns = await this.columnsRepository.find();
 
@@ -106,9 +111,12 @@ export class ColumnsService {
             if (bar.id === id) {
               bar.left_position = updateBarData.left_position;
               bar.width = updateBarData.width;
+              bar.start_time = updateBarData.start_time;
+              bar.end_time = updateBarData.end_time;
               barFound = true;
             }
           });
+          console.log('bruuu', updateBarData);
         });
       }
     });
