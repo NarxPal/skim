@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import styles from "@/styles/canvas.module.css";
 import Image from "next/image";
 import { useSelector } from "react-redux";
@@ -21,12 +21,6 @@ interface CanvasProps {
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
   videoRef: React.RefObject<HTMLVideoElement>;
 }
-
-type Clip = {
-  startTime: number;
-  endTime: number;
-  videoUrl: string;
-};
 
 const Canvas: React.FC<CanvasProps> = ({
   canvasHeight,

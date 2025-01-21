@@ -121,7 +121,16 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
                 const width = Math.round(
                   (duration / interval) * singleTickPxValue
                 ); // width being calculated here on the fly though we are saving in db through barsData hook
-                const left_position = bar.left_position;
+                const left_position =
+                  bar.left_position !== 0
+                    ? bar.left_position - singleTickPxValue
+                    : bar.left_position;
+                console.log(
+                  "lp and singtick",
+                  bar.left_position,
+                  singleTickPxValue
+                );
+                // rather than working on lp here i should create gap adjust that which will effect the lp of bars located around gaps
                 return { ...bar, width, left_position };
               }),
             };

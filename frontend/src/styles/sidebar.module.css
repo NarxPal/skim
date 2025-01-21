@@ -1,6 +1,6 @@
 /* left_pane.tsx content */
 .left_pane_container {
-  @apply flex flex-col gap-2 w-1/5 h-full border-r-2 border-editor_gray p-6 relative;
+  @apply flex flex-col gap-2 w-1/5 h-full border-r-2 border-off_voi p-6 relative;
 }
 
 .pane_sidebar {
@@ -8,11 +8,11 @@
 }
 
 .upload_box {
-  @apply h-1/3 rounded-md border-2 border-dashed opacity-90 hover:opacity-50 cursor-pointer;
+  @apply h-1/3 rounded-md border-2 border-dashed border-white border-opacity-20 cursor-pointer bg-off_voi;
 }
 
 .icon_text {
-  @apply h-full w-full items-center flex flex-col justify-center text-white;
+  @apply h-full w-full items-center flex flex-col justify-center text-white opacity-50 hover:opacity-100;
 }
 
 .upload_icon {
@@ -56,7 +56,7 @@
 }
 
 .sm_inner {
-  @apply border-r-2 border-editor_gray h-full p-6;
+  @apply border-r-2 border-off_voi h-full p-6;
 }
 
 .ul_items {
@@ -76,7 +76,7 @@
 }
 
 .up_btn_div {
-  @apply bg-blue_btn text-white font-semibold text-xs px-6 py-3 rounded-lg shadow-md flex justify-center items-center cursor-pointer;
+  @apply bg-voilet_btn text-white font-semibold text-xs px-6 py-3 rounded-lg shadow-md flex justify-center items-center cursor-pointer;
 }
 
 .search_bar_div {

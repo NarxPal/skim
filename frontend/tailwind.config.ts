@@ -25,11 +25,15 @@ export default {
         scroll_hover: "#555",
 
         // new design col
-
         editor_bg: "#161819",
         editor_gray: "#1F2027",
         blue_btn: "#2A6FFF",
         border: "#1B1D1E",
+
+        // more new design col
+        black_bg: "#040507",
+        off_voi: "#12131A",
+        voilet_btn: "#4D2CF4",
       },
     },
   },

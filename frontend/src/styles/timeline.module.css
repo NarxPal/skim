@@ -1,5 +1,5 @@
 .timeline {
-  @apply w-full flex-col border-editor_gray border-t-2 flex;
+  @apply w-full flex-col border-off_voi border-t-2 flex;
 }
 
 .tm_top {
@@ -7,7 +7,7 @@
 }
 
 .top_icons {
-  @apply flex flex-row p-1  border-b-2 border-light_gray select-none justify-between items-center;
+  @apply flex flex-row p-1  border-b-2 border-off_voi select-none justify-between items-center;
 }
 
 .tm_icon_div {
@@ -43,7 +43,7 @@
 }
 
 .sub_col_div {
-  @apply relative h-20 mb-2;
+  @apply relative h-20 mb-2 bg-off_voi rounded-lg;
 }
 
 .previewBar {
@@ -161,7 +161,7 @@
 /* ********* TIMELINE RULER STYLES ******************** */
 
 .ruler_div {
-  @apply text-white relative w-full overflow-hidden  border-light_gray border-b-2 bg-editor_gray bg-opacity-20 p-4 h-[20%] shadow-2xl z-10;
+  @apply text-white relative w-full overflow-hidden  border-off_voi border-b-2 bg-off_voi  p-4 h-[20%] shadow-2xl z-10;
 }
 
 .ruler_content {

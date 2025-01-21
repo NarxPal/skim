@@ -1,5 +1,5 @@
 .dash_bg {
-  @apply bg-editor_bg h-screen w-screen flex;
+  @apply bg-black_bg h-screen w-screen flex;
 }
 
 .head_pane {
@@ -7,7 +7,7 @@
 }
 
 .dash_header_div {
-  @apply flex flex-row h-[6%] w-full text-white items-center border-b-2 border-editor_gray;
+  @apply flex flex-row h-[6%] w-full text-white items-center border-b-2 border-off_voi;
 }
 
 .dash_header {
@@ -81,7 +81,7 @@
 }
 
 .canvas_pane {
-  @apply h-full w-[55%] rounded-md flex-col flex border-r-2 border-editor_gray;
+  @apply h-full w-[55%] rounded-md flex-col flex border-r-2 border-off_voi;
 }
 
 .resizer {
