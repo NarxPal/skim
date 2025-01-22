@@ -245,7 +245,36 @@ const Timeline: React.FC<TimelineProps> = ({
     document.addEventListener("mouseup", stopResize);
   };
 
-  const updateBarAfterResize = async (bar: bar) => {
+  const calculateGap = async (bar: bar, bars: bar[], barIndex: number) => {
+    // calc for first bar clip in the subcol
+    if (barIndex === 0) {
+      const gapWidth = bar.left_position;
+      console.log("gap w", gapWidth);
+      console.log("bar ind", barIndex);
+    }
+    // calc for bars clip placed next to first
+    else {
+      // start of  gap = w + lp of all the prev bars
+      // end of gap = lp of next bar
+      // width = end gap - start gap
+
+      const previousBars = bars.slice(0, barIndex);
+      const startOfGap = previousBars.reduce(
+        (totalWidth, prevBar) => totalWidth + prevBar.width,
+        previousBars[0]?.left_position || 0
+      );
+
+      const endOfGap = bar.left_position;
+      const gapWidth = endOfGap - startOfGap;
+      console.log("gap, start, end", gapWidth, startOfGap, endOfGap);
+    }
+  };
+
+  const updateBarAfterResize = async (
+    bar: bar,
+    bars: bar[],
+    barIndex: number
+  ) => {
     barsDataChangeAfterZoom?.sub_columns?.map((subcol) => {
       const targetBar = subcol.bars?.find((b) => b.id === bar.id);
       if (targetBar) {
@@ -262,6 +291,8 @@ const Timeline: React.FC<TimelineProps> = ({
       }
       return subcol;
     });
+
+    calculateGap(bar, bars, barIndex);
   };
 
   const resizeBar = (e: MouseEvent) => {
@@ -321,6 +352,7 @@ const Timeline: React.FC<TimelineProps> = ({
 
                   // Prevent overlap with the previous bar
                   if (barIndex > 0) {
+                    // todo: check barindex
                     for (let i = 0; i < barIndex; i++) {
                       // Only check for previous bars if it's not the first bar
                       const prevBar = bars[barIndex - 1];
@@ -369,7 +401,8 @@ const Timeline: React.FC<TimelineProps> = ({
                     }
                   }
                 }
-                updateBarAfterResize(bar);
+                console.log("bars BRUlli", bars);
+                updateBarAfterResize(bar, bars, activeBarId.current);
                 return {
                   ...bar,
                   width: Math.max(newWidth, 125),
@@ -976,17 +1009,19 @@ const Timeline: React.FC<TimelineProps> = ({
         </div>
       </div>
       <div className={styles.ruler_media}>
-        <Playhead
-          setScrollPosition={setScrollPosition}
-          scrollPosition={scrollPosition}
-          phLeftRef={phLeftRef}
-          mediaContainerWidth={mediaContainerWidth}
-          position={position}
-          setPosition={setPosition}
-          videoRef={videoRef}
-          totalDuration={totalMediaDuration}
-          setShowPhTime={setShowPhTime}
-        />
+        {barsData?.sub_columns?.length !== 0 && (
+          <Playhead
+            setScrollPosition={setScrollPosition}
+            scrollPosition={scrollPosition}
+            phLeftRef={phLeftRef}
+            mediaContainerWidth={mediaContainerWidth}
+            position={position}
+            setPosition={setPosition}
+            videoRef={videoRef}
+            totalDuration={totalMediaDuration}
+            setShowPhTime={setShowPhTime}
+          />
+        )}
 
         <TimelineRuler
           totalDuration={totalMediaDuration}
@@ -1004,16 +1039,28 @@ const Timeline: React.FC<TimelineProps> = ({
             className={styles.closeMenuDiv}
           >
             <div
-              className={styles.tm_media_container}
+              className={
+                barsData?.sub_columns?.length !== 0
+                  ? `${styles.tm_media_container}`
+                  : `${styles.empty_tm_media_container}`
+              }
               id={"id-1"}
-              style={{ width: `${mediaContainerWidth}px` }}
+              style={{
+                width:
+                  mediaContainerWidth !== 0
+                    ? `${mediaContainerWidth}px`
+                    : "100%",
+              }}
             >
               {((barsData && barsData.sub_columns === null) ||
               barsData?.sub_columns?.length === 0
-                ? new Array(3).fill(null) //now here 3 empty array will be shown when no sub_column will be present(initial state of timeline)
+                ? new Array(1).fill(null) //now here 1 empty array will be shown when no sub_column will be present(initial state of timeline)
                 : barsData?.sub_columns || []
               ).map((item, index) => {
-                return (
+                const isEmpty =
+                  barsData?.sub_columns?.length === 0 ||
+                  barsData?.sub_columns === null;
+                return !isEmpty ? (
                   <div
                     className={styles.sub_col_div}
                     key={index}
@@ -1198,7 +1245,7 @@ const Timeline: React.FC<TimelineProps> = ({
                           </div>
                         );
                       })
-                    ) : (
+                    ) : !isEmpty ? (
                       // this empty bar will be shown when there will be a sub_column without bar i guess and also it checks if there is bar in sub_column than it will show the above truthy structure
                       <div
                         className={`${styles.item_box_div} ${styles.m_item_box}`}
@@ -1221,7 +1268,16 @@ const Timeline: React.FC<TimelineProps> = ({
                           />
                         )}
                       </div>
-                    )}
+                    ) : null}
+                  </div>
+                ) : (
+                  <div
+                    className={styles.empty_parent}
+                    key={index}
+                    onDragOver={(e) => handleDynamicDragOver(e, item?.id)}
+                    onDrop={(e) => handleDynamicDrop(e, item?.id)}
+                  >
+                    <div className={styles.empty_sub_col}></div>
                   </div>
                 );
               })}

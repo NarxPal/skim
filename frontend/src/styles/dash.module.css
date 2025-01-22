@@ -81,7 +81,7 @@
 }
 
 .canvas_pane {
-  @apply h-full w-[55%] rounded-md flex-col flex border-r-2 border-off_voi;
+  @apply h-full w-[55%] flex-col flex border-r-2 border-off_voi;
 }
 
 .resizer {

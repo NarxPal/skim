@@ -25,12 +25,19 @@ type Bar = {
   end_time: number;
 };
 
+type Gap = {
+  start_gap: number;
+  end_gap: number;
+  width: number;
+};
+
 type Sub_Column = {
   id: number;
   project_id: number;
   user_id: string;
   parent_id: number;
   bars?: Bar[];
+  gaps?: Gap[];
 };
 
 @Entity('columns')

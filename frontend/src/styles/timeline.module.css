@@ -19,7 +19,7 @@
 }
 
 .tm_icon {
-  @apply cursor-pointer hover:bg-light_gray p-2 rounded-lg;
+  @apply cursor-pointer hover:bg-off_voi p-2 rounded-lg shadow-2xl;
 }
 
 .ruler_media {
@@ -42,8 +42,24 @@
   @apply relative;
 }
 
+.empty_tm_media_container {
+  @apply flex h-full absolute;
+}
+
+.common_sub_col {
+  @apply relative h-20  bg-off_voi rounded-lg;
+}
+
+.empty_parent {
+  @apply h-full w-full flex;
+}
+
+.empty_sub_col {
+  @apply w-full my-auto common_sub_col;
+}
+
 .sub_col_div {
-  @apply relative h-20 mb-2 bg-off_voi rounded-lg;
+  @apply mb-2 common_sub_col;
 }
 
 .previewBar {
