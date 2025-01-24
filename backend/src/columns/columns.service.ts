@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Columns } from 'src/models/columns.entity';
 import { CreateColumnDto } from './dto/createDTO';
-import { SubColDto, OnlySubColDto, BarData } from './dto/createDTO';
+import { SubColDto, OnlySubColDto, BarData, Gap } from './dto/createDTO';
 
 @Injectable()
 export class ColumnsService {
@@ -77,6 +77,7 @@ export class ColumnsService {
       user_id: subColumnData.user_id,
       parent_id: rootColumnId,
       bars: subColumnData.bars,
+      gaps: subColumnData.gaps,
     };
 
     // adding sub_columns to root column in here
@@ -116,13 +117,42 @@ export class ColumnsService {
               barFound = true;
             }
           });
-          console.log('bruuu', updateBarData);
         });
       }
     });
 
     if (!barFound) {
       throw new NotFoundException(`Bar with id ${id} not found`);
+    }
+
+    return this.columnsRepository.save(columns);
+  }
+
+  async updateGap(id: number, updateGapData: Gap) {
+    const columns = await this.columnsRepository.find();
+
+    if (!columns || columns.length === 0) {
+      throw new NotFoundException(`No columns found`);
+    }
+
+    let barFound = false;
+    columns.forEach((column) => {
+      if (column.sub_columns) {
+        column.sub_columns.forEach((subColumn) => {
+          subColumn.gaps?.forEach((gap) => {
+            if (gap.barId === id) {
+              gap.width = updateGapData.width;
+              gap.start_gap = updateGapData.start_gap;
+              gap.end_gap = updateGapData.end_gap;
+              barFound = true;
+            }
+          });
+        });
+      }
+    });
+
+    if (!barFound) {
+      throw new NotFoundException(`gap with id ${id} not found`);
     }
 
     return this.columnsRepository.save(columns);

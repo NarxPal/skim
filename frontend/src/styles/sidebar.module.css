@@ -8,7 +8,7 @@
 }
 
 .upload_box {
-  @apply h-1/3 rounded-md border-2 border-dashed border-white border-opacity-20 cursor-pointer bg-off_voi;
+  @apply h-1/3 rounded-md cursor-pointer bg-off_voi;
 }
 
 .icon_text {

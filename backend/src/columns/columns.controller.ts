@@ -11,7 +11,7 @@ import {
 import { ColumnsService } from './columns.service';
 import { Columns } from 'src/models/columns.entity';
 import { CreateColumnDto } from './dto/createDTO';
-import { SubColDto, OnlySubColDto, BarData } from './dto/createDTO';
+import { SubColDto, OnlySubColDto, BarData, Gap } from './dto/createDTO';
 @Controller('columns')
 export class ColumnsController {
   constructor(private readonly columnsService: ColumnsService) {}
@@ -55,6 +55,7 @@ export class ColumnsController {
     return this.columnsService.addSubColumnToRoot(rootColumnId, subColumnData);
   }
 
+  // updatebar after resize
   @Patch('sub-columns/bars/:id')
   async updateBar(
     @Param('id') id: number,
@@ -67,6 +68,17 @@ export class ColumnsController {
     },
   ) {
     return this.columnsService.updateBar(Number(id), updateBarData);
+  }
+
+  // update gap after resize
+  @Patch('sub-columns/gaps/:id')
+  async updateGap(
+    @Param('id') id: number,
+    @Body()
+    updateGapData: Gap,
+  ) {
+    console.log('updategapdata', updateGapData);
+    return this.columnsService.updateGap(Number(id), updateGapData);
   }
 
   @Patch('sub-columns/:SubColId/bars/:BarId')

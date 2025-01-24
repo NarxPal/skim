@@ -26,6 +26,8 @@ type Bar = {
 };
 
 type Gap = {
+  id: number;
+  barId: number;
   start_gap: number;
   end_gap: number;
   width: number;

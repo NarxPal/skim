@@ -1,5 +1,5 @@
 .canvas {
-  @apply w-full flex relative flex-col;
+  @apply w-full flex relative flex-col bg-off_voi;
 }
 
 .canvas_content {

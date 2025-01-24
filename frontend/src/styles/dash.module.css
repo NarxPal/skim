@@ -85,7 +85,7 @@
 }
 
 .resizer {
-  @apply hover:bg-blue_btn h-[4px] cursor-ns-resize relative;
+  @apply hover:bg-blue_btn h-[4px] cursor-ns-resize relative bg-off_voi;
 }
 
 .resizer_pad {

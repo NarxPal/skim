@@ -15,12 +15,21 @@ export type bar = {
   end_time: number;
 };
 
+export type gap = {
+  id: number;
+  barId: number;
+  start_gap: number;
+  end_gap: number;
+  width: number;
+};
+
 export type sub_column = {
   id: number;
   parent_id: number;
   project_id: number;
   user_id: string;
   bars: bar[];
+  gaps: gap[];
 };
 export type BarsProp = {
   id: number;

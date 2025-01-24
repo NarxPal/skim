@@ -31,12 +31,21 @@ type Bar = {
   // later: not having here column_id since don't know how we will pass it in frontend from handlemediadrop to createsubcol
 };
 
+export type Gap = {
+  id: number;
+  barId: number;
+  start_gap: number;
+  end_gap: number;
+  width: number;
+};
+
 type Sub_Column = {
   id: number;
   project_id: number;
   user_id: string;
   parent_id: number;
   bars?: Bar[];
+  gaps?: Gap[];
 };
 
 export class SubColDto {
@@ -57,6 +66,9 @@ export class SubColDto {
 
   @IsNotEmpty()
   bars: Bar[];
+
+  @IsNotEmpty()
+  gaps: Gap[];
 }
 
 export class OnlySubColDto {

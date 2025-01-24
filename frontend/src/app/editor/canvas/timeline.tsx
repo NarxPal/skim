@@ -9,7 +9,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 
 // types / interfaces import
-import { BarsProp, bar } from "@/interfaces/barsProp";
+import { BarsProp, sub_column, bar, gap } from "@/interfaces/barsProp";
 
 type MediaItem = {
   name: string;
@@ -76,6 +76,7 @@ const Timeline: React.FC<TimelineProps> = ({
   // usestate hooks
   const [columns, setColumns] = useState<ColumnsProps | undefined>(undefined); // column and barsdata are having same data
   const [barsData, setBarsData] = useState<BarsProp | null>(null);
+  const [gapData, setGapData] = useState<BarsProp | null>(null);
   const [barDragging, setBarDragging] = useState<boolean>(false);
   const [fetchBars, setFetchBars] = useState<boolean>(false);
   const [prevBarPosition, setPreviewBarPosition] = useState<number | null>(
@@ -162,7 +163,7 @@ const Timeline: React.FC<TimelineProps> = ({
     // parsedItem contains most of the data for bars but keys like left and width are added during handleaddbartocol
 
     const singleTickPxValue = mediaContainerWidth / totalMediaDuration; // equal px value for each marker, it changes based upon zoom level
-
+    const id = Math.floor(Math.random() * 1000000) + (Date.now() % 1000000);
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
       {
@@ -171,7 +172,7 @@ const Timeline: React.FC<TimelineProps> = ({
         parent_id: columns?.id,
         bars: [
           {
-            id: Math.floor(Math.random() * 1000000) + (Date.now() % 1000000),
+            id: id,
             user_id: parsedItem.user_id,
             name: parsedItem.name,
             left_position: 0, // default left position
@@ -185,6 +186,15 @@ const Timeline: React.FC<TimelineProps> = ({
             url: parsedItem.url,
             start_time: 0,
             end_time: parsedItem.duration,
+          },
+        ],
+        gaps: [
+          {
+            id: Math.floor(Math.random() * 1000000),
+            barId: id,
+            start_gap: 0,
+            end_gap: 0,
+            width: 0,
           },
         ],
       }
@@ -219,7 +229,7 @@ const Timeline: React.FC<TimelineProps> = ({
 
         const columnData = response.data;
         setColumns(columnData);
-        console.log("root col data", [response.data]);
+        console.log("root col data", columnData);
         setBarsData(columnData);
       } catch (error) {
         console.log(error);
@@ -245,12 +255,44 @@ const Timeline: React.FC<TimelineProps> = ({
     document.addEventListener("mouseup", stopResize);
   };
 
-  const calculateGap = async (bar: bar, bars: bar[], barIndex: number) => {
+  const handleGap = async (
+    subCol: sub_column,
+    gapId: number,
+    gapWidth: number,
+    startOfGap: number
+  ) => {
+    try {
+      const gap = await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gaps/${gapId}`,
+        {
+          ...subCol.gaps,
+          width: gapWidth - 1,
+          start_gap: startOfGap,
+          end_gap: gapWidth - 1,
+        }
+      );
+      console.log("gap res", gap.data[0].sub_columns[0].gaps[0]);
+      const clipAfterResize = gap.data[0];
+      // setBarsData(clipAfterResize);
+      // setBarsDataChangeAfterZoom(clipAfterResize);
+      setGapData(clipAfterResize);
+    } catch (error) {
+      console.error("Error updating gap:", error);
+    }
+  };
+
+  const calculateGap = async (
+    subcol: sub_column,
+    bar: bar,
+    bars: bar[],
+    barIndex: number
+  ) => {
     // calc for first bar clip in the subcol
-    if (barIndex === 0) {
-      const gapWidth = bar.left_position;
+    if (bar.order === 0) {
+      const startOfGap = 0;
+      const gapWidth = bar.left_position; // lp of bar would be the end position of gap
       console.log("gap w", gapWidth);
-      console.log("bar ind", barIndex);
+      handleGap(subcol, bar.id, gapWidth, startOfGap);
     }
     // calc for bars clip placed next to first
     else {
@@ -266,33 +308,37 @@ const Timeline: React.FC<TimelineProps> = ({
 
       const endOfGap = bar.left_position;
       const gapWidth = endOfGap - startOfGap;
-      console.log("gap, start, end", gapWidth, startOfGap, endOfGap);
+      console.log("end of gap", endOfGap);
+      console.log("start of gap", startOfGap);
+      console.log("gapwidth", gapWidth);
+
+      // console.log("gap, start, end", gapWidth, startOfGap, endOfGap);
     }
   };
 
   const updateBarAfterResize = async (
     bar: bar,
+    newLeftPosition: number,
     bars: bar[],
     barIndex: number
   ) => {
-    barsDataChangeAfterZoom?.sub_columns?.map((subcol) => {
+    barsDataChangeAfterZoom?.sub_columns?.map(async (subcol) => {
       const targetBar = subcol.bars?.find((b) => b.id === bar.id);
       if (targetBar) {
         axios.patch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/bars/${targetBar.id}`,
           {
             ...bar,
-            left_position: bar.left_position,
+            left_position: newLeftPosition,
             width: bar.width,
             start_time: bar.start_time,
             end_time: bar.end_time, // chaning this makes start_time 0
           }
         );
+        await calculateGap(subcol, bar, bars, barIndex);
       }
       return subcol;
     });
-
-    calculateGap(bar, bars, barIndex);
   };
 
   const resizeBar = (e: MouseEvent) => {
@@ -402,7 +448,7 @@ const Timeline: React.FC<TimelineProps> = ({
                   }
                 }
                 console.log("bars BRUlli", bars);
-                updateBarAfterResize(bar, bars, activeBarId.current);
+                updateBarAfterResize(bar, newLeft, bars, activeBarId.current);
                 return {
                   ...bar,
                   width: Math.max(newWidth, 125),
@@ -411,7 +457,7 @@ const Timeline: React.FC<TimelineProps> = ({
                   end_time: endTime,
                 };
               }
-              return bar;
+              return bar; // return if bar id !== resizing bar id
             }),
           };
         }),
@@ -1054,7 +1100,7 @@ const Timeline: React.FC<TimelineProps> = ({
             >
               {((barsData && barsData.sub_columns === null) ||
               barsData?.sub_columns?.length === 0
-                ? new Array(1).fill(null) //now here 1 empty array will be shown when no sub_column will be present(initial state of timeline)
+                ? new Array(1).fill(null) //here 1 empty array will be shown when no sub_column will be present(initial state of timeline)
                 : barsData?.sub_columns || []
               ).map((item, index) => {
                 const isEmpty =
@@ -1062,8 +1108,8 @@ const Timeline: React.FC<TimelineProps> = ({
                   barsData?.sub_columns === null;
                 return !isEmpty ? (
                   <div
-                    className={styles.sub_col_div}
                     key={index}
+                    className={styles.sub_col_div}
                     id={`subcol-${item?.id}`} // id will contain numeric value for each sub_column
                     onDragOver={(e) => handleDynamicDragOver(e, item?.id)}
                     onDrop={(e) => handleDynamicDrop(e, item?.id)}
@@ -1077,6 +1123,33 @@ const Timeline: React.FC<TimelineProps> = ({
                           }}
                         />
                       )}
+
+                    {/* {item?.gaps?.length > 0
+                      ? barsData &&
+                        barsData.sub_columns.map(( oGap: gap) => { */}
+                    {/* { gapData && gapData.sub_columns.map((oGap: sub_column) => {
+                          const gapWidth =
+                            (gapData &&
+                              gapData.sub_columns
+                                .flatMap((fgap) => fgap.gaps)
+                                .find((zoomGap) => oGap.gaps.some((gap) => gap.id === zoomGap?.barId))
+                                ?.width) ||
+                            oGap.gaps.width;  // correct this 
+                          return (
+                            <div
+                              key={oGap.id}
+                              className={styles.gap_box_div}
+                              style={{
+                                width: gapWidth, // width according to stored in db and zoom level
+                                left: 0,
+                              }}
+                            >
+                              <div className={styles.gap_box}></div>
+                            </div>
+                          );
+                        })
+                      : null} */}
+
                     {item?.bars?.length > 0 ? (
                       item?.bars?.map((bar: bar, barIndex: number) => {
                         // todo: optimize the barwidth here used as width since dropping media into timeline have a flicker due to first width shown is from barsData and than barsDataChangeAfterZoom
@@ -1098,12 +1171,12 @@ const Timeline: React.FC<TimelineProps> = ({
 
                         return (
                           <div
+                            key={barIndex}
                             className={styles.item_box_div}
                             style={{
                               width: barWidth, // width according to stored in db and zoom level
                               left: barLP,
                             }}
-                            key={barIndex}
                             id={`bar-${bar?.id}`}
                             onContextMenu={(e) =>
                               handleRightClickBar(e, bar, bar?.id, item?.id)
