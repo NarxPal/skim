@@ -15,6 +15,7 @@
     "@tanstack/react-virtual": "^3.10.9",
     "@types/js-cookie": "^3.0.6",
     "@types/lodash": "^4.17.13",
+    "@use-gesture/react": "^10.3.1",
     "axios": "^1.7.8",
     "js-cookie": "^3.0.5",
     "lodash": "^4.17.21",

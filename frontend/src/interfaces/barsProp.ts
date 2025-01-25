@@ -17,6 +17,7 @@ export type bar = {
 
 export type gap = {
   id: number;
+  sub_col_id: number;
   barId: number;
   start_gap: number;
   end_gap: number;
@@ -25,6 +26,7 @@ export type gap = {
 
 export type sub_column = {
   id: number;
+  sub_col_id: number;
   parent_id: number;
   project_id: number;
   user_id: string;

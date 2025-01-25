@@ -50,7 +50,7 @@ export class ColumnsController {
   @Post(':rootColumnId/sub-columns')
   async addSubColToRoot(
     @Param('rootColumnId') rootColumnId: number,
-    @Body() subColumnData: SubColDto,
+    @Body() subColumnData: OnlySubColDto,
   ) {
     return this.columnsService.addSubColumnToRoot(rootColumnId, subColumnData);
   }

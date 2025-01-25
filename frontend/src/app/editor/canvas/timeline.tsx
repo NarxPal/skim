@@ -9,7 +9,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 
 // types / interfaces import
-import { BarsProp, sub_column, bar, gap } from "@/interfaces/barsProp";
+import { BarsProp, sub_column, bar } from "@/interfaces/barsProp";
 
 type MediaItem = {
   name: string;
@@ -163,16 +163,19 @@ const Timeline: React.FC<TimelineProps> = ({
     // parsedItem contains most of the data for bars but keys like left and width are added during handleaddbartocol
 
     const singleTickPxValue = mediaContainerWidth / totalMediaDuration; // equal px value for each marker, it changes based upon zoom level
-    const id = Math.floor(Math.random() * 1000000) + (Date.now() % 1000000);
+    const barId = Math.floor(Math.random() * 1000000) + (Date.now() % 1000000);
+    const subColId =
+      Math.floor(Math.random() * 1000000) + (Date.now() % 1000000);
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
       {
+        sub_col_id: subColId,
         project_id: parsedItem.project_id,
         user_id: parsedItem.user_id,
         parent_id: columns?.id,
         bars: [
           {
-            id: id,
+            id: barId,
             user_id: parsedItem.user_id,
             name: parsedItem.name,
             left_position: 0, // default left position
@@ -191,7 +194,8 @@ const Timeline: React.FC<TimelineProps> = ({
         gaps: [
           {
             id: Math.floor(Math.random() * 1000000),
-            barId: id,
+            sub_col_id: subColId,
+            barId: barId,
             start_gap: 0,
             end_gap: 0,
             width: 0,
@@ -271,7 +275,7 @@ const Timeline: React.FC<TimelineProps> = ({
           end_gap: gapWidth - 1,
         }
       );
-      console.log("gap res", gap.data[0].sub_columns[0].gaps[0]);
+      console.log("gap res", gap.data[0]);
       const clipAfterResize = gap.data[0];
       // setBarsData(clipAfterResize);
       // setBarsDataChangeAfterZoom(clipAfterResize);
@@ -1124,17 +1128,22 @@ const Timeline: React.FC<TimelineProps> = ({
                         />
                       )}
 
-                    {/* {item?.gaps?.length > 0
-                      ? barsData &&
-                        barsData.sub_columns.map(( oGap: gap) => { */}
-                    {/* { gapData && gapData.sub_columns.map((oGap: sub_column) => {
-                          const gapWidth =
-                            (gapData &&
-                              gapData.sub_columns
-                                .flatMap((fgap) => fgap.gaps)
-                                .find((zoomGap) => oGap.gaps.some((gap) => gap.id === zoomGap?.barId))
-                                ?.width) ||
-                            oGap.gaps.width;  // correct this 
+                    {/* currently this will only work after resize handle are used since barsdata has not been updated */}
+                    {gapData &&
+                      gapData.sub_columns
+                        .filter(
+                          (oGap: sub_column) =>
+                            oGap.sub_col_id === item.sub_col_id
+                        )
+                        .map((oGap: sub_column) => {
+                          const gapWidth = oGap.gaps.find(
+                            (gap) =>
+                              gap.barId ===
+                              oGap.gaps.find(
+                                (zoomGap) =>
+                                  zoomGap?.sub_col_id === gap.sub_col_id
+                              )?.barId
+                          )?.width;
                           return (
                             <div
                               key={oGap.id}
@@ -1147,8 +1156,7 @@ const Timeline: React.FC<TimelineProps> = ({
                               <div className={styles.gap_box}></div>
                             </div>
                           );
-                        })
-                      : null} */}
+                        })}
 
                     {item?.bars?.length > 0 ? (
                       item?.bars?.map((bar: bar, barIndex: number) => {

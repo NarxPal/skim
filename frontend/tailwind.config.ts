@@ -35,6 +35,11 @@ export default {
         off_voi: "#12131A",
         voilet_btn: "#4D2CF4",
       },
+
+      backgroundImage: {
+        "diagonal-stripes":
+          "repeating-linear-gradient(-45deg, #2C2C2C, #2C2C2C 1.5px, #12131A 1.5px, #12131A  8px)",
+      },
     },
   },
   plugins: [],

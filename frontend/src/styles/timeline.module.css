@@ -71,7 +71,7 @@
 }
 
 .gap_box {
-  @apply bg-editor_gray relative rounded-lg w-full h-full;
+  @apply hover:bg-editor_gray relative rounded-lg w-full h-full hover:border-2 hover:border-containerGray hover:bg-diagonal-stripes;
 }
 
 .item_box_div {

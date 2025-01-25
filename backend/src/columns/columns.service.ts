@@ -3,7 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Columns } from 'src/models/columns.entity';
 import { CreateColumnDto } from './dto/createDTO';
-import { SubColDto, OnlySubColDto, BarData, Gap } from './dto/createDTO';
+import {
+  SubColDto,
+  OnlySubColDto,
+  BarData,
+  Gap,
+  Sub_Column,
+} from './dto/createDTO';
 
 @Injectable()
 export class ColumnsService {
@@ -62,7 +68,7 @@ export class ColumnsService {
   }
 
   // Add sub-column to a root column
-  async addSubColumnToRoot(rootColumnId: number, subColumnData: SubColDto) {
+  async addSubColumnToRoot(rootColumnId: number, subColumnData: OnlySubColDto) {
     const rootColumn = await this.columnsRepository.findOne({
       where: { id: rootColumnId },
     });
@@ -73,6 +79,7 @@ export class ColumnsService {
 
     const newSubColumn = {
       id: Math.floor(Math.random() * 1000),
+      sub_col_id: subColumnData.sub_col_id,
       project_id: subColumnData.project_id,
       user_id: subColumnData.user_id,
       parent_id: rootColumnId,

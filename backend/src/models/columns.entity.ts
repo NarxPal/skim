@@ -27,6 +27,7 @@ type Bar = {
 
 type Gap = {
   id: number;
+  sub_col_id: number;
   barId: number;
   start_gap: number;
   end_gap: number;
@@ -35,6 +36,7 @@ type Gap = {
 
 type Sub_Column = {
   id: number;
+  sub_col_id: number;
   project_id: number;
   user_id: string;
   parent_id: number;
