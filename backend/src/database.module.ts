@@ -14,13 +14,12 @@ import { Columns } from './models/columns.entity';
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         host: 'localhost',
-        port: parseInt(configService.get<string>('DB_PORT'), 10),
+        port: parseInt(configService.get<string>('PORT'), 10),
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        // entities: [__dirname + '/../**/*.entity{.ts,.js}'], // Adjust as per your structure
-        entities: [User, Projects, Media, Columns],
-        synchronize: true, // Auto sync entities with the database
+          entities: [User, Projects, Media, Columns],
+        synchronize: true, // Auto sync entities with the database, should be false in production, since it could lead to data loss, use migration instead
       }),
     }),
   ],

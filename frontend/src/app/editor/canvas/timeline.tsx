@@ -7,9 +7,11 @@ import TimelineRuler from "@/utils/timeline/timelineRuler";
 import Playhead from "@/utils/timeline/playhead";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
+import { useSpring, animated } from "@react-spring/web";
 
 // types / interfaces import
 import { BarsProp, sub_column, bar } from "@/interfaces/barsProp";
+import Clip from "@/components/clip";
 
 type MediaItem = {
   name: string;
@@ -96,9 +98,6 @@ const Timeline: React.FC<TimelineProps> = ({
     y: 0,
     id: null,
   });
-  const [options, setOptions] = useState<
-    { label: string; action: () => void }[]
-  >([]);
 
   const [barIndex, setBarIndex] = useState<number>();
   const [droppedBarNewLeft, setDroppedBarNewLeft] = useState<number | null>();
@@ -118,13 +117,6 @@ const Timeline: React.FC<TimelineProps> = ({
   const markerInterval = useSelector(
     (state: RootState) => state.markerInterval.markerInterval
   );
-
-  const icons: { [key: string]: string } = {
-    audio: "/audio.png",
-    video: "/video.png",
-    image: "/image.png",
-    text: "/text.png",
-  };
 
   // Update the scrollleft of media_parent_div when playhead moves out of view
   useEffect(() => {
@@ -159,10 +151,22 @@ const Timeline: React.FC<TimelineProps> = ({
   }, []);
 
   // create sub col for columns entity in db
-  const createSubCol = async (parsedItem: MediaItem) => {
+  const createSubCol = async (
+    parsedItem: MediaItem,
+    containerWidth: number,
+    totalDuration: number
+  ) => {
     // parsedItem contains most of the data for bars but keys like left and width are added during handleaddbartocol
 
-    const singleTickPxValue = mediaContainerWidth / totalMediaDuration; // equal px value for each marker, it changes based upon zoom level
+    // here, containerWidth = mediaContainerWidth hook, totalDuration = totalMediaDuration hook
+    const singleTickPxValue = containerWidth / totalDuration; // equal px value for each marker, it changes based upon zoom level
+    console.log("mediacontainer width", mediaContainerWidth);
+    console.log("total media duration", totalMediaDuration);
+    console.log("singletickpxvalue", singleTickPxValue);
+
+    console.log("pareseditem.duration", parsedItem.duration);
+    console.log("markerinterval", markerInterval);
+
     const barId = Math.floor(Math.random() * 1000000) + (Date.now() % 1000000);
     const subColId =
       Math.floor(Math.random() * 1000000) + (Date.now() % 1000000);
@@ -215,7 +219,15 @@ const Timeline: React.FC<TimelineProps> = ({
 
     // adding the dropped bar to root column, currently each dropped bar will create it's own sub-column
     try {
-      await createSubCol(parsedItem);
+      const [containerWidth, totalDuration] = await calcContainerWidth(
+        parsedItem
+      );
+      console.log(
+        "media contain width, totalmedia duration",
+        containerWidth,
+        totalDuration
+      );
+      await createSubCol(parsedItem, containerWidth, totalDuration);
       setFetchBars(true);
     } catch (error) {
       console.error("Error in handling drop:", error);
@@ -250,6 +262,7 @@ const Timeline: React.FC<TimelineProps> = ({
     direction: "left" | "right",
     barId: number
   ) => {
+    e.stopPropagation(); // prevent clip motion
     isResizing.current = true;
     resizeDirection.current = direction;
     startX.current = e.clientX;
@@ -666,69 +679,41 @@ const Timeline: React.FC<TimelineProps> = ({
   //   }
   // };
 
-  const delCmSubColId = async (subColId: number) => {
-    try {
-      const delSubCol = await axios.delete(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${subColId}`
-      );
-
-      console.log("del bar res", delSubCol);
-      setFetchBars(true);
-    } catch (error) {
-      console.log("error deleting bar", error);
-    }
-  };
-
-  const delCmBarId = async (cmSubColId: number, cmBarName: string) => {
-    console.log("cmsubcolid, cmbarname,", cmSubColId, cmBarName);
-    try {
-      const delBar = await axios.delete(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${cmSubColId}/bars/${cmBarName}`
-      );
-
-      console.log("cm del bar res", delBar);
-      setFetchBars(true);
-    } catch (error) {
-      console.log("error deleting bar", error);
-    }
-  };
-
   // ****** zoom in out ***********
-  useEffect(() => {
-    const calcContainerWidth = async () => {
-      console.log("barsdata[0]", barsData);
-      const totalDuration =
-        barsData?.sub_columns?.reduce((acc, subCol) => {
-          const subColBars = subCol?.bars || [];
-          return (
-            acc +
-            subColBars.reduce((sum, bar) => {
-              sum += bar.duration || 0;
-              return sum;
-            }, 0) // sum is reset to 0
-          );
-        }, 0) || 0; // if sub_columns is undefined default to 0 value
-      let containerWidth = 0;
+  // it only changes the containerwidth
+  const calcContainerWidth = async (parsedItem: MediaItem) => {
+    console.log("barsdata[0]", barsData);
+    const totalDuration =
+      barsData?.sub_columns?.reduce((acc, subCol) => {
+        const subColBars = subCol?.bars || [];
+        return (
+          acc +
+          subColBars.reduce((sum, bar) => {
+            sum += bar.duration || 0;
+            return sum;
+          }, 0) // sum intital value = 0
+        );
+      }, 0) ||
+      parsedItem?.duration ||
+      0; // if sub_columns is undefined(case: where no sub col present) take duration of dropped media else 0
+    let containerWidth = 0;
 
-      if (zoomLevel >= 10) {
-        containerWidth = totalDuration * 100; // making 100px per sec for zoom level 10
-      } else if (zoomLevel >= 8) {
-        containerWidth = totalDuration * 80;
-      } else if (zoomLevel >= 5) {
-        containerWidth = totalDuration * 80;
-      } else if (zoomLevel >= 2) {
-        containerWidth = totalDuration * 80;
-      } else {
-        containerWidth = totalDuration * 80;
-      }
+    if (zoomLevel >= 10) {
+      containerWidth = totalDuration * 100; // making 100px per sec for zoom level 10
+    } else if (zoomLevel >= 8) {
+      containerWidth = totalDuration * 80;
+    } else if (zoomLevel >= 5) {
+      containerWidth = totalDuration * 80;
+    } else if (zoomLevel >= 2) {
+      containerWidth = totalDuration * 80;
+    } else {
+      containerWidth = totalDuration * 80;
+    }
 
-      setTotalMediaDuration(totalDuration); // used for timelineRuler
-      console.log("total duration bro", totalDuration);
-      console.log("zoom level bro", zoomLevel);
-      setMediaContainerWidth(containerWidth);
-    };
-    calcContainerWidth();
-  }, [columns, zoomLevel]); // using columns here since setbarsdata will change everytime during resize bar
+    setTotalMediaDuration(totalDuration); // used for timelineRuler
+    setMediaContainerWidth(containerWidth);
+    return [containerWidth, totalDuration];
+  };
 
   const zoom_In = async () => {
     const MAX_ZOOM_LEVEL = 0; // Max zoom is 0
@@ -749,56 +734,6 @@ const Timeline: React.FC<TimelineProps> = ({
   };
 
   // ********** context menu functions ************
-
-  const handleRightClickBar = (
-    e: React.MouseEvent<HTMLDivElement>,
-    bar: bar,
-    id: number,
-    subColId: number
-  ) => {
-    e.preventDefault();
-    setOptions([
-      { label: "edit", action: () => console.log(`Edit ${bar.name}`) },
-      { label: "delete", action: () => delCmBarId(subColId, bar.name) },
-    ]);
-    const container = e.currentTarget.getBoundingClientRect();
-    setContextMenu({
-      visible: true,
-      x: e.clientX - container.left,
-      y: e.clientY - container.top,
-      id: id,
-    });
-  };
-
-  const handleRightClickSubCol = (
-    e: React.MouseEvent<HTMLDivElement>,
-    subColId: number
-  ) => {
-    e.preventDefault();
-    setOptions([
-      { label: "edit", action: () => console.log(`Edit ${subColId}`) },
-      { label: "delete", action: () => delCmSubColId(subColId) },
-    ]);
-    const container = e.currentTarget.getBoundingClientRect();
-    setContextMenu({
-      visible: true,
-      x: e.clientX - container.left,
-      y: e.clientY - container.top,
-      id: subColId,
-    });
-  };
-
-  const handleOptionClick = (option: {
-    label: string;
-    action: (id: number) => void;
-  }) => {
-    console.log("option click id", contextMenu.id);
-    if (contextMenu.id !== null) {
-      option.action(contextMenu.id);
-      console.log("option click id", contextMenu.id);
-    }
-    setContextMenu({ visible: false, x: 0, y: 0, id: null });
-  };
 
   const closeContextMenu = () => {
     setContextMenu({ visible: false, x: 0, y: 0, id: null });
@@ -1059,19 +994,20 @@ const Timeline: React.FC<TimelineProps> = ({
         </div>
       </div>
       <div className={styles.ruler_media}>
-        {barsData?.sub_columns?.length !== 0 && (
-          <Playhead
-            setScrollPosition={setScrollPosition}
-            scrollPosition={scrollPosition}
-            phLeftRef={phLeftRef}
-            mediaContainerWidth={mediaContainerWidth}
-            position={position}
-            setPosition={setPosition}
-            videoRef={videoRef}
-            totalDuration={totalMediaDuration}
-            setShowPhTime={setShowPhTime}
-          />
-        )}
+        {barsData?.sub_columns?.length !== 0 &&
+          barsData?.sub_columns !== null && (
+            <Playhead
+              setScrollPosition={setScrollPosition}
+              scrollPosition={scrollPosition}
+              phLeftRef={phLeftRef}
+              mediaContainerWidth={mediaContainerWidth}
+              position={position}
+              setPosition={setPosition}
+              videoRef={videoRef}
+              totalDuration={totalMediaDuration}
+              setShowPhTime={setShowPhTime}
+            />
+          )}
 
         <TimelineRuler
           totalDuration={totalMediaDuration}
@@ -1158,198 +1094,24 @@ const Timeline: React.FC<TimelineProps> = ({
                           );
                         })}
 
-                    {item?.bars?.length > 0 ? (
-                      item?.bars?.map((bar: bar, barIndex: number) => {
-                        // todo: optimize the barwidth here used as width since dropping media into timeline have a flicker due to first width shown is from barsData and than barsDataChangeAfterZoom
-                        const barWidth =
-                          (barsDataChangeAfterZoom &&
-                            barsDataChangeAfterZoom.sub_columns
-                              .flatMap((subCol) => subCol.bars)
-                              .find((zoomBar) => zoomBar?.id === bar.id)
-                              ?.width) ||
-                          bar.width;
-
-                        const barLP =
-                          (barsDataChangeAfterZoom &&
-                            barsDataChangeAfterZoom.sub_columns
-                              .flatMap((subCol) => subCol.bars)
-                              .find((zoomBar) => zoomBar?.id === bar.id)
-                              ?.left_position) ||
-                          bar.left_position;
-
-                        return (
-                          <div
-                            key={barIndex}
-                            className={styles.item_box_div}
-                            style={{
-                              width: barWidth, // width according to stored in db and zoom level
-                              left: barLP,
-                            }}
-                            id={`bar-${bar?.id}`}
-                            onContextMenu={(e) =>
-                              handleRightClickBar(e, bar, bar?.id, item?.id)
-                            } // here we are passing bar info
-                          >
-                            <div
-                              className={`${
-                                barsData?.sub_columns === null
-                                  ? `${styles.m_item_box}`
-                                  : `${styles.m_item_box_drop}`
-                              } group`}
-                            >
-                              <div
-                                className={
-                                  barsData?.sub_columns?.length
-                                    ? `${styles.item_content_drop}`
-                                    : ""
-                                }
-                              >
-                                {item && (
-                                  <div className={styles.m_item_keys}>
-                                    <div
-                                      className={styles.m_item_thumb}
-                                      style={{
-                                        backgroundImage: bar?.thumbnail_url
-                                          ? `url(${bar?.thumbnail_url})`
-                                          : "none",
-                                        backgroundRepeat: "repeat-x",
-                                        backgroundSize: "auto 100%",
-                                      }}
-                                    ></div>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* only show barcontent (bar arrow and label) when width of bar is above 125 */}
-                              {(barWidth || bar?.width) > 125 && (
-                                <div className={styles.bar_content}>
-                                  {barsData?.sub_columns?.length ? (
-                                    <div
-                                      className={`${styles.bar_arrow_left} hidden group-hover:flex`}
-                                      onMouseDown={(e) =>
-                                        startResize(e, "left", bar?.id)
-                                      }
-                                    >
-                                      <div className={styles.arrow_pad}>
-                                        <div className={styles.arrow_div}>
-                                          <Image
-                                            src="/left_arrow.png"
-                                            alt="left_arrow"
-                                            width={10}
-                                            height={10}
-                                            priority={true}
-                                            draggable={false}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ) : null}
-
-                                  {barWidth >= 300 && (
-                                    <div
-                                      className={styles.clip_center}
-                                      draggable
-                                      onDragStart={(e) =>
-                                        handleBarDragStart(bar?.id, e, item?.id)
-                                      }
-                                      onDragEnd={() => handleBarDragEnd()}
-                                    >
-                                      <div
-                                        className={`${styles.m_type_label} hidden group-hover:flex`}
-                                      >
-                                        <div
-                                          className={styles.type_label_content}
-                                        >
-                                          <div className={styles.type_icon}>
-                                            {bar?.type in icons && (
-                                              <Image
-                                                src={
-                                                  icons[
-                                                    bar?.type as keyof typeof icons
-                                                  ]
-                                                }
-                                                alt={bar?.type}
-                                                width={10}
-                                                height={10}
-                                                priority={true}
-                                              />
-                                            )}
-                                          </div>
-                                          <span className={styles.m_item_label}>
-                                            {bar?.name.length > 20
-                                              ? `${bar?.name.substring(
-                                                  0,
-                                                  25
-                                                )}...`
-                                              : bar?.name}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                  {barsData?.sub_columns?.length ? ( // length check if there are bars in sub_columns
-                                    <div
-                                      className={`${styles.bar_arrow_right} hidden group-hover:flex`}
-                                      onMouseDown={(e) =>
-                                        startResize(e, "right", bar?.id)
-                                      }
-                                    >
-                                      <div className={styles.arrow_pad}>
-                                        <div className={styles.arrow_div}>
-                                          <Image
-                                            src="/chevron_right.png"
-                                            alt="right_arrow"
-                                            width={10}
-                                            height={10}
-                                            priority={true}
-                                            draggable={false}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ) : null}
-                                </div>
-                              )}
-                            </div>
-
-                            {contextMenu.visible &&
-                              contextMenu.id == bar?.id && (
-                                <ContextMenu
-                                  x={contextMenu.x}
-                                  y={contextMenu.y}
-                                  id={contextMenu.id}
-                                  options={options}
-                                  onOptionClick={handleOptionClick}
-                                  visible={contextMenu.visible}
-                                />
-                              )}
-                          </div>
-                        );
-                      })
-                    ) : !isEmpty ? (
-                      // this empty bar will be shown when there will be a sub_column without bar i guess and also it checks if there is bar in sub_column than it will show the above truthy structure
-                      <div
-                        className={`${styles.item_box_div} ${styles.m_item_box}`}
-                        style={{ width: "1000px", left: "0px" }}
-                        onContextMenu={
-                          (e) =>
-                            item?.id !== undefined
-                              ? handleRightClickSubCol(e, item?.id)
-                              : null // don't show cm when sub_col_div have id subcol-undefined
-                        } // id here refers to the sub_col id and not bars id
-                      >
-                        {contextMenu.visible && contextMenu.id == item?.id && (
-                          <ContextMenu
-                            x={contextMenu.x}
-                            y={contextMenu.y}
-                            id={contextMenu.id}
-                            options={options}
-                            onOptionClick={handleOptionClick}
-                            visible={contextMenu.visible}
-                          />
-                        )}
-                      </div>
-                    ) : null}
+                    {item?.bars?.map(
+                      (bar: bar, barIndex: number, bars: bar[]) => (
+                        <Clip
+                          key={bar.id}
+                          item={item}
+                          isEmpty={isEmpty}
+                          barsDataChangeAfterZoom={barsDataChangeAfterZoom}
+                          barsData={barsData}
+                          contextMenu={contextMenu}
+                          setContextMenu={setContextMenu}
+                          mediaContainerWidth={mediaContainerWidth}
+                          setFetchBars={setFetchBars}
+                          bar={bar}
+                          barIndex={barIndex}
+                          bars={bars}
+                        />
+                      )
+                    )}
                   </div>
                 ) : (
                   <div

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Generated, OneToMany } from 'typeorm';
 import { Projects } from './projects.entity';
 
 @Entity({ schema: 'auth' })
@@ -16,7 +16,12 @@ export class User {
   @Column()
   username: string;
 
-  @Column()
+  @Column(
+    {
+      nullable: false,
+      unique: true,  
+    }
+  )
   email: string;
 
   @Column()

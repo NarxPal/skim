@@ -119,7 +119,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
               bars: subCol?.bars?.map((bar) => {
                 const duration = bar.duration || 0; // zero probly for img
                 const width = Math.round(
-                  (duration / interval) * singleTickPxValue
+                  (duration / interval) * singleTickPxValue //width not useful when resized and zoom level is changed
                 ); // width being calculated here on the fly though we are saving in db through barsData hook
                 // const left_position =
                 //   bar.left_position !== 0

@@ -78,7 +78,7 @@ const Upload: React.FC<MediaUploadProps> = ({
     if (!files || files.length === 0) {
       return;
     } else {
-      setUploadingMedia(true);
+      setUploadingMedia(true)
       try {
         const fileUploads = files.map(async (file) => {
           const isDuplicate = mediaItems.some(

@@ -47,7 +47,7 @@
 }
 
 .common_sub_col {
-  @apply relative h-20  bg-off_voi rounded-lg;
+  @apply relative h-16  bg-off_voi rounded-lg;
 }
 
 .empty_parent {
@@ -83,7 +83,7 @@
 }
 
 .m_item_box {
-  @apply bg-sm_light_gray p-2 rounded-lg h-[5rem] border-dashed border-2 border-white border-opacity-10 hover:border-opacity-70 hover:border-white text-white text-opacity-50 bg-cover font-semibold text-xs;
+  @apply bg-sm_light_gray p-2 rounded-lg h-[4rem] border-dashed border-2 border-white border-opacity-10 hover:border-opacity-70 hover:border-white text-white text-opacity-50 bg-cover font-semibold text-xs;
 }
 
 .m_item_bar {
@@ -91,7 +91,7 @@
 }
 
 .m_item_box_drop {
-  @apply bg-indigo-600 rounded-lg h-20  text-white bg-cover font-medium text-xs px-1 py-1 shadow-2xl relative;
+  @apply bg-indigo-600 rounded-lg h-16  text-white bg-cover font-medium text-xs px-1 py-1 shadow-2xl relative;
 }
 
 .bar_content {
@@ -99,11 +99,15 @@
 }
 
 .bar_arrow {
-  @apply h-[80%] items-center  cursor-ew-resize bg-indigo-600 shadow-2xl rounded-lg px-2 py-4;
+  @apply h-[70%] items-center  cursor-ew-resize bg-indigo-600 shadow-2xl rounded-lg px-2 py-4;
 }
 
 .bar_arrow_right {
   @apply bar_arrow  mr-[8px];
+}
+
+.bar_arrow_div {
+  @apply flex h-full items-center cursor-ew-resize;
 }
 
 .bar_arrow_left {
@@ -111,7 +115,7 @@
 }
 
 .arrow_pad {
-  @apply px-2 bg-indigo-500 h-[90%] items-center rounded-lg flex py-2;
+  @apply px-2 bg-indigo-500 items-center rounded-lg flex py-2;
 }
 .arrow_div {
   @apply w-2.5 h-2.5 flex pointer-events-none;

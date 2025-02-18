@@ -7,12 +7,12 @@ import { ProjectsController } from './projects/projects.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Projects } from './models/projects.entity';
 import { User } from './models/user.entity';
+import { Media } from './models/media.entity';
+import { Columns } from './models/columns.entity';
 import { MediaService } from './media/media.service';
 import { MediaController } from './media/media.controller';
 import { ColumnsService } from './columns/columns.service';
 import { ColumnsController } from './columns/columns.controller';
-import { Media } from './models/media.entity';
-import { Columns } from './models/columns.entity';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
@@ -42,7 +42,7 @@ import { CloudinaryController } from './cloudinary/cloudinary.controller';
     CloudinaryService,
   ],
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true }), // config module from nestjs helps load and config env globally
     DatabaseModule,
     UserModule,
     TypeOrmModule.forFeature([Projects, User, Media, Columns]),
