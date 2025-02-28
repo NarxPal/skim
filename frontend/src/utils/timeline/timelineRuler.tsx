@@ -8,6 +8,8 @@ import { setMarkerInterval } from "@/redux/markerInterval";
 import { throttle } from "lodash";
 // types / interfaces import
 import { BarsProp } from "@/interfaces/barsProp";
+import { SpringRef } from "@react-spring/web";
+
 interface TimelineRulerProps {
   totalDuration: number;
   zoomLevel: number;
@@ -19,6 +21,10 @@ interface TimelineRulerProps {
   barsData: BarsProp | null;
   videoRef: React.RefObject<HTMLVideoElement>;
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
+  api: SpringRef<{
+    clipWidth: number;
+    clipLP: number;
+  }>;
 }
 
 const TimelineRuler: React.FC<TimelineRulerProps> = ({
@@ -30,6 +36,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   barsData,
   videoRef,
   setShowPhTime,
+  api,
 }) => {
   // usestate hooks
   const [tickPos, setTickPos] = useState<number[]>(); // having array since we are mapping tickpos in dom
@@ -128,6 +135,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
 
                 // rather than working on lp here i should create gap adjust that which will effect the lp of bars located around gaps
 
+                api.start({ clipWidth: width });
                 return { ...bar, width };
               }),
               gaps:

@@ -67,11 +67,15 @@
 }
 
 .gap_box_div {
-  @apply absolute rounded-lg h-20;
+  @apply absolute rounded-lg h-16 z-10;
 }
 
 .gap_box {
   @apply hover:bg-editor_gray relative rounded-lg w-full h-full hover:border-2 hover:border-containerGray hover:bg-diagonal-stripes;
+}
+
+.clip_sub_col_div {
+  @apply flex absolute h-full w-full;
 }
 
 .item_box_div {

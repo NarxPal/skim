@@ -2,12 +2,11 @@ import React, { useState, useRef, useEffect } from "react";
 import styles from "@/styles/timeline.module.css";
 import Image from "next/image";
 import axios from "axios";
-import ContextMenu from "@/components/contextMenu";
 import TimelineRuler from "@/utils/timeline/timelineRuler";
 import Playhead from "@/utils/timeline/playhead";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
-import { useSpring, animated } from "@react-spring/web";
+import { useSpring, useSprings } from "@react-spring/web";
 
 // types / interfaces import
 import { BarsProp, sub_column, bar } from "@/interfaces/barsProp";
@@ -104,6 +103,7 @@ const Timeline: React.FC<TimelineProps> = ({
   const [LPBasedBars, setLPBasedBars] = useState<bar[]>([]);
   const [zoomLevel, setZoomLevel] = useState<number>(0);
   const [scrollPosition, setScrollPosition] = useState<number>(0);
+  const [updateBarsData, setUpdateBarsData] = useState<boolean>(false);
 
   // use ref hooks
   const isResizing = useRef(false);
@@ -149,6 +149,18 @@ const Timeline: React.FC<TimelineProps> = ({
       };
     }
   }, []);
+
+  // use gesture and spring
+  const bars = barsData?.sub_columns?.flatMap((subCol) => subCol.bars) || [];
+  const [spring, api] = useSpring(
+    () => ({
+      clipLP: 0,
+      clipWidth: 0, // initial width
+      config: { tension: 300, friction: 30 }, // smooth animation
+      immediate: true,
+    }),
+    []
+  );
 
   // create sub col for columns entity in db
   const createSubCol = async (
@@ -251,11 +263,15 @@ const Timeline: React.FC<TimelineProps> = ({
         console.log(error);
       }
       setFetchBars(false);
+      console.log(
+        "updatebars data doing false here, so barsdata might have been updated"
+      );
+      setUpdateBarsData(false); // for updating barsdata after updateBarAfterResize function
     };
     if (prjId) {
       fetchRootColumn();
     }
-  }, [prjId, fetchBars]);
+  }, [prjId, fetchBars, updateBarsData]);
 
   const startResize = (
     e: React.MouseEvent,
@@ -681,7 +697,7 @@ const Timeline: React.FC<TimelineProps> = ({
 
   // ****** zoom in out ***********
   // it only changes the containerwidth
-  const calcContainerWidth = async (parsedItem: MediaItem) => {
+  const calcContainerWidth = async (parsedItem?: MediaItem) => {
     console.log("barsdata[0]", barsData);
     const totalDuration =
       barsData?.sub_columns?.reduce((acc, subCol) => {
@@ -714,6 +730,11 @@ const Timeline: React.FC<TimelineProps> = ({
     setMediaContainerWidth(containerWidth);
     return [containerWidth, totalDuration];
   };
+
+  useEffect(() => {
+    // calling here for need in calcTicks in timelineruler.tsx
+    calcContainerWidth();
+  }, [zoomLevel, columns]);
 
   const zoom_In = async () => {
     const MAX_ZOOM_LEVEL = 0; // Max zoom is 0
@@ -1018,6 +1039,7 @@ const Timeline: React.FC<TimelineProps> = ({
           barsData={barsData}
           videoRef={videoRef}
           setShowPhTime={setShowPhTime}
+          api={api}
         />
         <div className={styles.media_parent_div} ref={mediaParentRef}>
           <div
@@ -1094,24 +1116,26 @@ const Timeline: React.FC<TimelineProps> = ({
                           );
                         })}
 
-                    {item?.bars?.map(
-                      (bar: bar, barIndex: number, bars: bar[]) => (
-                        <Clip
-                          key={bar.id}
-                          item={item}
-                          isEmpty={isEmpty}
-                          barsDataChangeAfterZoom={barsDataChangeAfterZoom}
-                          barsData={barsData}
-                          contextMenu={contextMenu}
-                          setContextMenu={setContextMenu}
-                          mediaContainerWidth={mediaContainerWidth}
-                          setFetchBars={setFetchBars}
-                          bar={bar}
-                          barIndex={barIndex}
-                          bars={bars}
-                        />
-                      )
-                    )}
+                    {item?.bars?.map((bar: bar, index: number, bars: bar[]) => (
+                      <Clip
+                        key={index}
+                        item={item}
+                        isEmpty={isEmpty}
+                        barsDataChangeAfterZoom={barsDataChangeAfterZoom}
+                        setBarsDataChangeAfterZoom={setBarsDataChangeAfterZoom}
+                        barsData={barsData}
+                        contextMenu={contextMenu}
+                        setContextMenu={setContextMenu}
+                        mediaContainerWidth={mediaContainerWidth}
+                        setFetchBars={setFetchBars}
+                        bar={bar}
+                        barIndex={index}
+                        bars={bars}
+                        startResize={startResize}
+                        setBarsData={setBarsData}
+                        setUpdateBarsData={setUpdateBarsData}
+                      />
+                    ))}
                   </div>
                 ) : (
                   <div
