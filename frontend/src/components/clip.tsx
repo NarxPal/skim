@@ -206,25 +206,30 @@ const Clip: React.FC<ClipProps> = ({
 
   // use gesture and spring
   const bindDrag = useDrag(
-    ({ movement: [dx], args: [barId], event }) => {
+    ({ movement: [dx], args: [barId], event, last }) => {
       if (event.target && (event.target as HTMLElement).closest(".handle"))
         // if the target element or its ancestors contain handle class than stop
         return;
-      api.start((i) => {
-        const clipWidth = springs[i].clipWidth.get();
-        if (bar.id !== barId.get()) return {};
-        const minX = 0;
-        const maxX = mediaContainerWidth - bar.width; // prevent going beyond right edge
-        const newX = Math.max(minX, Math.min(dx, maxX));
-        console.log(
-          " clip width",
-          "left pos",
-          clipWidth,
-          springs[i].clipLP.get()
-        );
-        // console.log("dx and maxx", dx, maxX);
-        // console.log("newx binddrag", newX);
-        return { clipLP: newX, immediate: true };
+
+      barsData?.sub_columns?.forEach((subColumn) => {
+        subColumn?.bars?.forEach((bar, barIndex) => {
+          if (bar.id !== barId.get()) return {};
+          const minX = 0;
+          const maxX = mediaContainerWidth - bar.width; // prevent going beyond right edge
+          const newX = Math.max(minX, Math.min(bar.left_position + dx, maxX));
+          api.start(() => {
+            return { clipLP: newX, immediate: true };
+          });
+          if (last) {
+            updateBarAfterResize(
+              bar,
+              subColumn.bars,
+              barIndex,
+              bar.width,
+              newX
+            );
+          }
+        });
       });
     },
     { axis: "x" }
@@ -232,19 +237,9 @@ const Clip: React.FC<ClipProps> = ({
 
   const bindLeftResize = useDrag(
     ({ movement: [dx], args: [barId], last }) => {
-      // console.log(
-      //   "might appear after barsdata updated, running in bindleftresize",
-      //   barsData
-      // );
       barsData?.sub_columns?.forEach((subColumn) => {
         subColumn?.bars?.forEach((bar, barIndex) => {
           if (bar.id !== barId.get()) return;
-
-          const clipWidth = springs[0].clipWidth.get();
-          const clipLP = springs[0].clipLP.get();
-
-          console.log("bar.width left resize ", bar.width, clipWidth);
-
           const newWidth = Math.max(minWidth, bar.width - dx);
           let newX = Math.min(
             bar.left_position + dx,
@@ -271,29 +266,13 @@ const Clip: React.FC<ClipProps> = ({
   const bindRightResize = useDrag(
     ({ movement: [dx], args: [barId], last }) => {
       if (bar.id !== barId.get()) return {};
-      const clipWidth = springs[0].clipWidth.get();
-      const clipLP = springs[0].clipLP.get();
-
       const newWidth = Math.max(
         minWidth,
         Math.min(bar.width + dx, mediaContainerWidth - bar.left_position)
       );
-      // console.log(
-      //   "check this",
-      //   bar.width,
-      //   dx,
-      //   mediaContainerWidth,
-      //   bar.left_position
-      // );
-      // console.log("newwidth, RH", newWidth);
       api.start(() => {
         return { clipWidth: newWidth, immediate: true };
       });
-      console.log(
-        "bar.width right resize ",
-        bar.width,
-        springs[0].clipWidth.get()
-      );
       if (last) {
         updateBarAfterResize(bar, bars, barIndex, newWidth, bar.left_position);
       }
