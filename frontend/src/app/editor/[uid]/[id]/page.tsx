@@ -14,6 +14,7 @@ import { FetchUser } from "@/components/fetchUser";
 
 // types / interfaces import
 import { BarsProp } from "@/interfaces/barsProp";
+import Right_pane from "../../sidebar/right_pane";
 
 const UserId = () => {
   const params = useParams<{ uid: string; id: string }>();
@@ -30,6 +31,7 @@ const UserId = () => {
   const [totalMediaDuration, setTotalMediaDuration] = useState<number>(0);
   const [position, setPosition] = useState<number>(0); // position of ph
   const [showPhTime, setShowPhTime] = useState<string>("00::00::00");
+  const [openRightPane, setOpenRightPane] = useState<boolean>(false);
 
   // useref hooks
   const isDragging = useRef(false);
@@ -184,7 +186,8 @@ const UserId = () => {
           <Sm_pane onCategorySelect={handleTabClick} />
           <Left_pane selectedCategory={activeTab} />
           <div
-            className={styles.canvas_pane}
+            className={`${styles.canvas_pane}
+            ${openRightPane ? styles.canvas_shrink : styles.canvas_expand}`}
             onMouseUp={handleResizeMouseUp}
             onMouseMove={handleResizeMouseMove}
           >
@@ -223,7 +226,36 @@ const UserId = () => {
             />
           </div>
 
-          <div className={styles.right_pane}></div>
+          <div
+            className={`${styles.right_pane} ${
+              openRightPane ? styles.rp_expand : ""
+            }`}
+          >
+            <div className={styles.right_pane_row}>
+              {openRightPane && (
+                <div className={styles.pane_content}>
+                  <Right_pane />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={styles.rp_btns}>
+            <div className={styles.rp_icon}>
+              <button
+                className={styles.toggle_btn}
+                onClick={() => setOpenRightPane(!openRightPane)}
+              >
+                <Image
+                  alt="controls"
+                  src="/controls.png"
+                  width={30}
+                  height={30}
+                  priority={true}
+                />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

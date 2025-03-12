@@ -194,7 +194,7 @@ export class ColumnsService {
     columns.forEach((column) => {
       if (column.sub_columns) {
         column.sub_columns.forEach((subColumn) => {
-          if (subColumn.id == id) {
+          if (subColumn.sub_col_id == id) {
             if (!subColumn.bars) {
               subColumn.bars = [];
             }

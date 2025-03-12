@@ -97,13 +97,13 @@ const Timeline: React.FC<TimelineProps> = ({
     y: 0,
     id: null,
   });
-
   const [barIndex, setBarIndex] = useState<number>();
   const [droppedBarNewLeft, setDroppedBarNewLeft] = useState<number | null>();
   const [LPBasedBars, setLPBasedBars] = useState<bar[]>([]);
   const [zoomLevel, setZoomLevel] = useState<number>(0);
   const [scrollPosition, setScrollPosition] = useState<number>(0);
   const [updateBarsData, setUpdateBarsData] = useState<boolean>(false);
+  const [hoveringOverRow, setHoveringOverRow] = useState<boolean>(false);
 
   // use ref hooks
   const isResizing = useRef(false);
@@ -112,6 +112,8 @@ const Timeline: React.FC<TimelineProps> = ({
   const activeBarId = useRef<number | null>(null);
   const mediaParentRef = useRef<HTMLDivElement | null>(null);
   const phLeftRef = useRef<HTMLDivElement>(null);
+  const addSubColRef = useRef<HTMLDivElement>(null);
+  const rowsRef = useRef<(HTMLDivElement | null)[]>([]);
 
   // redux hooks
   const markerInterval = useSelector(
@@ -185,13 +187,14 @@ const Timeline: React.FC<TimelineProps> = ({
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
       {
-        sub_col_id: subColId,
+        sub_col_id: subColId, // subcolid is needed for gaps for connection purpose
         project_id: parsedItem.project_id,
         user_id: parsedItem.user_id,
         parent_id: columns?.id,
         bars: [
           {
             id: barId,
+            sub_col_id: subColId, // adding subcolid here to fetch clips(from respective rows) from usespring
             user_id: parsedItem.user_id,
             name: parsedItem.name,
             left_position: 0, // default left position
@@ -272,21 +275,6 @@ const Timeline: React.FC<TimelineProps> = ({
       fetchRootColumn();
     }
   }, [prjId, fetchBars, updateBarsData]);
-
-  const startResize = (
-    e: React.MouseEvent,
-    direction: "left" | "right",
-    barId: number
-  ) => {
-    e.stopPropagation(); // prevent clip motion
-    isResizing.current = true;
-    resizeDirection.current = direction;
-    startX.current = e.clientX;
-    activeBarId.current = barId;
-
-    document.addEventListener("mousemove", resizeBar);
-    document.addEventListener("mouseup", stopResize);
-  };
 
   const handleGap = async (
     subCol: sub_column,
@@ -497,13 +485,6 @@ const Timeline: React.FC<TimelineProps> = ({
       };
     });
     startX.current = e.clientX;
-  };
-
-  const stopResize = () => {
-    isResizing.current = false;
-    resizeDirection.current = null;
-    document.removeEventListener("mousemove", resizeBar);
-    document.removeEventListener("mouseup", stopResize);
   };
 
   // remove draggedbar from it's subcol
@@ -1069,73 +1050,99 @@ const Timeline: React.FC<TimelineProps> = ({
                   barsData?.sub_columns?.length === 0 ||
                   barsData?.sub_columns === null;
                 return !isEmpty ? (
-                  <div
-                    key={index}
-                    className={styles.sub_col_div}
-                    id={`subcol-${item?.id}`} // id will contain numeric value for each sub_column
-                    onDragOver={(e) => handleDynamicDragOver(e, item?.id)}
-                    onDrop={(e) => handleDynamicDrop(e, item?.id)}
-                  >
-                    {prevBarPosition !== null &&
-                      draggedOverSubColId === item?.id && (
-                        <div
-                          className={styles.previewBar}
-                          style={{
-                            left: `${prevBarPosition}px`,
-                          }}
-                        />
+                  <div key={index}>
+                    <div
+                      className={styles.sub_col_div}
+                      id={`subcol-${item?.id}`} // id will contain numeric value for each sub_column
+                      data-row-id={item?.sub_col_id}
+                      ref={(el) => {
+                        rowsRef.current[index] = el;
+                      }}
+                      onDragOver={(e) => handleDynamicDragOver(e, item?.id)}
+                      onDrop={(e) => handleDynamicDrop(e, item?.id)}
+                    >
+                      {prevBarPosition !== null &&
+                        draggedOverSubColId === item?.id && (
+                          <div
+                            className={styles.previewBar}
+                            style={{
+                              left: `${prevBarPosition}px`,
+                            }}
+                          />
+                        )}
+
+                      {/* currently this will only work after resize handle are used since barsdata has not been updated */}
+                      {gapData &&
+                        gapData.sub_columns
+                          .filter(
+                            (oGap: sub_column) =>
+                              oGap.sub_col_id === item.sub_col_id
+                          )
+                          .map((oGap: sub_column) => {
+                            const gapWidth = oGap.gaps.find(
+                              (gap) =>
+                                gap.barId ===
+                                oGap.gaps.find(
+                                  (zoomGap) =>
+                                    zoomGap?.sub_col_id === gap.sub_col_id
+                                )?.barId
+                            )?.width;
+                            return (
+                              <div
+                                key={oGap.id}
+                                className={styles.gap_box_div}
+                                style={{
+                                  width: gapWidth, // width according to stored in db and zoom level
+                                  left: 0,
+                                }}
+                              >
+                                <div className={styles.gap_box}></div>
+                              </div>
+                            );
+                          })}
+
+                      {/* {item?.bars?.map(
+                        (bar: bar, index: number, bars: bar[]) => ( */}
+                      {item?.bars?.length > 0 && (
+                        // removed map in here check this out
+                        <div key={index}>
+                          <Clip
+                            item={item}
+                            isEmpty={isEmpty}
+                            barsDataChangeAfterZoom={barsDataChangeAfterZoom}
+                            setBarsDataChangeAfterZoom={
+                              setBarsDataChangeAfterZoom
+                            }
+                            barsData={barsData}
+                            contextMenu={contextMenu}
+                            setContextMenu={setContextMenu}
+                            mediaContainerWidth={mediaContainerWidth}
+                            setFetchBars={setFetchBars}
+                            // bar={item.bar}
+                            barIndex={index}
+                            bars={item.bars}
+                            setBarsData={setBarsData}
+                            setUpdateBarsData={setUpdateBarsData}
+                            setHoveringOverRow={setHoveringOverRow}
+                            rowsRef={rowsRef}
+                            addSubColRef={addSubColRef}
+                            mediaParentRef={mediaParentRef}
+                          />
+                        </div>
                       )}
+                      {/**    )
+                       )}
 
-                    {/* currently this will only work after resize handle are used since barsdata has not been updated */}
-                    {gapData &&
-                      gapData.sub_columns
-                        .filter(
-                          (oGap: sub_column) =>
-                            oGap.sub_col_id === item.sub_col_id
-                        )
-                        .map((oGap: sub_column) => {
-                          const gapWidth = oGap.gaps.find(
-                            (gap) =>
-                              gap.barId ===
-                              oGap.gaps.find(
-                                (zoomGap) =>
-                                  zoomGap?.sub_col_id === gap.sub_col_id
-                              )?.barId
-                          )?.width;
-                          return (
-                            <div
-                              key={oGap.id}
-                              className={styles.gap_box_div}
-                              style={{
-                                width: gapWidth, // width according to stored in db and zoom level
-                                left: 0,
-                              }}
-                            >
-                              <div className={styles.gap_box}></div>
-                            </div>
-                          );
-                        })}
+*/}
+                    </div>
 
-                    {item?.bars?.map((bar: bar, index: number, bars: bar[]) => (
-                      <Clip
-                        key={index}
-                        item={item}
-                        isEmpty={isEmpty}
-                        barsDataChangeAfterZoom={barsDataChangeAfterZoom}
-                        setBarsDataChangeAfterZoom={setBarsDataChangeAfterZoom}
-                        barsData={barsData}
-                        contextMenu={contextMenu}
-                        setContextMenu={setContextMenu}
-                        mediaContainerWidth={mediaContainerWidth}
-                        setFetchBars={setFetchBars}
-                        bar={bar}
-                        barIndex={index}
-                        bars={bars}
-                        startResize={startResize}
-                        setBarsData={setBarsData}
-                        setUpdateBarsData={setUpdateBarsData}
-                      />
-                    ))}
+                    <div className={styles.add_sub_col} ref={addSubColRef}>
+                      <div
+                        className={`${styles.add_line} ${
+                          hoveringOverRow ? "hover:bg-blue_btn" : ""
+                        }`}
+                      ></div>
+                    </div>
                   </div>
                 ) : (
                   <div

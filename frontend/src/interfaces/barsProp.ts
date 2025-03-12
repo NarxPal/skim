@@ -1,6 +1,7 @@
 export type bar = {
   filepath: string;
   id: number;
+  sub_col_id: number;
   left_position: number;
   name: string;
   project_id: number;

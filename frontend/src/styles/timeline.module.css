@@ -50,6 +50,14 @@
   @apply relative h-16  bg-off_voi rounded-lg;
 }
 
+.add_sub_col{
+  @apply  w-full h-2 flex items-center
+}
+
+.add_line{
+  @apply h-1/3 w-full 
+}
+
 .empty_parent {
   @apply h-full w-full flex;
 }
@@ -59,7 +67,7 @@
 }
 
 .sub_col_div {
-  @apply mb-2 common_sub_col;
+  @apply  common_sub_col;
 }
 
 .previewBar {

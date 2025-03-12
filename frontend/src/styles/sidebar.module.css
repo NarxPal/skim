@@ -1,6 +1,6 @@
 /* left_pane.tsx content */
 .left_pane_container {
-  @apply flex flex-col gap-2 w-1/5 h-full border-r-2 border-off_voi p-6 relative;
+  @apply flex flex-col gap-2 min-w-[20%] w-[20%] flex-shrink-0 h-full border-r-2 border-off_voi p-6 relative;
 }
 
 .pane_sidebar {
@@ -52,7 +52,7 @@
 
 /* ****** sm_pane.tsx content ********* */
 .sm_pane {
-  @apply flex-none flex-col  w-[4%] justify-between;
+  @apply flex-none flex-col  min-w-[4%] w-[4%] justify-between;
 }
 
 .sm_inner {

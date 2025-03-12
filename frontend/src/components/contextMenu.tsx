@@ -2,6 +2,7 @@ import React from "react";
 import styles from "@/styles/timeline.module.css";
 
 interface ContextMenuProps {
+  index: number;
   x: number;
   y: number;
   id: number | null;
@@ -11,6 +12,7 @@ interface ContextMenuProps {
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
+  index,
   x,
   y,
   // id,
@@ -21,6 +23,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   return (
     <div
       className={styles.menu_div}
+      key={index}
       style={{
         top: y,
         left: x,

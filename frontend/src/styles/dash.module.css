@@ -77,11 +77,45 @@
 }
 
 .pane_div {
-  @apply w-full h-[94%] flex;
+  @apply w-full h-[94%] flex flex-wrap;
 }
 
 .canvas_pane {
-  @apply h-full w-[55%] flex-col flex border-r-2 border-off_voi;
+  @apply h-full flex-col flex ;
+}
+
+.canvas_shrink{
+@apply min-w-[60%] w-[60%]
+}
+
+.canvas_expand{
+@apply min-w-[73%] w-[73%]
+}
+
+.right_pane{
+  @apply  h-full flex flex-col 
+}
+
+.rp_expand{
+  @apply min-w-[13%] w-[13%]
+}
+
+.right_pane_row{
+  @apply flex flex-row h-full w-full 
+}
+
+.pane_content{
+  @apply w-full h-full border-l-2 border-off_voi
+}
+.rp_icon{
+  @apply p-1 flex items-center
+}
+.rp_btns{
+  @apply min-w-[3%] w-[3%] flex flex-col p-3 border-l-2 border-off_voi
+}
+
+.toggle_btn{
+@apply hover:bg-gray-500 rounded-lg  
 }
 
 .resizer {

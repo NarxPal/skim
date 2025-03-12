@@ -16,6 +16,7 @@ export class CreateColumnDto {
 
 type Bar = {
   id: number;
+  sub_col_id:number;
   user_id: string;
   name: string;
   left_position: number;
@@ -86,6 +87,7 @@ export class OnlySubColDto {
 // this BarData is for subColumn bars, so here we don't have column_id
 export class BarData {
   id: number;
+  sub_col_id:number;
   user_id: string;
   name: string;
   left_position: number;
