@@ -77,7 +77,6 @@ export class ColumnsController {
     @Body()
     updateGapData: Gap,
   ) {
-    console.log('updategapdata', updateGapData);
     return this.columnsService.updateGap(Number(id), updateGapData);
   }
 
@@ -122,12 +121,12 @@ export class ColumnsController {
     };
   }
 
-  @Delete('/sub-columns/:cmSubColId/bars/:cmBarName')
+  @Delete('/sub-columns/:cmSubColId/bars/:cmBarId')
   async delCmBar(
     @Param('cmSubColId') cmSubColId: number,
-    @Param('cmBarName') cmBarName: string,
+    @Param('cmBarId') cmBarId: string,
   ) {
-    return this.columnsService.delCmBar(cmSubColId, cmBarName);
+    return this.columnsService.delCmBar(cmSubColId, cmBarId);
   }
 
   // for deleting the subcol, (similar path have been using in addBarToSubCol)

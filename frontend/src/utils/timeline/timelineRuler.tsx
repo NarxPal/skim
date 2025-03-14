@@ -21,10 +21,10 @@ interface TimelineRulerProps {
   barsData: BarsProp | null;
   videoRef: React.RefObject<HTMLVideoElement>;
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
-  api: SpringRef<{
-    clipWidth: number;
-    clipLP: number;
-  }>;
+  // api: SpringRef<{
+  //   clipWidth: number;
+  //   clipLP: number;
+  // }>;
 }
 
 const TimelineRuler: React.FC<TimelineRulerProps> = ({
@@ -36,7 +36,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   barsData,
   videoRef,
   setShowPhTime,
-  api,
+  // api,
 }) => {
   // usestate hooks
   const [tickPos, setTickPos] = useState<number[]>(); // having array since we are mapping tickpos in dom
@@ -135,7 +135,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
 
                 // rather than working on lp here i should create gap adjust that which will effect the lp of bars located around gaps
 
-                api.start({ clipWidth: width });
+                // api.start({ clipWidth: width });
                 return { ...bar, width };
               }),
               gaps:

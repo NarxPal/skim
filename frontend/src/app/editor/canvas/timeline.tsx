@@ -6,7 +6,7 @@ import TimelineRuler from "@/utils/timeline/timelineRuler";
 import Playhead from "@/utils/timeline/playhead";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
-import { useSpring, useSprings } from "@react-spring/web";
+import { useSpring } from "@react-spring/web";
 
 // types / interfaces import
 import { BarsProp, sub_column, bar } from "@/interfaces/barsProp";
@@ -153,16 +153,16 @@ const Timeline: React.FC<TimelineProps> = ({
   }, []);
 
   // use gesture and spring
-  const bars = barsData?.sub_columns?.flatMap((subCol) => subCol.bars) || [];
-  const [spring, api] = useSpring(
-    () => ({
-      clipLP: 0,
-      clipWidth: 0, // initial width
-      config: { tension: 300, friction: 30 }, // smooth animation
-      immediate: true,
-    }),
-    []
-  );
+  // const bars = barsData?.sub_columns?.flatMap((subCol) => subCol.bars) || [];
+  // const [spring, api] = useSpring(
+  //   () => ({
+  //     clipLP: 0,
+  //     clipWidth: 0, // initial width
+  //     config: { tension: 300, friction: 30 }, // smooth animation
+  //     immediate: true,
+  //   }),
+  //   []
+  // );
 
   // create sub col for columns entity in db
   const createSubCol = async (
@@ -1020,7 +1020,7 @@ const Timeline: React.FC<TimelineProps> = ({
           barsData={barsData}
           videoRef={videoRef}
           setShowPhTime={setShowPhTime}
-          api={api}
+          // api={api}
         />
         <div className={styles.media_parent_div} ref={mediaParentRef}>
           <div
@@ -1127,13 +1127,12 @@ const Timeline: React.FC<TimelineProps> = ({
                             rowsRef={rowsRef}
                             addSubColRef={addSubColRef}
                             mediaParentRef={mediaParentRef}
+                            prjId={prjId}
                           />
                         </div>
                       )}
-                      {/**    )
-                       )}
-
-*/}
+                      {/* )
+                      )} */}
                     </div>
 
                     <div className={styles.add_sub_col} ref={addSubColRef}>

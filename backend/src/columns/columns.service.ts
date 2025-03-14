@@ -244,25 +244,26 @@ export class ColumnsService {
     return updatedBars;
   }
 
-  async delCmBar(cmSubColId: number, cmBarName: string): Promise<void> {
+  async delCmBar(cmSubColId: number, cmBarId: string): Promise<void> {
     const columns = await this.columnsRepository.find();
     columns.forEach((column) => {
       if (column.sub_columns) {
         column.sub_columns.forEach((subColumn) => {
-          if (subColumn.id === Number(cmSubColId)) {
-            // Filter out the bar with the given name
+          if (subColumn.sub_col_id === Number(cmSubColId)) {
+
             subColumn.bars = subColumn.bars?.filter(
-              (bar) => bar.name !== cmBarName,
+              (bar) => Number(bar.id) !== Number(cmBarId),
             );
+            
             // If no bars are left, set `bars` to undefined
             if (subColumn.bars && subColumn.bars.length === 0) {
-              subColumn.bars = undefined;
+              subColumn.bars = [];
             }
+            // If no bars are left, set `bars` to empty arr
           }
         });
       }
     });
-
     await this.columnsRepository.save(columns);
   }
 

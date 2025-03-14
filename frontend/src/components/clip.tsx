@@ -36,6 +36,7 @@ interface ClipProps {
   rowsRef: React.RefObject<(HTMLDivElement | null)[]>;
   addSubColRef: React.RefObject<HTMLDivElement>;
   mediaParentRef: React.RefObject<HTMLDivElement | null>;
+  prjId: string;
 }
 const Clip: React.FC<ClipProps> = ({
   item,
@@ -56,12 +57,13 @@ const Clip: React.FC<ClipProps> = ({
   rowsRef,
   addSubColRef,
   mediaParentRef,
+  prjId,
 }) => {
   //state hooks
   const [options, setOptions] = useState<
     { label: string; action: () => void }[]
   >([]);
-  const [storeMappedBar, setStoreMappedBar] = useState<bar[]>([]);
+  const [delBarFromRow, setDelBarFromRow] = useState<bar>();
 
   //refs
 
@@ -109,7 +111,8 @@ const Clip: React.FC<ClipProps> = ({
   useEffect(() => {
     console.log("bars", bars);
     console.log("allbars", allBars);
-  }, []);
+    console.log("bars data", barsData);
+  }, [barsData]);
 
   useEffect(() => {
     console.log("bars.lengthin use spring", allBars.length);
@@ -209,9 +212,12 @@ const Clip: React.FC<ClipProps> = ({
           }
         );
         await calculateGap(subcol, bar, bars, barIndex);
-        // console.log("barsdata before updating it", barsData);
-        // console.log("updatedbar  data", updatebar.data[0]);
-        setBarsData(updatebar.data[0]);
+        console.log("barsdata before updating it", barsData);
+        console.log("updatedbar  data", updatebar.data);
+        const filteredData = updatebar.data.filter(
+          (bar: BarsProp) => bar.project_id === Number(prjId)
+        );
+        // setBarsDataChangeAfterZoom(filteredData);
         setUpdateBarsData(true);
       }
       return subcol;
@@ -225,7 +231,7 @@ const Clip: React.FC<ClipProps> = ({
   ) => {
     try {
       console.log("row id hovered", rowId);
-      const addBarResponse = await axios.patch(
+      await axios.patch(
         // sub-columns/:id - patch in backend
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${rowId}`,
         {
@@ -233,6 +239,7 @@ const Clip: React.FC<ClipProps> = ({
           barIndex, // For positioning bars in subcol based upon order values
         }
       );
+      delCmBarId(delBarFromRow?.sub_col_id, delBarFromRow?.id); // delete dragged bar from its row
       setUpdateBarsData(true);
     } catch (error) {}
   };
@@ -246,6 +253,7 @@ const Clip: React.FC<ClipProps> = ({
     barsData?.sub_columns?.map(async (subcol) => {
       const targetBar = subcol.bars?.find((b) => b.id === barId);
       if (targetBar) {
+        console.log("targetbar bro", targetBar);
         const updatebar = await axios.patch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/bars/${targetBar.id}`,
           {
@@ -253,14 +261,15 @@ const Clip: React.FC<ClipProps> = ({
             left_position: newLeftPosition,
           }
         );
-        const updatedLPRes = updatebar.data[0];
-        console.log("updatebarlp AFTER DROP", updatedLPRes);
-        const updatedBarRes = updatedLPRes.sub_columns
-          .flatMap((row: any) => (row.bars ? row.bars : []))
+        const filteredData = updatebar.data.filter(
+          (bar: BarsProp) => bar.project_id === Number(prjId)
+        );
+        const updatedBarRes = filteredData[0].sub_columns
+          .flatMap((subcol: any) => (subcol.bars ? subcol.bars : []))
           .find((bar: bar) => bar.id === targetBar.id);
 
         console.log("updatebar RES BRO", updatedBarRes);
-        setBarsData(updatebar.data[0]);
+        setBarsData(filteredData);
         updateBarRow(targetBar.id, NumHovRowId, updatedBarRes);
       }
     });
@@ -319,7 +328,7 @@ const Clip: React.FC<ClipProps> = ({
       } else if ("touches" in event && event.touches.length > 0) {
         clientY = event.touches[0].clientY;
       }
-
+      console.log("barsdata CHECK IT OUT BRO", barsData);
       barsData?.sub_columns?.forEach((subColumn) => {
         subColumn?.bars?.forEach((bar, barIndex) => {
           if (bar.id !== barId.get()) return {};
@@ -339,10 +348,11 @@ const Clip: React.FC<ClipProps> = ({
             console.log("newx bro", newX);
           }
 
+          const hoveredRowId = getRowUnderCursor(event as PointerEvent);
           console.log("BAR DRAGGED ID", barId.get(), bar.id);
+          console.log("dragged bar SUBCOL HERE", bar.sub_col_id);
+          setDelBarFromRow(bar);
           if (active) {
-            const hoveredRowId = getRowUnderCursor(event as PointerEvent);
-
             //fetch clips from hovered row
             fetchClipsOnHover(hoveredRowId);
             // clipsInRow?.map((clips) => {
@@ -370,7 +380,10 @@ const Clip: React.FC<ClipProps> = ({
             };
           });
           if (last) {
-            api.start({ zIndex: 1, clipTop: 0 });
+            api.start((i) => {
+              if (allBars[i].id !== barId.get()) return {};
+              return { zIndex: 1, clipTop: 0 };
+            });
             // if (targetRow && targetRow.id !== currentRowId) {
             //   moveClipToNewRow(bar, currentRowId, targetRow.id);
             // }
@@ -388,7 +401,6 @@ const Clip: React.FC<ClipProps> = ({
               // for dragged bar bw the subcol
               // updateBarAfterDragging(bar, newX); // todo: rather than updating, add new row below or above and add the newlp to the dragged bar and place it in new row
 
-              const hoveredRowId = getRowUnderCursor(event as PointerEvent);
               const clipsInRow = fetchClipsOnHover(hoveredRowId);
               clipsInRow?.map((clips) => {
                 if (hoveredRowId) {
@@ -488,11 +500,14 @@ const Clip: React.FC<ClipProps> = ({
     }
   };
 
-  const delCmBarId = async (cmSubColId: number, cmBarName: string) => {
-    console.log("cmsubcolid, cmbarname,", cmSubColId, cmBarName);
+  const delCmBarId = async (
+    cmSubColId: number | undefined,
+    cmBarId: number | undefined
+  ) => {
+    console.log("cmsubcolid, bar id,", cmSubColId, cmBarId);
     try {
       const delBar = await axios.delete(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${cmSubColId}/bars/${cmBarName}`
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${cmSubColId}/bars/${cmBarId}`
       );
 
       console.log("cm del bar res", delBar);
@@ -512,8 +527,8 @@ const Clip: React.FC<ClipProps> = ({
   ) => {
     e.preventDefault();
     setOptions([
-      { label: "edit", action: () => console.log(`Edit ${bar.name}`) },
-      { label: "delete", action: () => delCmBarId(subColId, bar.name) },
+      { label: "edit", action: () => console.log(`Edit ${bar.id}`) },
+      { label: "delete", action: () => delCmBarId(subColId, bar.id) },
     ]);
     const container = e.currentTarget.getBoundingClientRect();
     setContextMenu({
@@ -538,8 +553,8 @@ const Clip: React.FC<ClipProps> = ({
 
   return (
     <div className={styles.clip_sub_col_div} id={barIndex.toString()}>
-      {item.bars.map((bar: bar, index: number, bars: bar[]) => {
-        const spring = springs.find((s) => s.barID.get() === bar.id);
+      {item.bars.map((bar: bar, index: number) => {
+        const spring = springs.find((s) => s.barID?.get() === bar.id);
         return (
           <animated.div
             key={index}
@@ -550,13 +565,13 @@ const Clip: React.FC<ClipProps> = ({
               // left: left_position,
               width: spring?.clipWidth.to((w) => `${w}px`),
               transform: spring?.clipLP.to((xVal) => `translate(${xVal}px`),
-              top: springs[index].clipTop.to((yVal) => `${yVal}px`),
-              zIndex: springs[index].zIndex.to((z) => `${z}`),
+              top: spring?.clipTop.to((yVal) => `${yVal}px`),
+              zIndex: spring?.zIndex.to((z) => `${z}`),
               touchAction: "none",
             }}
             id={`bar-${bar?.id}`}
             onContextMenu={(e) =>
-              handleRightClickBar(e, bar, bar?.id, item?.id)
+              handleRightClickBar(e, bar, bar?.id, item?.sub_col_id)
             } // here we are passing bar info
           >
             <div
@@ -691,12 +706,10 @@ const Clip: React.FC<ClipProps> = ({
         );
       })}
 
-      {item.bars.map(
-        (bar: bar, index) =>
-          contextMenu.visible &&
-          contextMenu.id === bar?.id && (
+      {item.bars.map((bar: bar, index) => (
+        <div key={index}>
+          {contextMenu.visible && contextMenu.id === bar?.id && (
             <ContextMenu
-              index={index}
               x={contextMenu.x}
               y={contextMenu.y}
               id={contextMenu.id}
@@ -704,8 +717,9 @@ const Clip: React.FC<ClipProps> = ({
               onOptionClick={handleOptionClick}
               visible={contextMenu.visible}
             />
-          )
-      )}
+          )}
+        </div>
+      ))}
     </div>
   );
 };

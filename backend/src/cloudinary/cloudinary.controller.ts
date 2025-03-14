@@ -31,7 +31,6 @@ export class CloudinaryController {
   ) {
     try {
       const result = await this.cloudinaryService.uploadThumbnail(file, userId);
-      console.log('url', result.url);
       return { url: result.url };
     } catch (error) {
       console.error('Error uploading thumbnail:', error);
