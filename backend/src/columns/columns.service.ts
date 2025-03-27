@@ -100,6 +100,7 @@ export class ColumnsService {
     id: number,
     updateBarData: {
       left_position: number;
+      sub_col_id: number;
       width: number;
       start_time: number;
       end_time: number;
@@ -118,6 +119,7 @@ export class ColumnsService {
           subColumn.bars?.forEach((bar) => {
             if (bar.id === id) {
               bar.left_position = updateBarData.left_position;
+              bar.sub_col_id = updateBarData.sub_col_id;
               bar.width = updateBarData.width;
               bar.start_time = updateBarData.start_time;
               bar.end_time = updateBarData.end_time;
@@ -201,11 +203,8 @@ export class ColumnsService {
 
             const barWithOrder = {
               ...addBarData.addBarData,
-              order: addBarData.barIndex,
             };
-
-            subColumn?.bars?.splice(addBarData.barIndex, 0, barWithOrder);
-
+            subColumn?.bars?.splice(0, 0, barWithOrder);
             subColumn?.bars?.forEach((bar, index) => {
               bar.order = index;
             });
@@ -244,17 +243,29 @@ export class ColumnsService {
     return updatedBars;
   }
 
+  async updateBarAZ(prjId: number, data: Sub_Column[]) {
+    const column = await this.columnsRepository.findOne({
+      where: { project_id: prjId },
+    });
+    if (!column) {
+      throw new Error('Column not found');
+    }
+
+    // Update sub_columns with the new data
+    column.sub_columns = data;
+    await this.columnsRepository.save(column);
+  }
+
   async delCmBar(cmSubColId: number, cmBarId: string): Promise<void> {
     const columns = await this.columnsRepository.find();
     columns.forEach((column) => {
       if (column.sub_columns) {
         column.sub_columns.forEach((subColumn) => {
           if (subColumn.sub_col_id === Number(cmSubColId)) {
-
             subColumn.bars = subColumn.bars?.filter(
               (bar) => Number(bar.id) !== Number(cmBarId),
             );
-            
+
             // If no bars are left, set `bars` to undefined
             if (subColumn.bars && subColumn.bars.length === 0) {
               subColumn.bars = [];

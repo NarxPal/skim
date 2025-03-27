@@ -7,6 +7,8 @@ import ContextMenu from "./contextMenu";
 import { animated, SpringRef, SpringValue } from "@react-spring/web";
 import { useDrag } from "@use-gesture/react";
 import { useSprings } from "@react-spring/web";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 interface ContextMenuState {
   visible: boolean;
@@ -14,6 +16,15 @@ interface ContextMenuState {
   y: number;
   id: number | null;
 }
+
+type SpringType = {
+  barID: SpringValue<number>;
+  subColId: SpringValue<number>;
+  clipTop: SpringValue<number>;
+  clipLP: SpringValue<number>;
+  clipWidth: SpringValue<number>;
+  zIndex: SpringValue<number>;
+};
 
 interface ClipProps {
   item: sub_column;
@@ -37,6 +48,17 @@ interface ClipProps {
   addSubColRef: React.RefObject<HTMLDivElement>;
   mediaParentRef: React.RefObject<HTMLDivElement | null>;
   prjId: string;
+  zoomSprings: SpringType[];
+  zoomApi: SpringRef<{
+    barID: number;
+    subColId: number;
+    clipTop: number;
+    clipLP: number;
+    clipWidth: number;
+    zIndex: number;
+  }>;
+  zoomAllBars: bar[];
+  totalDuration: number;
 }
 const Clip: React.FC<ClipProps> = ({
   item,
@@ -58,6 +80,10 @@ const Clip: React.FC<ClipProps> = ({
   addSubColRef,
   mediaParentRef,
   prjId,
+  zoomSprings,
+  zoomApi,
+  zoomAllBars,
+  totalDuration,
 }) => {
   //state hooks
   const [options, setOptions] = useState<
@@ -65,7 +91,10 @@ const Clip: React.FC<ClipProps> = ({
   >([]);
   const [delBarFromRow, setDelBarFromRow] = useState<bar>();
 
-  //refs
+  // redux hooks
+  const markerInterval = useSelector(
+    (state: RootState) => state.markerInterval.markerInterval
+  );
 
   const icons: { [key: string]: string } = {
     audio: "/audio.png",
@@ -78,7 +107,6 @@ const Clip: React.FC<ClipProps> = ({
   // const { clipLP, clipWidth } = springs;
   let width: number;
   let left_position: number;
-  const minWidth = 250; // min width for clip, used during resizing
 
   const zoomBarsMap = new Map();
   barsDataChangeAfterZoom?.sub_columns?.forEach((subCol) => {
@@ -93,32 +121,38 @@ const Clip: React.FC<ClipProps> = ({
 
   // in the returned array first arg are spring values, second arg is api which control these spring
   // usespring hook takes either config or function, here using function
-  const [springs, api] = useSprings(
-    allBars.length || 0,
-    (i) => ({
-      barID: allBars[i].id,
-      subColId: allBars[i].sub_col_id,
-      clipTop: 0,
-      clipLP: allBars[i].left_position || 0, // initial lp
-      clipWidth: allBars[i].width || 0, // initial width
-      zIndex: 1,
-      config: { tension: 300, friction: 30 }, // smooth animation
-      immediate: true,
-    }),
-    []
-  );
+  // const [springs, api] = useSprings(
+  //   allBars.length || 0,
+  //   (i) => ({
+  //     barID: allBars[i].id,
+  //     subColId: allBars[i].sub_col_id,
+  //     clipTop: 0,
+  //     clipLP: allBars[i].left_position || 0, // initial lp
+  //     clipWidth: allBars[i].width || 0, // initial width
+  //     zIndex: 1,
+  //     config: { tension: 300, friction: 30 }, // smooth animation
+  //     immediate: true,
+  //   }),
+  //   []
+  // );
+
+  // useEffect(() => {
+  //   console.log(
+  //     "Springs array:",
+  //     springs.map((s, i) => ({
+  //       index: i,
+  //       barID: s.barID?.get(),
+  //       subColId: s.subColId?.get(),
+  //       clipLP: s.clipLP.get(),
+  //       clipWidth: s.clipWidth.get(),
+  //     }))
+  //   );
+  // }, [springs]);
 
   useEffect(() => {
-    console.log("bars", bars);
-    console.log("allbars", allBars);
-    console.log("bars data", barsData);
-  }, [barsData]);
-
-  useEffect(() => {
-    console.log("bars.lengthin use spring", allBars.length);
     console.log(
-      "Springs array:",
-      springs.map((s, i) => ({
+      "ZOOM Springs array:",
+      zoomSprings.map((s, i) => ({
         index: i,
         barID: s.barID?.get(),
         subColId: s.subColId?.get(),
@@ -126,7 +160,7 @@ const Clip: React.FC<ClipProps> = ({
         clipWidth: s.clipWidth.get(),
       }))
     );
-  }, [springs]);
+  }, [zoomSprings]);
 
   const handleGap = async (
     subCol: sub_column,
@@ -144,7 +178,7 @@ const Clip: React.FC<ClipProps> = ({
           end_gap: gapWidth - 1,
         }
       );
-      console.log("gap res", gap.data[0]);
+      // console.log("gap res", gap.data[0]);
       const clipAfterResize = gap.data[0];
       // setBarsData(clipAfterResize);
       // setBarsDataChangeAfterZoom(clipAfterResize);
@@ -164,7 +198,6 @@ const Clip: React.FC<ClipProps> = ({
     if (bar.order === 0) {
       const startOfGap = 0;
       const gapWidth = bar.left_position; // lp of bar would be the end position of gap
-      console.log("gap w", gapWidth);
       handleGap(subcol, bar.id, gapWidth, startOfGap);
     }
     // calc for bars clip placed next to first
@@ -212,7 +245,6 @@ const Clip: React.FC<ClipProps> = ({
           }
         );
         await calculateGap(subcol, bar, bars, barIndex);
-        console.log("barsdata before updating it", barsData);
         console.log("updatedbar  data", updatebar.data);
         const filteredData = updatebar.data.filter(
           (bar: BarsProp) => bar.project_id === Number(prjId)
@@ -230,13 +262,12 @@ const Clip: React.FC<ClipProps> = ({
     updatedBarRes: bar
   ) => {
     try {
-      console.log("row id hovered", rowId);
+      console.log("barindex updated bar CHECK EHCK", updatedBarRes);
       await axios.patch(
         // sub-columns/:id - patch in backend
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${rowId}`,
         {
           addBarData: { ...updatedBarRes }, // add bar to dropped subcol
-          barIndex, // For positioning bars in subcol based upon order values
         }
       );
       delCmBarId(delBarFromRow?.sub_col_id, delBarFromRow?.id); // delete dragged bar from its row
@@ -250,15 +281,16 @@ const Clip: React.FC<ClipProps> = ({
     hoveredRowId: string
   ) => {
     const NumHovRowId = Number(hoveredRowId);
+    console.log("after drop barindex", barIndex);
     barsData?.sub_columns?.map(async (subcol) => {
       const targetBar = subcol.bars?.find((b) => b.id === barId);
       if (targetBar) {
-        console.log("targetbar bro", targetBar);
         const updatebar = await axios.patch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/bars/${targetBar.id}`,
           {
             ...targetBar,
             left_position: newLeftPosition,
+            sub_col_id: NumHovRowId,
           }
         );
         const filteredData = updatebar.data.filter(
@@ -291,9 +323,6 @@ const Clip: React.FC<ClipProps> = ({
     const rows = getRows();
     const mouseY = event.clientY;
     const row = rows.find((r) => mouseY >= r.top && mouseY <= r.bottom);
-    console.log("rows", rows);
-    console.log("mouseY", mouseY);
-    console.log("row", row);
     return row ? row.id : null;
   };
 
@@ -302,20 +331,12 @@ const Clip: React.FC<ClipProps> = ({
     const clipsInRow = barsData?.sub_columns.filter(
       (subCol) => subCol.sub_col_id === NumRowId
     );
-    console.log("WHOLE ROW", clipsInRow);
     return clipsInRow;
   };
 
   // use gesture and spring
   const bindDrag = useDrag(
-    ({
-      movement: [dx, dy],
-      args: [barId, rowId],
-      event,
-      last,
-      down,
-      active,
-    }) => {
+    ({ movement: [dx, dy], args: [barId], event, last, down, active }) => {
       if (event.target && (event.target as HTMLElement).closest(".handle"))
         // if the target element or its ancestors contain handle class than stop
         return;
@@ -328,7 +349,6 @@ const Clip: React.FC<ClipProps> = ({
       } else if ("touches" in event && event.touches.length > 0) {
         clientY = event.touches[0].clientY;
       }
-      console.log("barsdata CHECK IT OUT BRO", barsData);
       barsData?.sub_columns?.forEach((subColumn) => {
         subColumn?.bars?.forEach((bar, barIndex) => {
           if (bar.id !== barId.get()) return {};
@@ -349,24 +369,15 @@ const Clip: React.FC<ClipProps> = ({
           }
 
           const hoveredRowId = getRowUnderCursor(event as PointerEvent);
-          console.log("BAR DRAGGED ID", barId.get(), bar.id);
-          console.log("dragged bar SUBCOL HERE", bar.sub_col_id);
+          console.log("hovered row id", hoveredRowId);
+
           setDelBarFromRow(bar);
           if (active) {
             //fetch clips from hovered row
             fetchClipsOnHover(hoveredRowId);
-            // clipsInRow?.map((clips) => {
-            //   clips.bars.forEach((bar) => {
-            //     if (newX <= bar.left_position) {
-            //       console.log("BAR.LEF", bar.left_position);
-            //     } else if (newX >= bar.left_position) {
-            //     }
-            //   });
-            // });
           }
-          console.log("down or what", down);
 
-          api.start((i) => {
+          zoomApi.start((i) => {
             if (allBars[i].id !== barId.get()) return {};
             return {
               clipTop: newY,
@@ -379,8 +390,11 @@ const Clip: React.FC<ClipProps> = ({
               immediate: down,
             };
           });
+
+          console.log("checkout bro ", newX, bar.left_position);
+
           if (last) {
-            api.start((i) => {
+            zoomApi.start((i) => {
               if (allBars[i].id !== barId.get()) return {};
               return { zIndex: 1, clipTop: 0 };
             });
@@ -406,7 +420,6 @@ const Clip: React.FC<ClipProps> = ({
                 if (hoveredRowId) {
                   clips.bars.forEach((bar) => {
                     if (newX <= bar.left_position) {
-                      console.log("BAR.LEF, newx", bar.left_position, newX);
                       updateBarLPAfterDrop(barId.get(), newX, hoveredRowId);
                     } else if (newX >= bar.left_position) {
                       const newLp = bar.left_position + bar.width;
@@ -419,26 +432,82 @@ const Clip: React.FC<ClipProps> = ({
           }
         });
       });
-      console.log("is over row ", isOverRow);
       setHoveringOverRow(isOverRow);
     }
   );
 
   const bindLeftResize = useDrag(
-    ({ movement: [dx], args: [barId], last }) => {
+    ({ movement: [dx], args: [barId, subColId], last }) => {
       barsData?.sub_columns?.forEach((subColumn) => {
         subColumn?.bars?.forEach((bar, barIndex) => {
           if (bar.id !== barId.get()) return;
-          console.log("bar.id , barid ", bar.id, barId.get());
-          const newWidth = Math.max(minWidth, bar.width - dx);
-          let newX = Math.min(
-            bar.left_position + dx,
-            bar.left_position + bar.width - minWidth
+          const singleTickPxValue = mediaContainerWidth / totalDuration; // equal px value for each marker
+          const duration = bar.duration || 0; // zero probly for img
+          const width = Math.round(
+            (duration / markerInterval) * singleTickPxValue
           );
+          const minWidth = width * 0.1;
+
+          let newWidth = Math.max(minWidth, Math.min(bar.width - dx, width));
+
+          let newX =
+            newWidth >= width
+              ? Math.max(
+                  bar.left_position + dx,
+                  bar.left_position + bar.width - newWidth
+                )
+              : Math.min(
+                  bar.left_position + dx,
+                  bar.left_position + bar.width - newWidth
+                );
+
+          // if (subColId === bar.sub_col_id) {
+          //   subColumn.bars.forEach((bar, index, bars) => {
+          //     if (index > 0) {
+          //       // Only check for previous bars if it's not the first bar
+          //       for (let i = 0; i < index; i++) {
+          //         const prevBar = bars[index - 1];
+          //         const minPosition = prevBar.left_position + prevBar.width + 2;
+
+          //         console.log("bars", bars);
+          //         console.log("index ", index);
+          //         console.log("prev bar bro", prevBar);
+
+          //         if (newX < minPosition) {
+          //           newX = minPosition; // Prevent overlap with previous bar
+          //           console.log(
+          //             "bar.w, bar.lp, newx",
+          //             bar.width,
+          //             bar.left_position,
+          //             newX
+          //           );
+          //           // newWidth = bar.width - (bar.left_position - newX); // Adjust width accordingly
+          //           newWidth = Math.max(
+          //             minWidth,
+          //             bar.width - (newX - bar.left_position)
+          //           );
+          //           console.log("new width CHECK HERE BRO", newWidth);
+          //         }
+          //       }
+          //     }
+          //   });
+          // } else {
+          //   // For the first bar, set left limit and stop increasing width(showing effect where right handle increases) if the left limit is reached
+          //   const minLeft = 0; // Prevent moving beyond left limit
+
+          //   newX = Math.max(newX, minLeft); // Set minimum left position
+          //   if (newX === minLeft) {
+          //     newWidth = Math.max(bar.width - dx, minWidth);
+          //   } else {
+          //     newWidth = Math.max(newWidth, minWidth); // Ensure minimum width
+          //   }
+          // }
 
           if (newX <= 0) newX = bar.left_position;
 
-          api.start((i) => {
+          // console.log("new x checklast ", newX);
+
+          zoomApi.start((i) => {
             if (allBars[i].id !== barId.get()) return {};
             return {
               clipLP: newX,
@@ -457,16 +526,39 @@ const Clip: React.FC<ClipProps> = ({
   );
 
   const bindRightResize = useDrag(
-    ({ movement: [dx], args: [barId], last }) => {
+    ({ movement: [dx], args: [barId, subColId], last }) => {
       barsData?.sub_columns?.forEach((subColumn) => {
         subColumn?.bars?.forEach((bar, barIndex) => {
           if (bar.id !== barId.get()) return {};
-          console.log("bar.,id , barid", bar.id, barId.get());
-          const newWidth = Math.max(
-            minWidth,
-            Math.min(bar.width + dx, mediaContainerWidth - bar.left_position)
+          const singleTickPxValue = mediaContainerWidth / totalDuration; // equal px value for each marker
+          const duration = bar.duration || 0; // zero probly for img
+          const width = Math.round(
+            (duration / markerInterval) * singleTickPxValue
           );
-          api.start((i) => {
+          const minWidth = width * 0.1;
+          console.log("width bro", width);
+          let newWidth = Math.max(minWidth, Math.min(bar.width + dx, width));
+          if (subColId === bar.sub_col_id) {
+            const rowBars = subColumn.bars;
+            // console.log("subcol.bars ", rowBars); // all bars
+
+            subColumn.bars.forEach((bar, index, bars) => {
+              console.log("bar check check id", bar.id);
+              for (let i = index + 1; i < rowBars.length; i++) {
+                const nextBar = bars[i];
+                const maxRightPosition = nextBar.left_position - 2;
+                // console.log("new width , barlp", newWidth, bar.left_position);
+                if (newWidth + bar.left_position > maxRightPosition) {
+                  // console.log("max r pos.", maxRightPosition);
+                  // console.log("bars[i], CHECK THIS OUT BRO", bars[i]);
+                  newWidth = maxRightPosition - bar.left_position - 2;
+                }
+              }
+            });
+          }
+          console.log("new width ", newWidth);
+
+          zoomApi.start((i) => {
             if (allBars[i].id !== barId.get()) return {};
             return { clipWidth: newWidth, immediate: true };
           });
@@ -554,19 +646,20 @@ const Clip: React.FC<ClipProps> = ({
   return (
     <div className={styles.clip_sub_col_div} id={barIndex.toString()}>
       {item.bars.map((bar: bar, index: number) => {
-        const spring = springs.find((s) => s.barID?.get() === bar.id);
+        // const spring = springs.find((s) => s.barID?.get() === bar.id);
+        const zoomSpring = zoomSprings.find((s) => s.barID?.get() === bar.id);
         return (
           <animated.div
             key={index}
-            {...bindDrag(spring?.barID, item.sub_col_id)}
+            {...bindDrag(zoomSpring?.barID)}
             className={styles.item_box_div}
             style={{
               // width: width, // width according to stored in db and zoom level
               // left: left_position,
-              width: spring?.clipWidth.to((w) => `${w}px`),
-              transform: spring?.clipLP.to((xVal) => `translate(${xVal}px`),
-              top: spring?.clipTop.to((yVal) => `${yVal}px`),
-              zIndex: spring?.zIndex.to((z) => `${z}`),
+              width: zoomSpring?.clipWidth.to((w) => `${w}px`),
+              transform: zoomSpring?.clipLP.to((xVal) => `translate(${xVal}px`),
+              top: zoomSpring?.clipTop.to((yVal) => `${yVal}px`),
+              zIndex: zoomSpring?.zIndex.to((z) => `${z}`),
               touchAction: "none",
             }}
             id={`bar-${bar?.id}`}
@@ -610,18 +703,26 @@ const Clip: React.FC<ClipProps> = ({
               </div>
 
               {/* only show barcontent (bar arrow and label) when width of bar is above 125 */}
-              {bar?.width > 125 && (
-                <div className={styles.bar_content}>
-                  {barsData?.sub_columns?.length ? (
-                    <div
-                      {...bindLeftResize(spring?.barID)}
-                      className={`${styles.bar_arrow_div} hidden group-hover:flex handle`}
-                      style={{
-                        touchAction: "none",
-                      }}
-                    >
+              <div className={styles.bar_content}>
+                {barsData?.sub_columns?.length ? (
+                  <div
+                    {...bindLeftResize(zoomSpring?.barID, bar.sub_col_id)}
+                    className={`${
+                      bar.width <= 125
+                        ? styles.sm_bar_arrow_div
+                        : styles.bar_arrow_div
+                    } flex group-hover:w-[3.5rem] handle`}
+                    style={{
+                      touchAction: "none",
+                    }}
+                  >
+                    {bar.width >= 125 && (
                       <div
-                        className={`${styles.bar_arrow_left} hidden group-hover:flex`}
+                        className={`${
+                          bar.width <= 125
+                            ? styles.sm_bar_arrow_left
+                            : styles.bar_arrow_left
+                        } flex group-hover:hidden`}
                       >
                         <div className={styles.arrow_pad}>
                           <div className={styles.arrow_div}>
@@ -636,53 +737,63 @@ const Clip: React.FC<ClipProps> = ({
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ) : null}
+                    )}
+                  </div>
+                ) : null}
 
-                  {bar.width >= 300 && (
+                {bar.width >= 300 && (
+                  <div
+                    className={styles.clip_center}
+                    // draggable
+                    // onDragStart={(e) =>
+                    //   handleBarDragStart(bar?.id, e, item?.id)
+                    // }
+                    // onDragEnd={() => handleBarDragEnd()}
+                  >
                     <div
-                      className={styles.clip_center}
-                      // draggable
-                      // onDragStart={(e) =>
-                      //   handleBarDragStart(bar?.id, e, item?.id)
-                      // }
-                      // onDragEnd={() => handleBarDragEnd()}
+                      className={`${styles.m_type_label} flex group-hover:hidden`}
                     >
-                      <div
-                        className={`${styles.m_type_label} hidden group-hover:flex`}
-                      >
-                        <div className={styles.type_label_content}>
-                          <div className={styles.type_icon}>
-                            {bar?.type in icons && (
-                              <Image
-                                src={icons[bar?.type as keyof typeof icons]}
-                                alt={bar?.type}
-                                width={10}
-                                height={10}
-                                priority={true}
-                              />
-                            )}
-                          </div>
-                          <span className={styles.m_item_label}>
-                            {bar?.name.length > 20
-                              ? `${bar?.name.substring(0, 25)}...`
-                              : bar?.name}
-                          </span>
+                      <div className={styles.type_label_content}>
+                        <div className={styles.type_icon}>
+                          {bar?.type in icons && (
+                            <Image
+                              src={icons[bar?.type as keyof typeof icons]}
+                              alt={bar?.type}
+                              width={10}
+                              height={10}
+                              priority={true}
+                            />
+                          )}
                         </div>
+                        <span className={styles.m_item_label}>
+                          {bar?.name.length > 20
+                            ? `${bar?.name.substring(0, 25)}...`
+                            : bar?.name}
+                        </span>
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {barsData?.sub_columns?.length ? ( // length check if there are bars in sub_columns
-                    <div
-                      {...bindRightResize(spring?.barID)}
-                      className={`${styles.bar_arrow_div} hidden group-hover:flex handle`}
-                      style={{
-                        touchAction: "none",
-                      }}
-                    >
+                {barsData?.sub_columns?.length ? ( // length check if there are bars in sub_columns
+                  <div
+                    {...bindRightResize(zoomSpring?.barID, bar.sub_col_id)}
+                    className={`${
+                      bar.width <= 125
+                        ? styles.sm_bar_arrow_div
+                        : styles.bar_arrow_div
+                    } flex group-hover:w-[3.5rem] handle`}
+                    style={{
+                      touchAction: "none",
+                    }}
+                  >
+                    {bar.width >= 125 && (
                       <div
-                        className={`${styles.bar_arrow_right} hidden group-hover:flex`}
+                        className={`${
+                          bar.width <= 125
+                            ? styles.sm_bar_arrow_left
+                            : styles.bar_arrow_right
+                        } flex group-hover:hidden`}
                       >
                         <div className={styles.arrow_pad}>
                           <div className={styles.arrow_div}>
@@ -697,10 +808,10 @@ const Clip: React.FC<ClipProps> = ({
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ) : null}
-                </div>
-              )}
+                    )}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </animated.div>
         );

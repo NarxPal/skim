@@ -177,6 +177,14 @@
   @apply w-full hover:bg-blue-500 hover:bg-opacity-70  hover:border-blue-600 hover:border-2 rounded-sm absolute;
 }
 
+.sm_bar_arrow_div{
+  @apply  w-4 bar_arrow_div
+}
+
+.sm_bar_arrow_left{
+  @apply h-[70%] items-center  cursor-ew-resize  shadow-2xl rounded-lg px-2 py-4;
+}
+
 /* ******* CONTEXT MENU *********** */
 
 .closeMenuDiv {

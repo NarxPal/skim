@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ColumnsService } from './columns.service';
 import { Columns } from 'src/models/columns.entity';
-import { CreateColumnDto } from './dto/createDTO';
+import { CreateColumnDto, Sub_Column } from './dto/createDTO';
 import { SubColDto, OnlySubColDto, BarData, Gap } from './dto/createDTO';
 @Controller('columns')
 export class ColumnsController {
@@ -62,6 +62,7 @@ export class ColumnsController {
     @Body()
     updateBarData: {
       left_position: number;
+      sub_col_id: number;
       width: number;
       start_time: number;
       end_time: number;
@@ -93,12 +94,19 @@ export class ColumnsController {
     return this.columnsService.addBarToSubCol(Number(id), addBarData);
   }
 
+  // for updating lp of bars present after dropped bar
   @Patch('sub-columns/updateBarLP/:dropSubColId')
   async updateBarLp(
     @Param('dropSubColId') dropSubColId: number,
     @Body() lpBars: any,
   ) {
     return this.columnsService.updateBarLp(Number(dropSubColId), lpBars);
+  }
+
+  // update subcolumn after zoom changes
+  @Patch('subCol/:prjId')
+  async updateBarAZ(@Param('prjId') prjId: string, @Body() data: Sub_Column[]) {
+    return this.columnsService.updateBarAZ(Number(prjId), data);
   }
 
   @Post()
