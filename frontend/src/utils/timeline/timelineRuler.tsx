@@ -20,6 +20,7 @@ interface TimelineRulerProps {
     React.SetStateAction<BarsProp | null>
   >;
   barsData: BarsProp | null;
+  setBarsData: React.Dispatch<React.SetStateAction<BarsProp | null>>;
   videoRef: React.RefObject<HTMLVideoElement>;
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
   api: SpringRef<{
@@ -41,6 +42,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   scrollPosition,
   setBarsDataChangeAfterZoom,
   barsData,
+  setBarsData,
   videoRef,
   setShowPhTime,
   api,
@@ -80,14 +82,14 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
       }),
     }));
     if (updateData && updateData.length > 0) {
-      console.log("udpated data CHECK  BAR", updateData);
-      const updatebar = axios.patch(
+      const updatebar = await axios.patch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/subCol/${prjId}`,
         updateData
       );
+      // console.log("updatebar", updatebar.config.data);
     }
     setFetchBars(true);
-    // console.log("updated barsdata CHECK", updatebar);
+    console.log("updatebaraz end");
   };
 
   // todo: throttledShowPhTimeUpdate formatTime are used in playhead, phanimation and timelineRuler file so optimize it
@@ -157,7 +159,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
             return {
               ...subCol, // Retain the original `subCol` structure
               bars: subCol?.bars?.map((bar) => {
-                const duration = bar.duration || 0; // zero probly for img
+                const duration = bar.clip_duration || 0; // zero probly for img
                 const width = Math.round(
                   (duration / interval) * singleTickPxValue //width not useful when resized and zoom level is changed
                 ); // width being calculated here on the fly though we are saving in db through barsData hook
@@ -181,7 +183,6 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
                   const start_gap = gap.start_gap || 0;
                   const end_gap = gap.end_gap || 0;
                   const width = end_gap - start_gap;
-                  console.log("add here for gap data change when zl changes");
 
                   return {
                     ...gap,

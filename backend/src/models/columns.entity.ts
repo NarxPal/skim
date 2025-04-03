@@ -11,7 +11,7 @@ import {
 
 type Bar = {
   id: number;
-  sub_col_id:number;
+  sub_col_id: number;
   user_id: string;
   name: string;
   left_position: number;
@@ -24,6 +24,8 @@ type Bar = {
   url: string;
   start_time: number;
   end_time: number;
+  duration: number;
+  clip_duration: number;
 };
 
 type Gap = {

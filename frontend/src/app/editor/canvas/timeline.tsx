@@ -102,8 +102,8 @@ const Timeline: React.FC<TimelineProps> = ({
   const [LPBasedBars, setLPBasedBars] = useState<bar[]>([]);
   const [zoomLevel, setZoomLevel] = useState<number>(0);
   const [scrollPosition, setScrollPosition] = useState<number>(0);
-  const [updateBarsData, setUpdateBarsData] = useState<boolean>(false);
   const [hoveringOverRow, setHoveringOverRow] = useState<boolean>(false);
+  const [updateBarsData, setUpdateBarsData] = useState<boolean>(false);
 
   // use ref hooks
   const isResizing = useRef(false);
@@ -205,6 +205,7 @@ const Timeline: React.FC<TimelineProps> = ({
             left_position: 0, // default left position
             width: (parsedItem.duration / markerInterval) * singleTickPxValue,
             duration: parsedItem.duration, // storing duration to use in calcContainerWidth
+            clip_duration: parsedItem.duration, // video len after resizing(needed during zoom lvl changes)
             project_id: parsedItem.project_id,
             type: parsedItem.type,
             thumbnail_url: parsedItem.thumbnail_url,
@@ -258,6 +259,7 @@ const Timeline: React.FC<TimelineProps> = ({
 
   useEffect(() => {
     const fetchRootColumn = async () => {
+      console.log("fetch root col start");
       try {
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${Number(prjId)}`
@@ -271,10 +273,7 @@ const Timeline: React.FC<TimelineProps> = ({
         console.log(error);
       }
       setFetchBars(false);
-      console.log(
-        "updatebars data doing false here, so barsdata might have been updated"
-      );
-      setUpdateBarsData(false); // for updating barsdata after updateBarAfterResize function
+      setUpdateBarsData(false);
     };
     if (prjId) {
       fetchRootColumn();
@@ -1022,6 +1021,7 @@ const Timeline: React.FC<TimelineProps> = ({
           scrollPosition={scrollPosition}
           setBarsDataChangeAfterZoom={setBarsDataChangeAfterZoom}
           barsData={barsData}
+          setBarsData={setBarsData}
           videoRef={videoRef}
           setShowPhTime={setShowPhTime}
           api={api}

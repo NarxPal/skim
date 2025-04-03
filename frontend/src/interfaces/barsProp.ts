@@ -9,6 +9,7 @@ export type bar = {
   user_id: string;
   width: number;
   duration: number;
+  clip_duration: number;
   order: number;
   url: string;
   thumbnail_url: string;

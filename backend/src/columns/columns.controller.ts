@@ -55,6 +55,11 @@ export class ColumnsController {
     return this.columnsService.addSubColumnToRoot(rootColumnId, subColumnData);
   }
 
+  @Post()
+  createColumn(@Body() createColumnDto: CreateColumnDto) {
+    return this.columnsService.create(createColumnDto);
+  }
+
   // updatebar after resize
   @Patch('sub-columns/bars/:id')
   async updateBar(
@@ -107,11 +112,6 @@ export class ColumnsController {
   @Patch('subCol/:prjId')
   async updateBarAZ(@Param('prjId') prjId: string, @Body() data: Sub_Column[]) {
     return this.columnsService.updateBarAZ(Number(prjId), data);
-  }
-
-  @Post()
-  createColumn(@Body() createColumnDto: CreateColumnDto) {
-    return this.columnsService.create(createColumnDto);
   }
 
   @Delete('/:projectId')

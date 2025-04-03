@@ -229,10 +229,27 @@ const Clip: React.FC<ClipProps> = ({
     newWidth: number,
     newLeftPosition: number
   ) => {
-    barsData?.sub_columns?.map(async (subcol) => {
+    barsDataChangeAfterZoom?.sub_columns?.map(async (subcol) => {
       const targetBar = subcol.bars?.find((b) => b.id === bar.id);
       // console.log("barsdatachangeafterzoom in updatebarafterresize", barsData);
       // console.log("newleft position bro", newLeftPosition);
+
+      const singleTickPxValue = mediaContainerWidth / totalDuration;
+      console.log("start time", newLeftPosition / singleTickPxValue);
+      console.log("end time", (newLeftPosition + newWidth) / singleTickPxValue);
+
+      console.log(
+        "newlp, singletickpxvalue",
+        newLeftPosition,
+        singleTickPxValue
+      );
+      console.log(
+        "newlp, newwidth, singletickpxval",
+        newLeftPosition,
+        newWidth,
+        singleTickPxValue
+      );
+
       if (targetBar) {
         const updatebar = await axios.patch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/bars/${targetBar.id}`,
@@ -240,8 +257,8 @@ const Clip: React.FC<ClipProps> = ({
             ...bar,
             left_position: newLeftPosition,
             width: newWidth,
-            start_time: bar.start_time,
-            end_time: bar.end_time, // chaning this makes start_time 0
+            start_time: bar.left_position,
+            end_time: bar.end_time,
           }
         );
         await calculateGap(subcol, bar, bars, barIndex);
@@ -249,7 +266,10 @@ const Clip: React.FC<ClipProps> = ({
         const filteredData = updatebar.data.filter(
           (bar: BarsProp) => bar.project_id === Number(prjId)
         );
-        // setBarsDataChangeAfterZoom(filteredData);
+        console.log("filtered data check in here", filteredData[0]);
+        const updatedData = filteredData[0];
+        setBarsDataChangeAfterZoom(updatedData);
+        setBarsData(updatedData);
         setUpdateBarsData(true);
       }
       return subcol;
@@ -271,7 +291,6 @@ const Clip: React.FC<ClipProps> = ({
         }
       );
       delCmBarId(delBarFromRow?.sub_col_id, delBarFromRow?.id); // delete dragged bar from its row
-      setUpdateBarsData(true);
     } catch (error) {}
   };
 
@@ -282,7 +301,7 @@ const Clip: React.FC<ClipProps> = ({
   ) => {
     const NumHovRowId = Number(hoveredRowId);
     console.log("after drop barindex", barIndex);
-    barsData?.sub_columns?.map(async (subcol) => {
+    barsDataChangeAfterZoom?.sub_columns?.map(async (subcol) => {
       const targetBar = subcol.bars?.find((b) => b.id === barId);
       if (targetBar) {
         const updatebar = await axios.patch(
@@ -301,7 +320,7 @@ const Clip: React.FC<ClipProps> = ({
           .find((bar: bar) => bar.id === targetBar.id);
 
         console.log("updatebar RES BRO", updatedBarRes);
-        setBarsData(filteredData);
+        setBarsDataChangeAfterZoom(filteredData);
         updateBarRow(targetBar.id, NumHovRowId, updatedBarRes);
       }
     });
@@ -349,7 +368,7 @@ const Clip: React.FC<ClipProps> = ({
       } else if ("touches" in event && event.touches.length > 0) {
         clientY = event.touches[0].clientY;
       }
-      barsData?.sub_columns?.forEach((subColumn) => {
+      barsDataChangeAfterZoom?.sub_columns?.forEach((subColumn) => {
         subColumn?.bars?.forEach((bar, barIndex) => {
           if (bar.id !== barId.get()) return {};
 
@@ -420,6 +439,7 @@ const Clip: React.FC<ClipProps> = ({
                 if (hoveredRowId) {
                   clips.bars.forEach((bar) => {
                     if (newX <= bar.left_position) {
+                      console.log("newx, barlp", newX, bar.left_position);
                       updateBarLPAfterDrop(barId.get(), newX, hoveredRowId);
                     } else if (newX >= bar.left_position) {
                       const newLp = bar.left_position + bar.width;
@@ -438,8 +458,9 @@ const Clip: React.FC<ClipProps> = ({
 
   const bindLeftResize = useDrag(
     ({ movement: [dx], args: [barId, subColId], last }) => {
-      barsData?.sub_columns?.forEach((subColumn) => {
-        subColumn?.bars?.forEach((bar, barIndex) => {
+      let newX: number;
+      barsDataChangeAfterZoom?.sub_columns?.forEach((subColumn) => {
+        subColumn?.bars?.forEach((bar, barIndex, bars) => {
           if (bar.id !== barId.get()) return;
           const singleTickPxValue = mediaContainerWidth / totalDuration; // equal px value for each marker
           const duration = bar.duration || 0; // zero probly for img
@@ -450,62 +471,55 @@ const Clip: React.FC<ClipProps> = ({
 
           let newWidth = Math.max(minWidth, Math.min(bar.width - dx, width));
 
-          let newX =
-            newWidth >= width
-              ? Math.max(
-                  bar.left_position + dx,
-                  bar.left_position + bar.width - newWidth
-                )
-              : Math.min(
-                  bar.left_position + dx,
-                  bar.left_position + bar.width - newWidth
-                );
+          if (subColId === bar.sub_col_id) {
+            if (bar.order === 0 && barIndex === 0) {
+              newX =
+                newWidth >= width
+                  ? Math.max(
+                      bar.left_position + dx,
+                      bar.left_position + bar.width - newWidth
+                    )
+                  : Math.min(
+                      bar.left_position + dx,
+                      bar.left_position + bar.width - newWidth
+                    ); // both args value will be same until the handle reach its minwidth
 
-          // if (subColId === bar.sub_col_id) {
-          //   subColumn.bars.forEach((bar, index, bars) => {
-          //     if (index > 0) {
-          //       // Only check for previous bars if it's not the first bar
-          //       for (let i = 0; i < index; i++) {
-          //         const prevBar = bars[index - 1];
-          //         const minPosition = prevBar.left_position + prevBar.width + 2;
+              // For the first bar, set left limit and stop increasing width
+              if (newX <= 0) {
+                const minLeft = 0; // Prevent moving beyond left limit
+                newX = Math.max(newX, minLeft); // Set minimum left position
+                newWidth = bar.width - (minLeft - bar.left_position);
+              }
+            } else {
+              const filteredBars = bars.filter(
+                (filterBar) => filterBar.order < bar.order
+              );
+              const prevBar = filteredBars[filteredBars.length - 1];
+              console.log("filtered bar", prevBar);
+              const minPosition = prevBar.left_position + prevBar.width + 2;
+              console.log("minpos", minPosition);
 
-          //         console.log("bars", bars);
-          //         console.log("index ", index);
-          //         console.log("prev bar bro", prevBar);
+              let calcNewX =
+                newWidth >= width
+                  ? Math.max(
+                      bar.left_position + dx,
+                      bar.left_position + bar.width - newWidth
+                    )
+                  : Math.min(
+                      bar.left_position + dx,
+                      bar.left_position + bar.width - newWidth
+                    );
 
-          //         if (newX < minPosition) {
-          //           newX = minPosition; // Prevent overlap with previous bar
-          //           console.log(
-          //             "bar.w, bar.lp, newx",
-          //             bar.width,
-          //             bar.left_position,
-          //             newX
-          //           );
-          //           // newWidth = bar.width - (bar.left_position - newX); // Adjust width accordingly
-          //           newWidth = Math.max(
-          //             minWidth,
-          //             bar.width - (newX - bar.left_position)
-          //           );
-          //           console.log("new width CHECK HERE BRO", newWidth);
-          //         }
-          //       }
-          //     }
-          //   });
-          // } else {
-          //   // For the first bar, set left limit and stop increasing width(showing effect where right handle increases) if the left limit is reached
-          //   const minLeft = 0; // Prevent moving beyond left limit
+              let calcMinNewX = Math.max(calcNewX, minPosition);
 
-          //   newX = Math.max(newX, minLeft); // Set minimum left position
-          //   if (newX === minLeft) {
-          //     newWidth = Math.max(bar.width - dx, minWidth);
-          //   } else {
-          //     newWidth = Math.max(newWidth, minWidth); // Ensure minimum width
-          //   }
-          // }
-
-          if (newX <= 0) newX = bar.left_position;
-
-          // console.log("new x checklast ", newX);
+              if (calcMinNewX === minPosition) {
+                newX = calcMinNewX;
+                newWidth = bar.width - (minPosition - bar.left_position);
+              } else {
+                newX = calcNewX;
+              }
+            }
+          }
 
           zoomApi.start((i) => {
             if (allBars[i].id !== barId.get()) return {};
@@ -527,7 +541,7 @@ const Clip: React.FC<ClipProps> = ({
 
   const bindRightResize = useDrag(
     ({ movement: [dx], args: [barId, subColId], last }) => {
-      barsData?.sub_columns?.forEach((subColumn) => {
+      barsDataChangeAfterZoom?.sub_columns?.forEach((subColumn) => {
         subColumn?.bars?.forEach((bar, barIndex) => {
           if (bar.id !== barId.get()) return {};
           const singleTickPxValue = mediaContainerWidth / totalDuration; // equal px value for each marker
@@ -648,6 +662,7 @@ const Clip: React.FC<ClipProps> = ({
       {item.bars.map((bar: bar, index: number) => {
         // const spring = springs.find((s) => s.barID?.get() === bar.id);
         const zoomSpring = zoomSprings.find((s) => s.barID?.get() === bar.id);
+        const clipWidthValue = zoomSpring?.clipWidth.get();
         return (
           <animated.div
             key={index}
