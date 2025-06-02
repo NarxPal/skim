@@ -96,6 +96,9 @@ const Clip: React.FC<ClipProps> = ({
     (state: RootState) => state.markerInterval.markerInterval
   );
 
+  const lastNewWidthLeftRef = useRef<number | null>(null);
+  const lastNewWidthRightRef = useRef<number | null>(null);
+
   const icons: { [key: string]: string } = {
     audio: "/audio.png",
     video: "/video.png",
@@ -227,28 +230,65 @@ const Clip: React.FC<ClipProps> = ({
     bars: bar[],
     barIndex: number,
     newWidth: number,
-    newLeftPosition: number
+    newLeftPosition: number,
+    resizeHandle?: string, // option since not needed for bindDrag
+    predictedEndTime?: number, // taking from bindRightResize only
+    predictedStartTime?: number
   ) => {
     barsDataChangeAfterZoom?.sub_columns?.map(async (subcol) => {
       const targetBar = subcol.bars?.find((b) => b.id === bar.id);
       // console.log("barsdatachangeafterzoom in updatebarafterresize", barsData);
       // console.log("newleft position bro", newLeftPosition);
 
+      const visibleDuration = bar.duration - bar.start_time;
       const singleTickPxValue = mediaContainerWidth / totalDuration;
-      console.log("start time", newLeftPosition / singleTickPxValue);
-      console.log("end time", (newLeftPosition + newWidth) / singleTickPxValue);
+
+      const trimFromLeftPx = newLeftPosition - bar.left_position;
+      const startTrimSec =
+        (trimFromLeftPx / singleTickPxValue) * markerInterval;
+
+      const startTimeVal =
+        predictedStartTime && predictedStartTime < 0
+          ? 0
+          : bar.start_time + startTrimSec;
+      const startTime = resizeHandle === "left" ? startTimeVal : bar.start_time;
 
       console.log(
-        "newlp, singletickpxvalue",
-        newLeftPosition,
-        singleTickPxValue
+        "predicted Start TIME, predicted END TIME",
+        predictedStartTime,
+        predictedEndTime
       );
+
+      console.log("trim from left px", trimFromLeftPx);
       console.log(
-        "newlp, newwidth, singletickpxval",
-        newLeftPosition,
-        newWidth,
-        singleTickPxValue
+        "bar.start time, starttrim sec",
+        bar.start_time,
+        startTrimSec
       );
+
+      const endTimeTrimValue =
+        resizeHandle === "right"
+          ? visibleDuration - (newWidth / singleTickPxValue) * markerInterval
+          : 0; // no changes should happen to end_time if using left handle
+
+      console.log(
+        "bar.duration, new width, singletickpx val, marker interval",
+        bar.duration,
+        newWidth,
+        singleTickPxValue,
+        markerInterval
+      );
+      console.log("endtime trim val", endTimeTrimValue);
+
+      const endTimeVal =
+        predictedEndTime && predictedEndTime > bar.duration
+          ? 0
+          : endTimeTrimValue;
+
+      const endTimeAfterTrim =
+        resizeHandle === "right"
+          ? bar.duration - endTimeVal
+          : bar.end_time - endTimeTrimValue;
 
       if (targetBar) {
         const updatebar = await axios.patch(
@@ -257,8 +297,11 @@ const Clip: React.FC<ClipProps> = ({
             ...bar,
             left_position: newLeftPosition,
             width: newWidth,
-            start_time: bar.left_position,
-            end_time: bar.end_time,
+            start_time: startTime,
+            end_time: endTimeAfterTrim,
+            clip_duration: parseFloat(
+              (endTimeAfterTrim - startTime).toFixed(2)
+            ),
           }
         );
         await calculateGap(subcol, bar, bars, barIndex);
@@ -462,33 +505,101 @@ const Clip: React.FC<ClipProps> = ({
       barsDataChangeAfterZoom?.sub_columns?.forEach((subColumn) => {
         subColumn?.bars?.forEach((bar, barIndex, bars) => {
           if (bar.id !== barId.get()) return;
+          const duration = bar.duration || 0; // zero probly for img media
           const singleTickPxValue = mediaContainerWidth / totalDuration; // equal px value for each marker
-          const duration = bar.duration || 0; // zero probly for img
           const width = Math.round(
             (duration / markerInterval) * singleTickPxValue
           );
-          const minWidth = width * 0.1;
 
+          const trimmedPixels = dx; // dx is negative when dragging left
+          const trimmedSeconds =
+            (trimmedPixels / singleTickPxValue) * markerInterval;
+          const predictedStartTime = bar.start_time + trimmedSeconds;
+
+          const minWidth = width * 0.1;
           let newWidth = Math.max(minWidth, Math.min(bar.width - dx, width));
+          console.log(
+            "minwidth",
+            minWidth,
+            "bar.width , dx, width",
+            bar.width,
+            dx,
+            width
+          );
 
           if (subColId === bar.sub_col_id) {
             if (bar.order === 0 && barIndex === 0) {
-              newX =
-                newWidth >= width
-                  ? Math.max(
-                      bar.left_position + dx,
-                      bar.left_position + bar.width - newWidth
-                    )
-                  : Math.min(
-                      bar.left_position + dx,
-                      bar.left_position + bar.width - newWidth
-                    ); // both args value will be same until the handle reach its minwidth
+              console.log("preidct start", predictedStartTime);
+              if (predictedStartTime >= 0) {
+                console.log("GREATER THAN 0 RUN");
+                newX =
+                  newWidth >= width
+                    ? Math.max(
+                        bar.left_position + dx,
+                        bar.left_position + bar.width - newWidth
+                      )
+                    : Math.min(
+                        bar.left_position + dx,
+                        bar.left_position + bar.width - newWidth
+                      ); // both args value will be same until the handle reach its minwidth
 
-              // For the first bar, set left limit and stop increasing width
-              if (newX <= 0) {
-                const minLeft = 0; // Prevent moving beyond left limit
-                newX = Math.max(newX, minLeft); // Set minimum left position
-                newWidth = bar.width - (minLeft - bar.left_position);
+                // console.log(
+                //   "newx min or max",
+                //   bar.left_position + dx,
+                //   bar.left_position + bar.width - newWidth
+                // );
+
+                // console.log(
+                //   "start time, dx, predic start time",
+                //   bar.start_time,
+                //   dx,
+                //   predictedStartTime
+                // );
+                // For the first bar, set left limit and stop increasing width
+                if (newX <= 0) {
+                  const minLeft = 0; // Prevent moving beyond left limit
+                  newX = Math.max(newX, minLeft); // Set minimum left position
+                  newWidth = bar.width - (minLeft - bar.left_position);
+                }
+                lastNewWidthLeftRef.current = newWidth;
+                console.log("newx and new width", newX, newWidth);
+              } else if (predictedStartTime <= -1) {
+                console.log("LESS THAN 0 RUN");
+                console.log("predcistart TIME", predictedStartTime);
+
+                // newWidth = Math.max(
+                //   minWidth,
+                //   Math.min(newWidth - dx, bar.width) // bar.width will be min in here
+                // );
+
+                newWidth = lastNewWidthLeftRef.current ?? newWidth;
+                console.log("newwidth LAST NEW WIDTH", newWidth);
+                newX = Math.max(
+                  bar.left_position + dx,
+                  bar.left_position + bar.width - newWidth // this will be max in here
+                );
+
+                // console.log(
+                //   "minwidth",
+                //   minWidth,
+                //   "newwidth, dx, bar.width IN LESS CHECKO",
+                //   newWidth,
+                //   dx,
+                //   bar.width
+                // );
+
+                // console.log(
+                //   "check this OUT",
+                //   bar.left_position + dx,
+                //   bar.left_position + bar.width - newWidth
+                // );
+                // console.log(
+                //   "bar.lp, dx, bar.width, newwidth",
+                //   bar.left_position,
+                //   dx,
+                //   bar.width,
+                //   newWidth
+                // );
               }
             } else {
               const filteredBars = bars.filter(
@@ -531,7 +642,16 @@ const Clip: React.FC<ClipProps> = ({
           });
 
           if (last) {
-            updateBarAfterResize(bar, subColumn.bars, barIndex, newWidth, newX);
+            updateBarAfterResize(
+              bar,
+              subColumn.bars,
+              barIndex,
+              newWidth,
+              newX,
+              "left",
+              undefined, // for predictedEndTime
+              predictedStartTime
+            );
           }
         });
       });
@@ -542,35 +662,69 @@ const Clip: React.FC<ClipProps> = ({
   const bindRightResize = useDrag(
     ({ movement: [dx], args: [barId, subColId], last }) => {
       barsDataChangeAfterZoom?.sub_columns?.forEach((subColumn) => {
+        let newWidth: number;
         subColumn?.bars?.forEach((bar, barIndex) => {
-          if (bar.id !== barId.get()) return {};
           const singleTickPxValue = mediaContainerWidth / totalDuration; // equal px value for each marker
+          const trimmedPixels = dx; // dx is negative when dragging left
+          const trimmedSeconds =
+            (trimmedPixels / singleTickPxValue) * markerInterval;
+          const predictedEndTime = bar.end_time + trimmedSeconds;
+
+          if (bar.id !== barId.get()) return {};
           const duration = bar.duration || 0; // zero probly for img
-          const width = Math.round(
-            (duration / markerInterval) * singleTickPxValue
-          );
+          const visibleDuration = duration - bar.start_time;
+          const width = (visibleDuration / markerInterval) * singleTickPxValue;
+
           const minWidth = width * 0.1;
-          console.log("width bro", width);
-          let newWidth = Math.max(minWidth, Math.min(bar.width + dx, width));
           if (subColId === bar.sub_col_id) {
             const rowBars = subColumn.bars;
             // console.log("subcol.bars ", rowBars); // all bars
 
-            subColumn.bars.forEach((bar, index, bars) => {
-              console.log("bar check check id", bar.id);
-              for (let i = index + 1; i < rowBars.length; i++) {
-                const nextBar = bars[i];
-                const maxRightPosition = nextBar.left_position - 2;
-                // console.log("new width , barlp", newWidth, bar.left_position);
-                if (newWidth + bar.left_position > maxRightPosition) {
-                  // console.log("max r pos.", maxRightPosition);
-                  // console.log("bars[i], CHECK THIS OUT BRO", bars[i]);
-                  newWidth = maxRightPosition - bar.left_position - 2;
+            // console.log("trimmed seconds ", trimmedSeconds);
+            // console.log("predic end time", predictedEndTime);
+
+            if (predictedEndTime <= bar.duration) {
+              console.log("predict end time < THAN DURATION", predictedEndTime);
+              console.log(
+                "bar.end time, trimmed seconds, dx",
+                bar.end_time,
+                trimmedSeconds,
+                dx
+              );
+              subColumn.bars.forEach((bar, index, bars) => {
+                newWidth = Math.max(minWidth, Math.min(bar.width + dx, width));
+                console.log(
+                  "minwidth, bar.width, dx, width",
+                  minWidth,
+                  bar.width,
+                  dx,
+                  width
+                );
+                lastNewWidthRightRef.current = newWidth;
+                console.log("newwidth in < than", newWidth);
+
+                for (let i = index + 1; i < rowBars.length; i++) {
+                  const nextBar = bars[i];
+                  const maxRightPosition = nextBar.left_position - 2;
+                  // console.log("new width , barlp", newWidth, bar.left_position);
+                  if (newWidth + bar.left_position > maxRightPosition) {
+                    // console.log("max r pos.", maxRightPosition);
+                    // console.log("bars[i], CHECK THIS OUT BRO", bars[i]);
+                    newWidth = maxRightPosition - bar.left_position - 2;
+                  }
                 }
-              }
-            });
+              });
+            } else if (predictedEndTime > bar.duration) {
+              console.log("predict end time > THAN DURATION", predictedEndTime);
+              newWidth = lastNewWidthRightRef.current ?? bar.width; // bar.width in case newWidth is undefined
+              console.log(
+                "lastnewwidth REF, newidth, bar.width BABE",
+                lastNewWidthRightRef.current,
+                newWidth,
+                bar.width
+              );
+            }
           }
-          console.log("new width ", newWidth);
 
           zoomApi.start((i) => {
             if (allBars[i].id !== barId.get()) return {};
@@ -582,7 +736,10 @@ const Clip: React.FC<ClipProps> = ({
               bars,
               barIndex,
               newWidth,
-              bar.left_position
+              bar.left_position,
+              "right",
+              predictedEndTime,
+              undefined // for predictedStartTime
             );
           }
         });

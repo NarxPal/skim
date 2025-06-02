@@ -71,6 +71,7 @@ export class ColumnsController {
       width: number;
       start_time: number;
       end_time: number;
+      clip_duration: number;
     },
   ) {
     return this.columnsService.updateBar(Number(id), updateBarData);

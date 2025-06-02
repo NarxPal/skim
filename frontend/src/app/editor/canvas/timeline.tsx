@@ -1027,6 +1027,7 @@ const Timeline: React.FC<TimelineProps> = ({
           api={api}
           setFetchBars={setFetchBars}
           prjId={prjId}
+          allBars={allBars}
         />
         <div className={styles.media_parent_div} ref={mediaParentRef}>
           <div

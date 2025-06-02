@@ -7,7 +7,7 @@ import { setPhPreview } from "@/redux/phPreview";
 import { setMarkerInterval } from "@/redux/markerInterval";
 import { throttle } from "lodash";
 // types / interfaces import
-import { BarsProp } from "@/interfaces/barsProp";
+import { BarsProp, bar } from "@/interfaces/barsProp";
 import { SpringRef } from "@react-spring/web";
 import axios from "axios";
 
@@ -33,6 +33,7 @@ interface TimelineRulerProps {
   }>;
   setFetchBars: React.Dispatch<React.SetStateAction<boolean>>;
   prjId: string;
+  allBars: bar[];
 }
 
 const TimelineRuler: React.FC<TimelineRulerProps> = ({
@@ -48,6 +49,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   api,
   setFetchBars,
   prjId,
+  allBars,
 }) => {
   // usestate hooks
   const [tickPos, setTickPos] = useState<number[]>(); // having array since we are mapping tickpos in dom
@@ -68,16 +70,14 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
     }
   }, [scrollPosition]);
 
-  const updateBarAZ = async (barsDurations: BarsProp) => {
+  const updateBarAZ = async (barsDurations: BarsProp, interval: number) => {
     const singleTickPxValue = containerWidth / totalDuration; // equal px value for each marker
     const updateData = barsDurations.sub_columns.map((subCol) => ({
       ...subCol,
       bars: subCol?.bars?.map((bar) => {
-        const duration = bar.duration || 0; // zero probly for img
-        const width = Math.round(
-          (duration / markerInterval) * singleTickPxValue
-        );
-
+        const duration = bar.clip_duration || 0; // zero probly for img
+        console.log("clip duration in updatbaraz", duration);
+        const width = Math.round((duration / interval) * singleTickPxValue);
         return { ...bar, width };
       }),
     }));
@@ -86,10 +86,9 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/subCol/${prjId}`,
         updateData
       );
-      // console.log("updatebar", updatebar.config.data);
+      // console.log("updatebar CHECK CHECK", updatebar.config.data);
     }
     setFetchBars(true);
-    console.log("updatebaraz end");
   };
 
   // todo: throttledShowPhTimeUpdate formatTime are used in playhead, phanimation and timelineRuler file so optimize it
@@ -160,6 +159,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
               ...subCol, // Retain the original `subCol` structure
               bars: subCol?.bars?.map((bar) => {
                 const duration = bar.clip_duration || 0; // zero probly for img
+                console.log("bar.clipduration 1", duration);
                 const width = Math.round(
                   (duration / interval) * singleTickPxValue //width not useful when resized and zoom level is changed
                 ); // width being calculated here on the fly though we are saving in db through barsData hook
@@ -170,8 +170,8 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
                 //     : bar.left_position;
 
                 // rather than working on lp here i should create gap adjust that which will effect the lp of bars located around gaps
-
-                api.start(() => {
+                api.start((i) => {
+                  if (allBars[i].id !== bar.id) return {};
                   return {
                     clipWidth: width,
                   };
@@ -196,7 +196,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
       };
       console.log("bro barsdurations", barsDurations);
       setBarsDataChangeAfterZoom(barsDurations);
-      updateBarAZ(barsDurations);
+      updateBarAZ(barsDurations, interval);
     };
     calcTicks();
   }, [zoomLevel, containerWidth, totalDuration]); // adding delCmBarId to again map over the data since barsData will be changed

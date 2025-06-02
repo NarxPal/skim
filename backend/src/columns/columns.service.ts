@@ -104,6 +104,7 @@ export class ColumnsService {
       width: number;
       start_time: number;
       end_time: number;
+      clip_duration: number;
     },
   ) {
     const columns = await this.columnsRepository.find();
@@ -123,6 +124,7 @@ export class ColumnsService {
               bar.width = updateBarData.width;
               bar.start_time = updateBarData.start_time;
               bar.end_time = updateBarData.end_time;
+              bar.clip_duration = updateBarData.clip_duration;
               barFound = true;
             }
           });
