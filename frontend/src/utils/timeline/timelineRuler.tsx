@@ -194,7 +194,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
             };
           }) || [],
       };
-      console.log("bro barsdurations", barsDurations);
+      console.log("bro barsdurations, SETBARSDATA RAN BRO", barsDurations);
       setBarsDataChangeAfterZoom(barsDurations);
       updateBarAZ(barsDurations, interval);
     };

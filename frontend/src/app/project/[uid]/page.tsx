@@ -106,7 +106,7 @@ const Project = () => {
       }
     };
     fetchPrjData();
-  }, [params.uid, openCreateModal, openEditModal]);
+  }, [params.uid, openCreateModal, openEditModal, openDelModal]);
 
   const handleEditPrj = async (filename: string, id: number) => {
     setOpenEditModal(true);

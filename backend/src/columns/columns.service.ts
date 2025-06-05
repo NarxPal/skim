@@ -206,8 +206,15 @@ export class ColumnsService {
             const barWithOrder = {
               ...addBarData.addBarData,
             };
-            subColumn?.bars?.splice(0, 0, barWithOrder);
-            subColumn?.bars?.forEach((bar, index) => {
+            const bars = subColumn?.bars || [];
+
+            let insertIndex = bars.findIndex(
+              (bar) => bar.left_position > barWithOrder.left_position,
+            );
+            if (insertIndex === -1) insertIndex = bars.length;
+
+            bars.splice(insertIndex, 0, barWithOrder);
+            bars.forEach((bar, index) => {
               bar.order = index;
             });
           }

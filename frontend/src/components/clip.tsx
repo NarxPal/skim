@@ -319,13 +319,10 @@ const Clip: React.FC<ClipProps> = ({
     });
   };
 
-  const updateBarRow = async (
-    dropBarId: number,
-    rowId: number,
-    updatedBarRes: bar
-  ) => {
+  // it changes the dragged bar row to where it has been dropped
+  const updateBarRow = async (rowId: number, updatedBarRes: bar) => {
     try {
-      console.log("barindex updated bar CHECK EHCK", updatedBarRes);
+      console.log("getting UPDATED BAR RES", updatedBarRes);
       await axios.patch(
         // sub-columns/:id - patch in backend
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${rowId}`,
@@ -337,15 +334,15 @@ const Clip: React.FC<ClipProps> = ({
     } catch (error) {}
   };
 
+  // updatebarlpafterdrop update lp, subcolid of dragged bar
   const updateBarLPAfterDrop = async (
     barId: number,
     newLeftPosition: number,
     hoveredRowId: string
   ) => {
     const NumHovRowId = Number(hoveredRowId);
-    console.log("after drop barindex", barIndex);
     barsDataChangeAfterZoom?.sub_columns?.map(async (subcol) => {
-      const targetBar = subcol.bars?.find((b) => b.id === barId);
+      const targetBar = subcol.bars?.find((b) => b.id === barId); // fetching dragged bar here
       if (targetBar) {
         const updatebar = await axios.patch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/bars/${targetBar.id}`,
@@ -363,8 +360,9 @@ const Clip: React.FC<ClipProps> = ({
           .find((bar: bar) => bar.id === targetBar.id);
 
         console.log("updatebar RES BRO", updatedBarRes);
+        console.log("filtered data CHECK HERE AB", filteredData);
         setBarsDataChangeAfterZoom(filteredData);
-        updateBarRow(targetBar.id, NumHovRowId, updatedBarRes);
+        updateBarRow(NumHovRowId, updatedBarRes);
       }
     });
   };
@@ -432,6 +430,7 @@ const Clip: React.FC<ClipProps> = ({
 
           const hoveredRowId = getRowUnderCursor(event as PointerEvent);
           console.log("hovered row id", hoveredRowId);
+          console.log("barindex bro", barIndex);
 
           setDelBarFromRow(bar);
           if (active) {
@@ -484,7 +483,11 @@ const Clip: React.FC<ClipProps> = ({
                     if (newX <= bar.left_position) {
                       console.log("newx, barlp", newX, bar.left_position);
                       updateBarLPAfterDrop(barId.get(), newX, hoveredRowId);
+                    } else if (newX >= bar.left_position + bar.width) {
+                      // here newX is lp which user had during hover, so taking exact lp
+                      updateBarLPAfterDrop(barId.get(), newX, hoveredRowId);
                     } else if (newX >= bar.left_position) {
+                      // this condition is when dragged bar is above the bar present in the hovered subcol
                       const newLp = bar.left_position + bar.width;
                       updateBarLPAfterDrop(barId.get(), newLp, hoveredRowId);
                     }
@@ -914,14 +917,7 @@ const Clip: React.FC<ClipProps> = ({
                 ) : null}
 
                 {bar.width >= 300 && (
-                  <div
-                    className={styles.clip_center}
-                    // draggable
-                    // onDragStart={(e) =>
-                    //   handleBarDragStart(bar?.id, e, item?.id)
-                    // }
-                    // onDragEnd={() => handleBarDragEnd()}
-                  >
+                  <div className={styles.clip_center}>
                     <div
                       className={`${styles.m_type_label} flex group-hover:hidden`}
                     >

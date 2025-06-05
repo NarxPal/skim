@@ -169,6 +169,31 @@ const Timeline: React.FC<TimelineProps> = ({
     []
   );
 
+  useEffect(() => {
+    const fetchRootColumn = async () => {
+      console.log("fetch root col start");
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${Number(prjId)}`
+        );
+
+        const columnData = response.data;
+        setColumns(columnData);
+        console.log("root col data", columnData);
+        setBarsData(columnData);
+      } catch (error) {
+        console.log(error);
+      }
+      setFetchBars(false);
+      console.log("RUNNING AFTER FETCH BARS");
+      setUpdateBarsData(false);
+      console.log("ALL BARS ", allBars);
+    };
+    if (prjId) {
+      fetchRootColumn();
+    }
+  }, [prjId, fetchBars, updateBarsData]);
+
   // create sub col for columns entity in db
   const createSubCol = async (
     parsedItem: MediaItem,
@@ -229,6 +254,8 @@ const Timeline: React.FC<TimelineProps> = ({
       }
     );
     console.log("create sub col bro:", response.data);
+    console.log("before SET FETCH BARS TRUE");
+    setFetchBars(true);
     return response;
   };
 
@@ -248,247 +275,12 @@ const Timeline: React.FC<TimelineProps> = ({
         containerWidth,
         totalDuration
       );
-      await createSubCol(parsedItem, containerWidth, totalDuration);
-      setFetchBars(true);
+      createSubCol(parsedItem, containerWidth, totalDuration);
     } catch (error) {
       console.error("Error in handling drop:", error);
     }
 
     // setBarDragging(false);
-  };
-
-  useEffect(() => {
-    const fetchRootColumn = async () => {
-      console.log("fetch root col start");
-      try {
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${Number(prjId)}`
-        );
-
-        const columnData = response.data;
-        setColumns(columnData);
-        console.log("root col data", columnData);
-        setBarsData(columnData);
-      } catch (error) {
-        console.log(error);
-      }
-      setFetchBars(false);
-      setUpdateBarsData(false);
-    };
-    if (prjId) {
-      fetchRootColumn();
-    }
-  }, [prjId, fetchBars, updateBarsData]);
-
-  const handleGap = async (
-    subCol: sub_column,
-    gapId: number,
-    gapWidth: number,
-    startOfGap: number
-  ) => {
-    try {
-      const gap = await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gaps/${gapId}`,
-        {
-          ...subCol.gaps,
-          width: gapWidth - 1,
-          start_gap: startOfGap,
-          end_gap: gapWidth - 1,
-        }
-      );
-      console.log("gap res", gap.data[0]);
-      const clipAfterResize = gap.data[0];
-      // setBarsData(clipAfterResize);
-      // setBarsDataChangeAfterZoom(clipAfterResize);
-      setGapData(clipAfterResize);
-    } catch (error) {
-      console.error("Error updating gap:", error);
-    }
-  };
-
-  const calculateGap = async (
-    subcol: sub_column,
-    bar: bar,
-    bars: bar[],
-    barIndex: number
-  ) => {
-    // calc for first bar clip in the subcol
-    if (bar.order === 0) {
-      const startOfGap = 0;
-      const gapWidth = bar.left_position; // lp of bar would be the end position of gap
-      console.log("gap w", gapWidth);
-      handleGap(subcol, bar.id, gapWidth, startOfGap);
-    }
-    // calc for bars clip placed next to first
-    else {
-      // start of  gap = w + lp of all the prev bars
-      // end of gap = lp of next bar
-      // width = end gap - start gap
-
-      const previousBars = bars.slice(0, barIndex);
-      const startOfGap = previousBars.reduce(
-        (totalWidth, prevBar) => totalWidth + prevBar.width,
-        previousBars[0]?.left_position || 0
-      );
-
-      const endOfGap = bar.left_position;
-      const gapWidth = endOfGap - startOfGap;
-      console.log("end of gap", endOfGap);
-      console.log("start of gap", startOfGap);
-      console.log("gapwidth", gapWidth);
-
-      // console.log("gap, start, end", gapWidth, startOfGap, endOfGap);
-    }
-  };
-
-  const updateBarAfterResize = async (
-    bar: bar,
-    newLeftPosition: number,
-    bars: bar[],
-    barIndex: number
-  ) => {
-    barsDataChangeAfterZoom?.sub_columns?.map(async (subcol) => {
-      const targetBar = subcol.bars?.find((b) => b.id === bar.id);
-      if (targetBar) {
-        axios.patch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/bars/${targetBar.id}`,
-          {
-            ...bar,
-            left_position: newLeftPosition,
-            width: bar.width,
-            start_time: bar.start_time,
-            end_time: bar.end_time, // chaning this makes start_time 0
-          }
-        );
-        await calculateGap(subcol, bar, bars, barIndex);
-      }
-      return subcol;
-    });
-  };
-
-  const resizeBar = (e: MouseEvent) => {
-    if (!isResizing.current || !resizeDirection.current) return;
-    const dx = e.clientX - startX.current; // the e.clientx is the current mouse position during the movement of the mouse and we are subtracting it with initial mouse (starting) position during mousedown
-    setBarsDataChangeAfterZoom((prevRootColumn: BarsProp | null) => {
-      if (!prevRootColumn) return null;
-      return {
-        ...prevRootColumn,
-        sub_columns: prevRootColumn.sub_columns?.map((subColumn) => {
-          return {
-            ...subColumn,
-            bars: subColumn?.bars?.map((bar, barIndex, bars) => {
-              if (bar.id === activeBarId.current) {
-                let newWidth = bar.width;
-                let newLeft = bar.left_position;
-
-                let startTime = 0; // to newly created media from 0
-                let endTime = 0; // value for end clip
-
-                // singleTickPxValue used in newWidth variable
-                const singleTickPxValue =
-                  mediaContainerWidth / totalMediaDuration; // equal px value for each marker, it changes based upon zoom level
-                const pixelValuePerStep = singleTickPxValue / markerInterval;
-
-                const maxWidth =
-                  (bar.duration / markerInterval) * singleTickPxValue;
-
-                // LEFT HANDLE:
-                if (resizeDirection.current === "left") {
-                  const minWidth = 125;
-
-                  const minLeft =
-                    bar.width === minWidth
-                      ? bar.left_position
-                      : bar.left_position + dx >= 0
-                      ? bar.left_position + dx
-                      : 0; // Prevent moving beyond left limit
-
-                  newLeft = minLeft;
-
-                  // Ensure the width doesn't grow when reaching the left gap constraint
-                  if (newLeft === 0) {
-                    newWidth = Math.max(bar.width - dx, minWidth);
-                    startTime = 0; // for first clip media start time duration falls to zero if newleft eq zero
-                  } else {
-                    newWidth = Math.min(
-                      Math.max(bar.width - dx, minWidth),
-                      maxWidth
-                    );
-                    // only calc startime when width is availbale, based upon duration
-                    if (bar.width !== maxWidth) {
-                      // startTime = bar.start_time + dx; //its px value but we want time in sec
-                      startTime = bar.left_position / pixelValuePerStep;
-                    }
-                  }
-
-                  // Prevent overlap with the previous bar
-                  if (barIndex > 0) {
-                    // todo: check barindex
-                    for (let i = 0; i < barIndex; i++) {
-                      // Only check for previous bars if it's not the first bar
-                      const prevBar = bars[barIndex - 1];
-                      const minPosition =
-                        prevBar.left_position + prevBar.width + 2;
-
-                      if (newLeft < minPosition) {
-                        newLeft = minPosition; // Prevent overlap with previous bar
-                        newWidth = bar.width - (bar.left_position - newLeft); // Adjust width accordingly
-                      }
-                    }
-                  } else {
-                    // For the first bar, set left limit and stop increasing width(showing effect where right handle increases) if the left limit is reached
-                    const minLeft = 0; // Prevent moving beyond left limit
-                    newLeft = Math.max(newLeft, minLeft); // Set minimum left position
-                    if (newLeft === minLeft) {
-                      newWidth = bar.width;
-                    } else {
-                      newWidth = Math.max(newWidth, minWidth); // Ensure minimum width
-                    }
-                  }
-
-                  if (newWidth === maxWidth) {
-                    // if width equals duration than don't grow the clip
-                    newLeft = bar.left_position; // fallback to last lp
-                  }
-                }
-
-                // RIGHT HANDLE :
-                else {
-                  newWidth = Math.min(bar.width + dx, maxWidth);
-                  if (bar.width !== maxWidth) {
-                    // only calc endtime when width is avilable based upon duration
-                    // endTime = bar.end_time - dx; // neg for pointer moving left for right handle
-                    endTime = bar.width / pixelValuePerStep;
-                    console.log("media clip end duration", endTime);
-                  }
-
-                  // Right handle: prevent overlap with next bar
-                  for (let i = barIndex + 1; i < bars.length; i++) {
-                    // +1 for working with next bar
-                    const nextBar = bars[i];
-                    const maxRightPosition = nextBar.left_position - 2;
-                    if (newWidth + bar.left_position > maxRightPosition) {
-                      newWidth = maxRightPosition - bar.left_position - 2;
-                    }
-                  }
-                }
-                console.log("bars BRUlli", bars);
-                updateBarAfterResize(bar, newLeft, bars, activeBarId.current);
-                return {
-                  ...bar,
-                  width: Math.max(newWidth, 125),
-                  left_position: newLeft,
-                  start_time: startTime,
-                  end_time: endTime,
-                };
-              }
-              return bar; // return if bar id !== resizing bar id
-            }),
-          };
-        }),
-      };
-    });
-    startX.current = e.clientX;
   };
 
   // remove draggedbar from it's subcol
@@ -682,6 +474,7 @@ const Timeline: React.FC<TimelineProps> = ({
   // ****** zoom in out ***********
   // it only changes the containerwidth
   const calcContainerWidth = async (parsedItem?: MediaItem) => {
+    console.log("barsdatachangeafter zoom state", barsDataChangeAfterZoom);
     console.log("barsdata[0]", barsData);
     const totalDuration =
       barsData?.sub_columns?.reduce((acc, subCol) => {
@@ -725,7 +518,7 @@ const Timeline: React.FC<TimelineProps> = ({
     if (zoomLevel !== 0) {
       console.log("zooom in", zoomLevel);
       setZoomLevel((prev) => Math.max(prev - 2, MAX_ZOOM_LEVEL));
-      setFetchBars(true); // it will fetch the barsData which will run the useEffect calcTicks in timelineruler file
+      // setFetchBars(true); // it will fetch the barsData which will run the useEffect calcTicks in timelineruler file
     }
   };
 
@@ -734,7 +527,7 @@ const Timeline: React.FC<TimelineProps> = ({
     if (zoomLevel >= 0 && zoomLevel < 10) {
       console.log("zooom out", zoomLevel);
       setZoomLevel((prev) => Math.min(prev + 2, MIN_ZOOM_LEVEL));
-      setFetchBars(true);
+      // setFetchBars(true);
     }
   };
 
@@ -769,6 +562,7 @@ const Timeline: React.FC<TimelineProps> = ({
       // }
       const { relativeX, targetIndex } = result;
       setBarIndex(targetIndex);
+      console.log("drag over TARGET BAR INDEX", targetIndex);
       const barsInSubCol: bar[] = await getBarsForSubColId(dragOverSubColId);
       const leftPositions: number[] = barsInSubCol?.map(
         (bar: bar) => bar.left_position
@@ -826,19 +620,6 @@ const Timeline: React.FC<TimelineProps> = ({
     }
   };
 
-  const handleBarDragStart = async (
-    draggedBarId: number,
-    e: React.DragEvent<HTMLDivElement>,
-    dragSubColId: number
-  ) => {
-    setBarDragging(true);
-    const BarId = JSON.stringify(draggedBarId);
-    const subColId = JSON.stringify(dragSubColId);
-    console.log("bro drabar id ", BarId);
-    e.dataTransfer.setData("draggedBarId", BarId); //here converting id(number) to string since setData require data in string
-    e.dataTransfer.setData("dragSubColId", subColId);
-  };
-
   const handleBarDrop = (
     e: React.DragEvent<HTMLDivElement>,
     dropSubColId: number
@@ -873,14 +654,6 @@ const Timeline: React.FC<TimelineProps> = ({
   //     // deleteTemporarySpace();
   //   }
   // };
-
-  const handleBarDragEnd = async () => {
-    setBarDragging(false);
-
-    // const barsInSubCol = await getBarsForSubColId(dragOverSubColId);
-    // console.log("barsinsubcol bro", barsInSubCol);
-    // resetBarPositions(dragOverSubColId);
-  };
 
   const handleDynamicDrop = (
     e: React.DragEvent<HTMLDivElement>,

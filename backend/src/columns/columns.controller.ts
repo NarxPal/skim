@@ -95,6 +95,7 @@ export class ColumnsController {
     return this.columnsService.deleteDraggedBar(SubColId, BarId);
   }
 
+  // used in updateBarRow function in frontend
   @Patch('sub-columns/:id')
   async addBarToSubCol(@Param('id') id: number, @Body() addBarData: any) {
     return this.columnsService.addBarToSubCol(Number(id), addBarData);
@@ -138,7 +139,7 @@ export class ColumnsController {
     return this.columnsService.delCmBar(cmSubColId, cmBarId);
   }
 
-  // for deleting the subcol, (similar path have been using in addBarToSubCol)
+  // for deleting the subcol, (similar path have been used in addBarToSubCol)
   @Delete('/sub-columns/:cmSubColId')
   async delSubCol(@Param('cmSubColId') cmSubColId: number) {
     return this.columnsService.delSubCol(cmSubColId);
