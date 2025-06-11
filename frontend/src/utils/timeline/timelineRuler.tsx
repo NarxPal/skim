@@ -24,7 +24,7 @@ interface TimelineRulerProps {
   videoRef: React.RefObject<HTMLVideoElement>;
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
   api: SpringRef<{
-    barID: number;
+    // barID: number;
     subColId: number;
     clipTop: number;
     clipLP: number;

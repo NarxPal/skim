@@ -18,7 +18,7 @@ interface ContextMenuState {
 }
 
 type SpringType = {
-  barID: SpringValue<number>;
+  // barID: SpringValue<number>;
   subColId: SpringValue<number>;
   clipTop: SpringValue<number>;
   clipLP: SpringValue<number>;
@@ -50,7 +50,7 @@ interface ClipProps {
   prjId: string;
   zoomSprings: SpringType[];
   zoomApi: SpringRef<{
-    barID: number;
+    // barID: number;
     subColId: number;
     clipTop: number;
     clipLP: number;
@@ -59,6 +59,8 @@ interface ClipProps {
   }>;
   zoomAllBars: bar[];
   totalDuration: number;
+  setBarAfterShift: React.Dispatch<React.SetStateAction<boolean>>;
+  barIdsRef: React.MutableRefObject<number[]>;
 }
 const Clip: React.FC<ClipProps> = ({
   item,
@@ -84,6 +86,8 @@ const Clip: React.FC<ClipProps> = ({
   zoomApi,
   zoomAllBars,
   totalDuration,
+  setBarAfterShift,
+  barIdsRef,
 }) => {
   //state hooks
   const [options, setOptions] = useState<
@@ -157,7 +161,7 @@ const Clip: React.FC<ClipProps> = ({
       "ZOOM Springs array:",
       zoomSprings.map((s, i) => ({
         index: i,
-        barID: s.barID?.get(),
+        // barID: s.barID?.get(),
         subColId: s.subColId?.get(),
         clipLP: s.clipLP.get(),
         clipWidth: s.clipWidth.get(),
@@ -253,32 +257,32 @@ const Clip: React.FC<ClipProps> = ({
           : bar.start_time + startTrimSec;
       const startTime = resizeHandle === "left" ? startTimeVal : bar.start_time;
 
-      console.log(
-        "predicted Start TIME, predicted END TIME",
-        predictedStartTime,
-        predictedEndTime
-      );
+      // console.log(
+      //   "predicted Start TIME, predicted END TIME",
+      //   predictedStartTime,
+      //   predictedEndTime
+      // );
 
-      console.log("trim from left px", trimFromLeftPx);
-      console.log(
-        "bar.start time, starttrim sec",
-        bar.start_time,
-        startTrimSec
-      );
+      // console.log("trim from left px", trimFromLeftPx);
+      // console.log(
+      //   "bar.start time, starttrim sec",
+      //   bar.start_time,
+      //   startTrimSec
+      // );
 
       const endTimeTrimValue =
         resizeHandle === "right"
           ? visibleDuration - (newWidth / singleTickPxValue) * markerInterval
           : 0; // no changes should happen to end_time if using left handle
 
-      console.log(
-        "bar.duration, new width, singletickpx val, marker interval",
-        bar.duration,
-        newWidth,
-        singleTickPxValue,
-        markerInterval
-      );
-      console.log("endtime trim val", endTimeTrimValue);
+      // console.log(
+      //   "bar.duration, new width, singletickpx val, marker interval",
+      //   bar.duration,
+      //   newWidth,
+      //   singleTickPxValue,
+      //   markerInterval
+      // );
+      // console.log("endtime trim val", endTimeTrimValue);
 
       const endTimeVal =
         predictedEndTime && predictedEndTime > bar.duration
@@ -319,19 +323,89 @@ const Clip: React.FC<ClipProps> = ({
     });
   };
 
-  // it changes the dragged bar row to where it has been dropped
+  const shiftBarsAfterDrop = async (
+    data: BarsProp,
+    droppedBarId: number | undefined,
+    hoveredRowId?: number
+  ) => {
+    try {
+      await Promise.all(
+        data.sub_columns?.map(async (subcol) => {
+          // const droppedBar = subcol.bars?.find((b) => b.id === droppedBarId); // fetching all bars except dropped one
+
+          const clonedSubCol = structuredClone(subcol);
+          const droppedBar = clonedSubCol.bars?.find(
+            (b) => b.id === droppedBarId
+          );
+
+          if (!droppedBar) return;
+          console.log("dropped bar checko", droppedBar);
+          const barsPresentAfterDroppedBar = subcol.bars
+            .filter((bar) => bar.left_position > droppedBar.left_position)
+            .sort((a, b) => a.left_position - b.left_position);
+
+          const barsPresentBeforeDroppedBar = subcol.bars.filter(
+            (bar) => bar.left_position < droppedBar.left_position
+          );
+
+          if (!barsPresentAfterDroppedBar) return;
+
+          for (let i = 0; i < barsPresentAfterDroppedBar.length; i++) {
+            const curr = barsPresentAfterDroppedBar[i];
+            const minLeft =
+              i === 0
+                ? droppedBar.left_position + droppedBar.width
+                : barsPresentAfterDroppedBar[i - 1].left_position +
+                  barsPresentAfterDroppedBar[i - 1].width;
+
+            if (curr.left_position < minLeft) {
+              curr.left_position = minLeft; // shift to right of previous bar
+            }
+          }
+
+          const updatedBars = [
+            ...barsPresentBeforeDroppedBar.map((bar) => ({ ...bar })),
+            { ...droppedBar },
+            ...barsPresentAfterDroppedBar.map((bar) => ({ ...bar })),
+          ];
+
+          console.log("updated bars", updatedBars);
+          console.log("data", data);
+          const updatedData = await axios.patch(
+            // sub-columns/:id - patch in backend
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/updateBar/${hoveredRowId}`,
+            {
+              addBarData: { ...updatedBars },
+            }
+          );
+          console.log("updated data.data", updatedData.data[0]);
+          const getUpdatedData = updatedData.data[0];
+          setBarsDataChangeAfterZoom(getUpdatedData);
+          setBarsData(getUpdatedData);
+          setBarAfterShift(true);
+        })
+      );
+    } catch (error) {
+      console.error("Error in shiftBarsAfterDrop:", error);
+    }
+  };
+
+  // it adds dragged bar to the row where it has been dropped
   const updateBarRow = async (rowId: number, updatedBarRes: bar) => {
     try {
       console.log("getting UPDATED BAR RES", updatedBarRes);
-      await axios.patch(
+      const afterAddingBar = await axios.patch(
         // sub-columns/:id - patch in backend
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${rowId}`,
         {
           addBarData: { ...updatedBarRes }, // add bar to dropped subcol
         }
       );
-      delCmBarId(delBarFromRow?.sub_col_id, delBarFromRow?.id); // delete dragged bar from its row
-    } catch (error) {}
+      console.log("after adding bar", afterAddingBar.data);
+      delCmBarId(delBarFromRow?.sub_col_id, delBarFromRow?.id, rowId); // delete dragged bar from its row
+    } catch (error) {
+      console.error("Error in updateBarRow:", error);
+    }
   };
 
   // updatebarlpafterdrop update lp, subcolid of dragged bar
@@ -358,10 +432,9 @@ const Clip: React.FC<ClipProps> = ({
         const updatedBarRes = filteredData[0].sub_columns
           .flatMap((subcol: any) => (subcol.bars ? subcol.bars : []))
           .find((bar: bar) => bar.id === targetBar.id);
-
         console.log("updatebar RES BRO", updatedBarRes);
         console.log("filtered data CHECK HERE AB", filteredData);
-        setBarsDataChangeAfterZoom(filteredData);
+        // setBarsDataChangeAfterZoom(filteredData);
         updateBarRow(NumHovRowId, updatedBarRes);
       }
     });
@@ -400,7 +473,6 @@ const Clip: React.FC<ClipProps> = ({
       if (event.target && (event.target as HTMLElement).closest(".handle"))
         // if the target element or its ancestors contain handle class than stop
         return;
-
       let isOverRow = false;
       let clientY = 0;
 
@@ -411,8 +483,7 @@ const Clip: React.FC<ClipProps> = ({
       }
       barsDataChangeAfterZoom?.sub_columns?.forEach((subColumn) => {
         subColumn?.bars?.forEach((bar, barIndex) => {
-          if (bar.id !== barId.get()) return {};
-
+          if (bar.id !== barId) return {};
           // for clip movement within the subcol(row)
           const minX = 0;
           const maxX = mediaContainerWidth - bar.width; // prevent going beyond right edge
@@ -438,25 +509,34 @@ const Clip: React.FC<ClipProps> = ({
             fetchClipsOnHover(hoveredRowId);
           }
 
-          zoomApi.start((i) => {
-            if (allBars[i].id !== barId.get()) return {};
-            return {
-              clipTop: newY,
-              clipLP: threshold_condition
-                ? down
-                  ? newX
-                  : bar.left_position
-                : newX,
-              zIndex: down ? 49 : 1,
-              immediate: down,
-            };
-          });
+          let resolvedX = newX;
+
+          const barIndexMap = new Map(
+            barIdsRef.current.map((id, idx) => [id, idx])
+          );
+          const getBarIndex = barIndexMap.get(barId);
+
+          if (getBarIndex != undefined) {
+            zoomApi.start((i) => {
+              if (i !== getBarIndex) return {};
+              return {
+                clipTop: newY,
+                clipLP: threshold_condition
+                  ? down
+                    ? newX
+                    : bar.left_position
+                  : newX,
+                zIndex: down ? 49 : 1,
+                immediate: down,
+              };
+            });
+          }
 
           console.log("checkout bro ", newX, bar.left_position);
 
           if (last) {
             zoomApi.start((i) => {
-              if (allBars[i].id !== barId.get()) return {};
+              if (allBars[i].id !== barId) return {};
               return { zIndex: 1, clipTop: 0 };
             });
             // if (targetRow && targetRow.id !== currentRowId) {
@@ -472,29 +552,89 @@ const Clip: React.FC<ClipProps> = ({
                 bar.width,
                 newX
               );
+              console.log("newx in < vertical", newX);
             } else if (Math.abs(dy) > verticalThreshold) {
               // for dragged bar bw the subcol
-              // updateBarAfterDragging(bar, newX); // todo: rather than updating, add new row below or above and add the newlp to the dragged bar and place it in new row
-
               const clipsInRow = fetchClipsOnHover(hoveredRowId);
+              console.log("clips in row ", clipsInRow);
               clipsInRow?.map((clips) => {
                 if (hoveredRowId) {
+                  const firstBarLp = clips.bars[0]?.left_position;
+                  const lastBar = clips.bars?.length - 1;
+                  const lastBarLp = clips.bars[lastBar]?.left_position;
+                  const lastBarWidth = clips.bars[lastBar]?.width;
+
                   clips.bars.forEach((bar) => {
-                    if (newX <= bar.left_position) {
-                      console.log("newx, barlp", newX, bar.left_position);
-                      updateBarLPAfterDrop(barId.get(), newX, hoveredRowId);
-                    } else if (newX >= bar.left_position + bar.width) {
-                      // here newX is lp which user had during hover, so taking exact lp
-                      updateBarLPAfterDrop(barId.get(), newX, hoveredRowId);
-                    } else if (newX >= bar.left_position) {
+                    const start = bar.left_position;
+                    const end = bar.left_position + bar.width;
+
+                    if (newX <= firstBarLp) {
+                      console.log("newx, barlp 1", newX, bar.left_position);
+                      resolvedX = newX;
+                      updateBarLPAfterDrop(barId, resolvedX, hoveredRowId);
+                      console.log("before first clips ran");
+                    }
+
+                    for (let i = 0; i < clips.bars.length - 1; i++) {
+                      const current = clips.bars[i];
+                      const next = clips.bars[i + 1];
+
+                      const currentEnd = current.left_position + current.width;
+                      const nextStart = next.left_position;
+
+                      if (newX > currentEnd && newX < nextStart) {
+                        // newX fits between current and next clip
+                        resolvedX = newX;
+                        updateBarLPAfterDrop(barId, resolvedX, hoveredRowId);
+                        console.log(
+                          "bw clips ran, currentend, nextstart, newx",
+                          currentEnd,
+                          nextStart,
+                          newX
+                        );
+                        break;
+                      }
+                    }
+
+                    if (newX >= start && newX <= end) {
                       // this condition is when dragged bar is above the bar present in the hovered subcol
-                      const newLp = bar.left_position + bar.width;
-                      updateBarLPAfterDrop(barId.get(), newLp, hoveredRowId);
+                      resolvedX = bar.left_position + bar.width;
+                      updateBarLPAfterDrop(barId, resolvedX, hoveredRowId);
+                      // console.log("newx, barlp 3", newX, bar.left_position);
+                      console.log("start, end , newx", start, end, newX);
+                      console.log("on hov clips ran");
+                    }
+                    if (newX >= lastBarLp + lastBarWidth) {
+                      resolvedX = newX;
+                      updateBarLPAfterDrop(barId, resolvedX, hoveredRowId);
+                      console.log(
+                        "after last clips ran, newx, lastbarlp + lastbarwidth",
+                        newX,
+                        lastBarLp + lastBarWidth
+                      );
                     }
                   });
+
+                  // when row is empty
+                  updateBarLPAfterDrop(barId, resolvedX, hoveredRowId);
                 }
               });
             }
+
+            zoomApi.start((i) => {
+              if (i !== getBarIndex) return {};
+              return {
+                clipLP: hoveredRowId
+                  ? resolvedX
+                  : threshold_condition
+                  ? down
+                    ? resolvedX
+                    : bar.left_position
+                  : resolvedX,
+                zIndex: 1,
+                immediate: false,
+              };
+            });
           }
         });
       });
@@ -507,7 +647,7 @@ const Clip: React.FC<ClipProps> = ({
       let newX: number;
       barsDataChangeAfterZoom?.sub_columns?.forEach((subColumn) => {
         subColumn?.bars?.forEach((bar, barIndex, bars) => {
-          if (bar.id !== barId.get()) return;
+          if (bar.id !== barId) return;
           const duration = bar.duration || 0; // zero probly for img media
           const singleTickPxValue = mediaContainerWidth / totalDuration; // equal px value for each marker
           const width = Math.round(
@@ -636,7 +776,7 @@ const Clip: React.FC<ClipProps> = ({
           }
 
           zoomApi.start((i) => {
-            if (allBars[i].id !== barId.get()) return {};
+            if (allBars[i].id !== barId) return {};
             return {
               clipLP: newX,
               clipWidth: newWidth,
@@ -673,7 +813,7 @@ const Clip: React.FC<ClipProps> = ({
             (trimmedPixels / singleTickPxValue) * markerInterval;
           const predictedEndTime = bar.end_time + trimmedSeconds;
 
-          if (bar.id !== barId.get()) return {};
+          if (bar.id !== barId) return {};
           const duration = bar.duration || 0; // zero probly for img
           const visibleDuration = duration - bar.start_time;
           const width = (visibleDuration / markerInterval) * singleTickPxValue;
@@ -730,7 +870,7 @@ const Clip: React.FC<ClipProps> = ({
           }
 
           zoomApi.start((i) => {
-            if (allBars[i].id !== barId.get()) return {};
+            if (allBars[i].id !== barId) return {};
             return { clipWidth: newWidth, immediate: true };
           });
           if (last) {
@@ -766,9 +906,11 @@ const Clip: React.FC<ClipProps> = ({
     }
   };
 
+  // it deletes the bar from the dragged subcol
   const delCmBarId = async (
     cmSubColId: number | undefined,
-    cmBarId: number | undefined
+    cmBarId: number | undefined,
+    hoveredRowId?: number
   ) => {
     console.log("cmsubcolid, bar id,", cmSubColId, cmBarId);
     try {
@@ -776,8 +918,14 @@ const Clip: React.FC<ClipProps> = ({
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${cmSubColId}/bars/${cmBarId}`
       );
 
-      console.log("cm del bar res", delBar);
-      setFetchBars(true);
+      const filteredData = delBar.data.filter(
+        (bar: BarsProp) => bar.project_id === Number(prjId)
+      );
+      const updatedRow = filteredData[0];
+      console.log("updated row bro after delcmbarid", updatedRow);
+      // setBarsDataChangeAfterZoom(updatedRow);
+      // setFetchBars(true);
+      shiftBarsAfterDrop(updatedRow, cmBarId, hoveredRowId);
     } catch (error) {
       console.log("error deleting bar", error);
     }
@@ -821,16 +969,20 @@ const Clip: React.FC<ClipProps> = ({
     <div className={styles.clip_sub_col_div} id={barIndex.toString()}>
       {item.bars.map((bar: bar, index: number) => {
         // const spring = springs.find((s) => s.barID?.get() === bar.id);
-        const zoomSpring = zoomSprings.find((s) => s.barID?.get() === bar.id);
-        const clipWidthValue = zoomSpring?.clipWidth.get();
+        // const zoomSpring = zoomSprings.find((s) => s.barID?.get() === bar.id);
+        // const clipWidthValue = zoomSpring?.clipWidth.get();
+
+        const barIndex = barIdsRef.current.findIndex(
+          (id: any) => id === bar.id
+        );
+        const zoomSpring = zoomSprings[barIndex];
+
         return (
           <animated.div
-            key={index}
-            {...bindDrag(zoomSpring?.barID)}
+            key={bar.id}
+            {...bindDrag(bar.id)}
             className={styles.item_box_div}
             style={{
-              // width: width, // width according to stored in db and zoom level
-              // left: left_position,
               width: zoomSpring?.clipWidth.to((w) => `${w}px`),
               transform: zoomSpring?.clipLP.to((xVal) => `translate(${xVal}px`),
               top: zoomSpring?.clipTop.to((yVal) => `${yVal}px`),
@@ -881,7 +1033,7 @@ const Clip: React.FC<ClipProps> = ({
               <div className={styles.bar_content}>
                 {barsData?.sub_columns?.length ? (
                   <div
-                    {...bindLeftResize(zoomSpring?.barID, bar.sub_col_id)}
+                    {...bindLeftResize(bar.id, bar.sub_col_id)}
                     className={`${
                       bar.width <= 125
                         ? styles.sm_bar_arrow_div
@@ -945,7 +1097,7 @@ const Clip: React.FC<ClipProps> = ({
 
                 {barsData?.sub_columns?.length ? ( // length check if there are bars in sub_columns
                   <div
-                    {...bindRightResize(zoomSpring?.barID, bar.sub_col_id)}
+                    {...bindRightResize(bar.id, bar.sub_col_id)}
                     className={`${
                       bar.width <= 125
                         ? styles.sm_bar_arrow_div

@@ -31,7 +31,7 @@ type Bar = {
   end_time: number;
   duration: number;
   clip_duration: number;
-  // later: not having here column_id since don't know how we will pass it in frontend from handlemediadrop to createsubcol
+  // not having here column_id
 };
 
 export type Gap = {
@@ -102,4 +102,6 @@ export class BarData {
   url: string;
   start_time: number;
   end_time: number;
+  duration: number;
+  clip_duration: number;
 }

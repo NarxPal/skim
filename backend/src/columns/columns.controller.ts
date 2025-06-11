@@ -31,11 +31,19 @@ export class ColumnsController {
     return this.columnsService.findOneByProjectId(project_id);
   }
 
-  @Get('sub-columns/:dragOverSubColId')
-  async subColIdBars(
-    @Param('dragOverSubColId') dragOverSubColId: number,
-  ): Promise<OnlySubColDto> {
-    return this.columnsService.subColIdBars(Number(dragOverSubColId));
+  // @Get('sub-columns/:dragOverSubColId')
+  // async subColIdBars(
+  //   @Param('dragOverSubColId') dragOverSubColId: number,
+  // ): Promise<OnlySubColDto> {
+  //   console.log('this function is not used anywhere', dragOverSubColId);
+  //   return this.columnsService.subColIdBars(Number(dragOverSubColId));
+  // }
+
+  // get bars from droppped row
+  @Get('sub-columns/row/:rowId')
+  async dropBarRow(@Param('rowId') rowId: string): Promise<BarData[]> {
+    console.log('row id ', rowId);
+    return this.columnsService.dropBarRow(Number(rowId));
   }
 
   // filter to get dragged bar id
@@ -87,18 +95,16 @@ export class ColumnsController {
     return this.columnsService.updateGap(Number(id), updateGapData);
   }
 
-  @Patch('sub-columns/:SubColId/bars/:BarId')
-  async delBarSubCol(
-    @Param('SubColId') SubColId: number,
-    @Param('BarId') BarId: number,
-  ) {
-    return this.columnsService.deleteDraggedBar(SubColId, BarId);
-  }
-
   // used in updateBarRow function in frontend
   @Patch('sub-columns/:id')
   async addBarToSubCol(@Param('id') id: number, @Body() addBarData: any) {
     return this.columnsService.addBarToSubCol(Number(id), addBarData);
+  }
+
+  @Patch('sub-columns/updateBar/:id')
+  async updateBarToSubCol(@Param('id') id: number, @Body() barData: any) {
+    console.log('updatebar RAN');
+    return this.columnsService.updateBarToSubCol(Number(id), barData);
   }
 
   // for updating lp of bars present after dropped bar

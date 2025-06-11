@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import styles from "@/styles/timeline.module.css";
 import Image from "next/image";
 import axios from "axios";
@@ -80,12 +80,6 @@ const Timeline: React.FC<TimelineProps> = ({
   const [gapData, setGapData] = useState<BarsProp | null>(null);
   const [barDragging, setBarDragging] = useState<boolean>(false);
   const [fetchBars, setFetchBars] = useState<boolean>(false);
-  const [prevBarPosition, setPreviewBarPosition] = useState<number | null>(
-    null
-  );
-  const [draggedOverSubColId, setDraggedOverSubColId] = useState<number | null>(
-    null
-  );
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
     x: number;
@@ -97,23 +91,19 @@ const Timeline: React.FC<TimelineProps> = ({
     y: 0,
     id: null,
   });
-  const [barIndex, setBarIndex] = useState<number>();
-  const [droppedBarNewLeft, setDroppedBarNewLeft] = useState<number | null>();
-  const [LPBasedBars, setLPBasedBars] = useState<bar[]>([]);
   const [zoomLevel, setZoomLevel] = useState<number>(0);
   const [scrollPosition, setScrollPosition] = useState<number>(0);
   const [hoveringOverRow, setHoveringOverRow] = useState<boolean>(false);
   const [updateBarsData, setUpdateBarsData] = useState<boolean>(false);
+  const [barAfterShift, setBarAfterShift] = useState<boolean>(false);
 
   // use ref hooks
-  const isResizing = useRef(false);
-  const resizeDirection = useRef<"left" | "right" | null>(null);
-  const startX = useRef(0);
-  const activeBarId = useRef<number | null>(null);
   const mediaParentRef = useRef<HTMLDivElement | null>(null);
   const phLeftRef = useRef<HTMLDivElement>(null);
   const addSubColRef = useRef<HTMLDivElement>(null);
   const rowsRef = useRef<(HTMLDivElement | null)[]>([]);
+
+  const barIdsRef = useRef<number[]>([]);
 
   // redux hooks
   const markerInterval = useSelector(
@@ -153,11 +143,20 @@ const Timeline: React.FC<TimelineProps> = ({
   }, []);
 
   // use gesture and spring
-  const allBars = barsData?.sub_columns?.flatMap((subCol) => subCol.bars) || [];
+  const allBars = useMemo(() => {
+    // using useMemo since allBars becomes stale and doesn't update after barsData changes
+    return (
+      barsData?.sub_columns?.flatMap((subCol) =>
+        [...(subCol.bars || [])].sort((a, b) => a.order - b.order)
+      ) || []
+    );
+  }, [barsData]);
+
+  barIdsRef.current = allBars.map((b: any) => b.id);
   const [springs, api] = useSprings(
     allBars.length || 0,
     (i) => ({
-      barID: allBars[i].id,
+      // barID: allBars[i].id,
       subColId: allBars[i].sub_col_id,
       clipTop: 0,
       clipLP: allBars[i].left_position || 0, // initial lp
@@ -166,12 +165,34 @@ const Timeline: React.FC<TimelineProps> = ({
       config: { tension: 300, friction: 30 }, // smooth animation
       immediate: true,
     }),
-    []
+    [barsData]
   );
 
   useEffect(() => {
+    if (barAfterShift && barsDataChangeAfterZoom) {
+      const newBars =
+        barsDataChangeAfterZoom.sub_columns?.flatMap((sc) => sc.bars) || [];
+
+      newBars.forEach((bar) => {
+        const index = barIdsRef.current.findIndex((id) => id === bar.id);
+        if (index !== -1) {
+          api.start((i) => {
+            if (i !== index) return {};
+            return {
+              clipLP: bar.left_position,
+              clipWidth: bar.width,
+              immediate: true,
+            };
+          });
+        }
+      });
+
+      setBarAfterShift(false);
+    }
+  }, [barAfterShift, barsDataChangeAfterZoom, api]);
+
+  useEffect(() => {
     const fetchRootColumn = async () => {
-      console.log("fetch root col start");
       try {
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${Number(prjId)}`
@@ -181,18 +202,19 @@ const Timeline: React.FC<TimelineProps> = ({
         setColumns(columnData);
         console.log("root col data", columnData);
         setBarsData(columnData);
+        setBarsDataChangeAfterZoom(columnData); // added here since required after drag,drop for bind functions in clips
       } catch (error) {
         console.log(error);
       }
       setFetchBars(false);
-      console.log("RUNNING AFTER FETCH BARS");
+      setBarAfterShift(false);
       setUpdateBarsData(false);
       console.log("ALL BARS ", allBars);
     };
     if (prjId) {
       fetchRootColumn();
     }
-  }, [prjId, fetchBars, updateBarsData]);
+  }, [prjId, fetchBars, updateBarsData, barAfterShift]);
 
   // create sub col for columns entity in db
   const createSubCol = async (
@@ -254,7 +276,6 @@ const Timeline: React.FC<TimelineProps> = ({
       }
     );
     console.log("create sub col bro:", response.data);
-    console.log("before SET FETCH BARS TRUE");
     setFetchBars(true);
     return response;
   };
@@ -278,107 +299,6 @@ const Timeline: React.FC<TimelineProps> = ({
       createSubCol(parsedItem, containerWidth, totalDuration);
     } catch (error) {
       console.error("Error in handling drop:", error);
-    }
-
-    // setBarDragging(false);
-  };
-
-  // remove draggedbar from it's subcol
-  const delBarSubCol = async (draggedBarId: number, dragSubColId: number) => {
-    try {
-      const delBar = await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${dragSubColId}/bars/${draggedBarId}`
-      );
-      console.log("del bar res", delBar);
-      setFetchBars(true);
-    } catch (error) {
-      console.log("error deleting bar", error);
-    }
-  };
-
-  // add dragged bar to subcol
-  const updateBarSubCol = async (
-    draggedBarId: number,
-    dropSubColId: number,
-    e: React.DragEvent<HTMLDivElement>,
-    dragSubColId: number
-  ) => {
-    try {
-      const getBarData = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${dragSubColId}/bars/${draggedBarId}`
-      );
-      // console.log("barindex, droppedbarnewlp bro", barIndex, droppedBarNewLeft);
-      // Update the dragged bar order using targetIndex here and than add it to the dropsubcolid
-      const addBarData = getBarData.data;
-
-      // if drag subcol id equal the drop subcolid than don't add the bar, we will use duplicate feature to add the same bar in the same sub_column
-      if (Number(dragSubColId) !== dropSubColId) {
-        const addBarResponse = await axios.patch(
-          // sub-columns/:id - patch in backend
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${dropSubColId}`,
-          {
-            addBarData: { ...addBarData, left_position: droppedBarNewLeft }, // Also updating the left position while adding bar to subcol
-          }
-        );
-        setDroppedBarNewLeft(null);
-        console.log("drag bar added", addBarResponse);
-      }
-
-      // don't delete the subcol if drag and drop sub col id for bar is same
-      if (Number(dragSubColId) !== dropSubColId) {
-        delBarSubCol(Number(draggedBarId), Number(dragSubColId));
-      }
-    } catch (error) {
-      console.log("updatebarSubcol error", error);
-    }
-  };
-
-  // updatebarlp updates the left position of the existing bars in sub_col during bar drop from subcol
-  const updateBarLP = async (
-    draggedBarId: number,
-    dropSubColId: number,
-    e: React.DragEvent<HTMLDivElement>
-  ) => {
-    const dragSubColId = e.dataTransfer.getData("dragSubColId");
-    // here we are saving the left position present in filteredbars into db
-    try {
-      const getDraggedBarData = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${dragSubColId}/bars/${draggedBarId}`
-      );
-
-      const dragBarWidth = getDraggedBarData.data.width;
-      console.log("draggedbardata bro", getDraggedBarData.data);
-
-      const BAR_GAP = 10;
-      const updateLPBars = LPBasedBars.map((bar, index) => {
-        const newLeftPosition =
-          index === 0
-            ? // For the first bar, add the initial offset, which is newlp + width
-              droppedBarNewLeft + dragBarWidth + BAR_GAP
-            : // For subsequent bars, add the previous bar's left_position + width
-              LPBasedBars[index - 1].left_position +
-              LPBasedBars[index - 1].width +
-              BAR_GAP;
-
-        return { ...bar, left_position: newLeftPosition };
-      });
-      console.log("updtaelbbar bro", updateLPBars);
-      if (Number(dragSubColId) !== dropSubColId) {
-        const updateBarLPRes = await axios.patch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/updateBarLP/${dropSubColId}`,
-          updateLPBars
-        );
-
-        console.log("UpdateBarLP response:", updateBarLPRes.data);
-        updateBarSubCol(
-          Number(draggedBarId),
-          dropSubColId,
-          e,
-          Number(dragSubColId)
-        );
-      }
-    } catch (error) {
-      console.error("Error updating bar left positions:", error);
     }
   };
 
@@ -412,43 +332,6 @@ const Timeline: React.FC<TimelineProps> = ({
     } catch (error) {
       console.log("error creating empty subcol", error);
     }
-  };
-
-  const calcHoverPosition = async (
-    e: React.DragEvent<HTMLDivElement>,
-    dragOverSubColId: number
-  ): Promise<{ relativeX: number; targetIndex: number } | null> => {
-    const subColElement = document.querySelector(
-      `#subcol-${dragOverSubColId}`
-    ) as HTMLElement;
-
-    if (!subColElement) {
-      console.error("Sub-column element not found");
-      return null;
-    }
-
-    const relativeX = Math.max(
-      0,
-      e.clientX - subColElement.getBoundingClientRect().left
-    ); // with relativeX is used to know if the dragged bar should occur before or after the existing bar based upon left position
-
-    const barsInSubCol = await getBarsForSubColId(dragOverSubColId);
-    let targetIndex = barsInSubCol?.length; // Default targetIndex would be after the last bar
-    // console.log("barsubcol len", barsInSubCol);
-    if (barsInSubCol && barsInSubCol.length > 0) {
-      if (targetIndex !== undefined) {
-        for (let i = 0; i < barsInSubCol.length; i++) {
-          const bar = barsInSubCol[i];
-          if (relativeX < bar.left_position) {
-            // Calculation is always before the bar(before the left handle) since we are calculating everything from left
-            targetIndex = i;
-            break;
-          }
-        }
-      }
-    }
-    // math round for relativeX since db doesn't accept integer with decimal
-    return { relativeX: Math.round(relativeX), targetIndex };
   };
 
   // const createTemporarySpace = async (
@@ -543,95 +426,6 @@ const Timeline: React.FC<TimelineProps> = ({
     // setBarDragging(false);
   };
 
-  const handleBarDragOver = async (
-    e: React.DragEvent<HTMLDivElement>,
-    dragOverSubColId: number
-  ) => {
-    // Allow the element to be dropped by preventing the default behavior
-    e.preventDefault();
-    const result = await calcHoverPosition(e, dragOverSubColId);
-
-    // const draggedBarId = e.dataTransfer.getData("draggedBarId");
-    // console.log("draggedbar id bro", draggedBarId);
-    if (result) {
-      // const { targetIndex, leftPosition } = result;
-      // if (leftPosition && targetIndex !== null) {
-      //   setPreviewBarPosition(leftPosition);
-      //   const barsInSubCol = await getBarsForSubColId(dragOverSubColId);
-      //   createTemporarySpace(barsInSubCol, targetIndex, 50);
-      // }
-      const { relativeX, targetIndex } = result;
-      setBarIndex(targetIndex);
-      console.log("drag over TARGET BAR INDEX", targetIndex);
-      const barsInSubCol: bar[] = await getBarsForSubColId(dragOverSubColId);
-      const leftPositions: number[] = barsInSubCol?.map(
-        (bar: bar) => bar.left_position
-      );
-
-      let newLeftPosition: number | undefined = undefined;
-
-      if (barsInSubCol === undefined || barsInSubCol?.length === undefined) {
-        setDroppedBarNewLeft(relativeX);
-      } else {
-        for (let i = 0; i < leftPositions?.length; i++) {
-          if (
-            barsInSubCol.length === 1 &&
-            relativeX > barsInSubCol[0].left_position
-          ) {
-            // taking lp + width of the single bar present in subcol as newlp
-            newLeftPosition =
-              barsInSubCol[0].left_position + barsInSubCol[0].width + 10; //10 px for gap
-            setDroppedBarNewLeft(newLeftPosition);
-            break;
-          } else if (
-            barsInSubCol.length === 1 &&
-            relativeX < barsInSubCol[0].left_position
-          ) {
-            // when hovering left side of the single bar this elif is used
-            newLeftPosition = relativeX;
-            setDroppedBarNewLeft(newLeftPosition);
-            break;
-          }
-          // relativex is used to find left position for the dropped bar
-          else if (relativeX < leftPositions[i]) {
-            newLeftPosition = leftPositions[i]; // taking the lp of bar using index ,where condition meet
-            setDroppedBarNewLeft(newLeftPosition);
-            break;
-          }
-        }
-      }
-
-      // shift all bars with left_position >= newLeftPosition, until this the dragged bar should not be added into the subcol otherwise it's lp will also be changed (hence we are doing updatebarsubcol after updateBarLP)
-      if (newLeftPosition !== undefined) {
-        const filteredBars = barsInSubCol
-          .filter((bar) => bar.left_position >= newLeftPosition)
-          .map((bar) => ({
-            ...bar,
-            // dragged bar left p. + width, should be added to each bar present in filtered bars,done in updateBarLP
-          }));
-
-        // console.log(">= filter bars after lp addition", filteredBars);
-        setLPBasedBars(filteredBars);
-      }
-
-      setPreviewBarPosition(relativeX);
-    } else {
-      console.error("Hover position could not be calculated");
-    }
-  };
-
-  const handleBarDrop = (
-    e: React.DragEvent<HTMLDivElement>,
-    dropSubColId: number
-  ) => {
-    const draggedBarId = e.dataTransfer.getData("draggedBarId"); // it is index value since we are passing index of the draggedbar in handleBarDragStart
-
-    updateBarLP(Number(draggedBarId), dropSubColId, e); // this will update all the existing bars lp in subcol which are >= newLeftPosition
-
-    setBarDragging(false);
-    setDraggedOverSubColId(null);
-  };
-
   // const resetBarPositions = async (
   //   barsInSubCol: bar[],
   //   dragOverSubColId: number,
@@ -660,7 +454,6 @@ const Timeline: React.FC<TimelineProps> = ({
     dropSubColId: number
   ) => {
     if (barDragging) {
-      handleBarDrop(e, dropSubColId);
       // resetBarPositions(dropSubColId)
     } else {
       handleMediaDrop(e);
@@ -672,8 +465,6 @@ const Timeline: React.FC<TimelineProps> = ({
     dragOverSubColId: number
   ) => {
     if (barDragging) {
-      handleBarDragOver(e, dragOverSubColId);
-      setDraggedOverSubColId(dragOverSubColId);
     } else {
       handleDragOver(e);
     }
@@ -841,16 +632,6 @@ const Timeline: React.FC<TimelineProps> = ({
                       onDragOver={(e) => handleDynamicDragOver(e, item?.id)}
                       onDrop={(e) => handleDynamicDrop(e, item?.id)}
                     >
-                      {prevBarPosition !== null &&
-                        draggedOverSubColId === item?.id && (
-                          <div
-                            className={styles.previewBar}
-                            style={{
-                              left: `${prevBarPosition}px`,
-                            }}
-                          />
-                        )}
-
                       {/* currently this will only work after resize handle are used since barsdata has not been updated */}
                       {gapData &&
                         gapData.sub_columns
@@ -881,10 +662,7 @@ const Timeline: React.FC<TimelineProps> = ({
                             );
                           })}
 
-                      {/* {item?.bars?.map(
-                        (bar: bar, index: number, bars: bar[]) => ( */}
                       {item?.bars?.length > 0 && (
-                        // removed map in here check this out
                         <div key={index}>
                           <Clip
                             item={item}
@@ -912,11 +690,11 @@ const Timeline: React.FC<TimelineProps> = ({
                             zoomApi={api}
                             zoomAllBars={allBars}
                             totalDuration={totalMediaDuration}
+                            setBarAfterShift={setBarAfterShift}
+                            barIdsRef={barIdsRef}
                           />
                         </div>
                       )}
-                      {/* )
-                      )} */}
                     </div>
 
                     <div className={styles.add_sub_col} ref={addSubColRef}>

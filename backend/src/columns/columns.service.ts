@@ -26,20 +26,20 @@ export class ColumnsService {
     return this.columnsRepository.findOne({ where: { project_id } });
   }
 
-  async subColIdBars(
-    dragOverSubColId: number,
-  ): Promise<OnlySubColDto | undefined> {
-    const columns = await this.columnsRepository.find();
-    for (const column of columns) {
-      const subColumn = column.sub_columns?.find(
-        (subCol) => subCol.id === dragOverSubColId,
-      );
-      if (subColumn) {
-        return subColumn;
-      }
-    }
-    return undefined;
-  }
+  // async subColIdBars(
+  //   dragOverSubColId: number,
+  // ): Promise<OnlySubColDto | undefined> {
+  //   const columns = await this.columnsRepository.find();
+  //   for (const column of columns) {
+  //     const subColumn = column.sub_columns?.find(
+  //       (subCol) => subCol.id === dragOverSubColId,
+  //     );
+  //     if (subColumn) {
+  //       return subColumn;
+  //     }
+  //   }
+  //   return undefined;
+  // }
 
   async dragBarId(subColId: number, id: number): Promise<BarData | undefined> {
     const columns = await this.columnsRepository.find();
@@ -54,6 +54,19 @@ export class ColumnsService {
       }
     });
     return getBar;
+  }
+
+  async dropBarRow(rowId: number): Promise<BarData[] | []> {
+    const columns = await this.columnsRepository.find();
+    for (const column of columns) {
+      for (const subCol of column.sub_columns || []) {
+        if (subCol.sub_col_id === Number(rowId)) {
+          return subCol.bars || [];
+        }
+      }
+    }
+
+    return [];
   }
 
   // Create a new column (root or sub-column)
@@ -208,9 +221,13 @@ export class ColumnsService {
             };
             const bars = subColumn?.bars || [];
 
+            const isDuplicate = bars.some((bar) => bar.id === barWithOrder.id);
+            if (isDuplicate) return; // skip insertion
+
             let insertIndex = bars.findIndex(
               (bar) => bar.left_position > barWithOrder.left_position,
             );
+            // findIndex return -1 if no match found in array
             if (insertIndex === -1) insertIndex = bars.length;
 
             bars.splice(insertIndex, 0, barWithOrder);
@@ -223,6 +240,30 @@ export class ColumnsService {
     });
 
     await this.columnsRepository.save(columns);
+    return columns;
+  }
+
+  async updateBarToSubCol(id: number, barData: any) {
+    try {
+      const columns = await this.columnsRepository.find();
+      console.log('bardata', barData);
+      for (const column of columns) {
+        for (const subColumn of column.sub_columns || []) {
+          if (subColumn.sub_col_id === id) {
+            const barDataArr = Object.values(barData.addBarData) as BarData[];
+            console.log('bardataarr', barDataArr);
+            subColumn.bars = [...barDataArr]; // replace with new bars
+          }
+        }
+      }
+
+      await this.columnsRepository.save(columns);
+      const updatedColumns = await this.columnsRepository.find();
+      return updatedColumns;
+    } catch (error) {
+      console.error('Error updating sub-column bars:', error);
+      throw error;
+    }
   }
 
   async updateBarLp(id: number, lpBars: BarData[]) {
@@ -265,7 +306,7 @@ export class ColumnsService {
     await this.columnsRepository.save(column);
   }
 
-  async delCmBar(cmSubColId: number, cmBarId: string): Promise<void> {
+  async delCmBar(cmSubColId: number, cmBarId: string) {
     const columns = await this.columnsRepository.find();
     columns.forEach((column) => {
       if (column.sub_columns) {
@@ -275,7 +316,6 @@ export class ColumnsService {
               (bar) => Number(bar.id) !== Number(cmBarId),
             );
 
-            // If no bars are left, set `bars` to undefined
             if (subColumn.bars && subColumn.bars.length === 0) {
               subColumn.bars = [];
             }
@@ -285,6 +325,7 @@ export class ColumnsService {
       }
     });
     await this.columnsRepository.save(columns);
+    return columns;
   }
 
   async delSubCol(cmSubColId: number): Promise<void> {

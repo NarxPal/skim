@@ -70,10 +70,6 @@
   @apply  common_sub_col;
 }
 
-.previewBar {
-  @apply absolute  h-[5rem] w-[50px] bg-sm_light_gray p-2 rounded-lg  border-dashed border-2 border-white border-opacity-10 hover:border-opacity-70 hover:border-white;
-}
-
 .gap_box_div {
   @apply absolute rounded-lg h-16 z-10;
 }
