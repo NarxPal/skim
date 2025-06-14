@@ -235,14 +235,14 @@ const Clip: React.FC<ClipProps> = ({
     barIndex: number,
     newWidth: number,
     newLeftPosition: number,
+    rulerStartTimePxVal: number,
+    rulerStartTimeInSec: number,
     resizeHandle?: string, // option since not needed for bindDrag
     predictedEndTime?: number, // taking from bindRightResize only
     predictedStartTime?: number
   ) => {
     barsDataChangeAfterZoom?.sub_columns?.map(async (subcol) => {
       const targetBar = subcol.bars?.find((b) => b.id === bar.id);
-      // console.log("barsdatachangeafterzoom in updatebarafterresize", barsData);
-      // console.log("newleft position bro", newLeftPosition);
 
       const visibleDuration = bar.duration - bar.start_time;
       const singleTickPxValue = mediaContainerWidth / totalDuration;
@@ -257,32 +257,10 @@ const Clip: React.FC<ClipProps> = ({
           : bar.start_time + startTrimSec;
       const startTime = resizeHandle === "left" ? startTimeVal : bar.start_time;
 
-      // console.log(
-      //   "predicted Start TIME, predicted END TIME",
-      //   predictedStartTime,
-      //   predictedEndTime
-      // );
-
-      // console.log("trim from left px", trimFromLeftPx);
-      // console.log(
-      //   "bar.start time, starttrim sec",
-      //   bar.start_time,
-      //   startTrimSec
-      // );
-
       const endTimeTrimValue =
         resizeHandle === "right"
           ? visibleDuration - (newWidth / singleTickPxValue) * markerInterval
           : 0; // no changes should happen to end_time if using left handle
-
-      // console.log(
-      //   "bar.duration, new width, singletickpx val, marker interval",
-      //   bar.duration,
-      //   newWidth,
-      //   singleTickPxValue,
-      //   markerInterval
-      // );
-      // console.log("endtime trim val", endTimeTrimValue);
 
       const endTimeVal =
         predictedEndTime && predictedEndTime > bar.duration
@@ -306,6 +284,8 @@ const Clip: React.FC<ClipProps> = ({
             clip_duration: parseFloat(
               (endTimeAfterTrim - startTime).toFixed(2)
             ),
+            ruler_start_time: rulerStartTimePxVal,
+            ruler_start_time_in_sec: rulerStartTimeInSec,
           }
         );
         await calculateGap(subcol, bar, bars, barIndex);
@@ -412,7 +392,9 @@ const Clip: React.FC<ClipProps> = ({
   const updateBarLPAfterDrop = async (
     barId: number,
     newLeftPosition: number,
-    hoveredRowId: string
+    hoveredRowId: string,
+    rulerStartTimePxVal: number,
+    pxToTime: number
   ) => {
     const NumHovRowId = Number(hoveredRowId);
     barsDataChangeAfterZoom?.sub_columns?.map(async (subcol) => {
@@ -424,6 +406,8 @@ const Clip: React.FC<ClipProps> = ({
             ...targetBar,
             left_position: newLeftPosition,
             sub_col_id: NumHovRowId,
+            ruler_start_time: rulerStartTimePxVal,
+            ruler_start_time_in_sec: pxToTime,
           }
         );
         const filteredData = updatebar.data.filter(
@@ -496,12 +480,14 @@ const Clip: React.FC<ClipProps> = ({
 
           if (threshold_condition) {
             newY = last ? 0 : dy;
-            console.log("newx bro", newX);
           }
-
           const hoveredRowId = getRowUnderCursor(event as PointerEvent);
-          console.log("hovered row id", hoveredRowId);
-          console.log("barindex bro", barIndex);
+
+          const rulerStartTimePxVal = Math.max(0, bar.left_position + dx);
+
+          const singleTickPxValue = mediaContainerWidth / totalDuration;
+          const pxPerSecond = singleTickPxValue / markerInterval;
+          const pxToTime = rulerStartTimePxVal / pxPerSecond;
 
           setDelBarFromRow(bar);
           if (active) {
@@ -532,8 +518,6 @@ const Clip: React.FC<ClipProps> = ({
             });
           }
 
-          console.log("checkout bro ", newX, bar.left_position);
-
           if (last) {
             zoomApi.start((i) => {
               if (allBars[i].id !== barId) return {};
@@ -550,7 +534,9 @@ const Clip: React.FC<ClipProps> = ({
                 subColumn.bars,
                 barIndex,
                 bar.width,
-                newX
+                newX,
+                rulerStartTimePxVal,
+                pxToTime
               );
               console.log("newx in < vertical", newX);
             } else if (Math.abs(dy) > verticalThreshold) {
@@ -571,7 +557,13 @@ const Clip: React.FC<ClipProps> = ({
                     if (newX <= firstBarLp) {
                       console.log("newx, barlp 1", newX, bar.left_position);
                       resolvedX = newX;
-                      updateBarLPAfterDrop(barId, resolvedX, hoveredRowId);
+                      updateBarLPAfterDrop(
+                        barId,
+                        resolvedX,
+                        hoveredRowId,
+                        rulerStartTimePxVal,
+                        pxToTime
+                      );
                       console.log("before first clips ran");
                     }
 
@@ -585,7 +577,13 @@ const Clip: React.FC<ClipProps> = ({
                       if (newX > currentEnd && newX < nextStart) {
                         // newX fits between current and next clip
                         resolvedX = newX;
-                        updateBarLPAfterDrop(barId, resolvedX, hoveredRowId);
+                        updateBarLPAfterDrop(
+                          barId,
+                          resolvedX,
+                          hoveredRowId,
+                          rulerStartTimePxVal,
+                          pxToTime
+                        );
                         console.log(
                           "bw clips ran, currentend, nextstart, newx",
                           currentEnd,
@@ -599,24 +597,37 @@ const Clip: React.FC<ClipProps> = ({
                     if (newX >= start && newX <= end) {
                       // this condition is when dragged bar is above the bar present in the hovered subcol
                       resolvedX = bar.left_position + bar.width;
-                      updateBarLPAfterDrop(barId, resolvedX, hoveredRowId);
+                      updateBarLPAfterDrop(
+                        barId,
+                        resolvedX,
+                        hoveredRowId,
+                        rulerStartTimePxVal,
+                        pxToTime
+                      );
                       // console.log("newx, barlp 3", newX, bar.left_position);
                       console.log("start, end , newx", start, end, newX);
                       console.log("on hov clips ran");
                     }
                     if (newX >= lastBarLp + lastBarWidth) {
                       resolvedX = newX;
-                      updateBarLPAfterDrop(barId, resolvedX, hoveredRowId);
+                      updateBarLPAfterDrop(
+                        barId,
+                        resolvedX,
+                        hoveredRowId,
+                        rulerStartTimePxVal,
+                        pxToTime
+                      );
                       console.log(
                         "after last clips ran, newx, lastbarlp + lastbarwidth",
                         newX,
                         lastBarLp + lastBarWidth
                       );
+                      console.log("px to time", pxToTime);
                     }
                   });
 
                   // when row is empty
-                  updateBarLPAfterDrop(barId, resolvedX, hoveredRowId);
+                  // updateBarLPAfterDrop(barId, resolvedX, hoveredRowId);
                 }
               });
             }
@@ -655,9 +666,14 @@ const Clip: React.FC<ClipProps> = ({
           );
 
           const trimmedPixels = dx; // dx is negative when dragging left
+          console.log("trimmed px", trimmedPixels);
           const trimmedSeconds =
             (trimmedPixels / singleTickPxValue) * markerInterval;
           const predictedStartTime = bar.start_time + trimmedSeconds;
+
+          const rulerStartTimePxVal = Math.max(0, bar.left_position + dx);
+          const pxPerSecond = singleTickPxValue / markerInterval;
+          const pxToTime = rulerStartTimePxVal / pxPerSecond;
 
           const minWidth = width * 0.1;
           let newWidth = Math.max(minWidth, Math.min(bar.width - dx, width));
@@ -686,18 +702,6 @@ const Clip: React.FC<ClipProps> = ({
                         bar.left_position + bar.width - newWidth
                       ); // both args value will be same until the handle reach its minwidth
 
-                // console.log(
-                //   "newx min or max",
-                //   bar.left_position + dx,
-                //   bar.left_position + bar.width - newWidth
-                // );
-
-                // console.log(
-                //   "start time, dx, predic start time",
-                //   bar.start_time,
-                //   dx,
-                //   predictedStartTime
-                // );
                 // For the first bar, set left limit and stop increasing width
                 if (newX <= 0) {
                   const minLeft = 0; // Prevent moving beyond left limit
@@ -721,28 +725,6 @@ const Clip: React.FC<ClipProps> = ({
                   bar.left_position + dx,
                   bar.left_position + bar.width - newWidth // this will be max in here
                 );
-
-                // console.log(
-                //   "minwidth",
-                //   minWidth,
-                //   "newwidth, dx, bar.width IN LESS CHECKO",
-                //   newWidth,
-                //   dx,
-                //   bar.width
-                // );
-
-                // console.log(
-                //   "check this OUT",
-                //   bar.left_position + dx,
-                //   bar.left_position + bar.width - newWidth
-                // );
-                // console.log(
-                //   "bar.lp, dx, bar.width, newwidth",
-                //   bar.left_position,
-                //   dx,
-                //   bar.width,
-                //   newWidth
-                // );
               }
             } else {
               const filteredBars = bars.filter(
@@ -791,6 +773,8 @@ const Clip: React.FC<ClipProps> = ({
               barIndex,
               newWidth,
               newX,
+              rulerStartTimePxVal,
+              pxToTime,
               "left",
               undefined, // for predictedEndTime
               predictedStartTime
@@ -817,6 +801,10 @@ const Clip: React.FC<ClipProps> = ({
           const duration = bar.duration || 0; // zero probly for img
           const visibleDuration = duration - bar.start_time;
           const width = (visibleDuration / markerInterval) * singleTickPxValue;
+
+          const rulerStartTimePxVal = Math.max(0, bar.left_position + dx);
+          const pxPerSecond = singleTickPxValue / markerInterval;
+          const pxToTime = rulerStartTimePxVal / pxPerSecond;
 
           const minWidth = width * 0.1;
           if (subColId === bar.sub_col_id) {
@@ -880,6 +868,8 @@ const Clip: React.FC<ClipProps> = ({
               barIndex,
               newWidth,
               bar.left_position,
+              rulerStartTimePxVal,
+              pxToTime,
               "right",
               predictedEndTime,
               undefined // for predictedStartTime

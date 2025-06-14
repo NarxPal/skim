@@ -118,6 +118,8 @@ export class ColumnsService {
       start_time: number;
       end_time: number;
       clip_duration: number;
+      ruler_start_time: number;
+      ruler_start_time_in_sec: number;
     },
   ) {
     const columns = await this.columnsRepository.find();
@@ -138,6 +140,10 @@ export class ColumnsService {
               bar.start_time = updateBarData.start_time;
               bar.end_time = updateBarData.end_time;
               bar.clip_duration = updateBarData.clip_duration;
+              bar.ruler_start_time = updateBarData.ruler_start_time;
+              bar.ruler_start_time_in_sec =
+                updateBarData.ruler_start_time_in_sec;
+
               barFound = true;
             }
           });
@@ -304,6 +310,7 @@ export class ColumnsService {
     // Update sub_columns with the new data
     column.sub_columns = data;
     await this.columnsRepository.save(column);
+    return column;
   }
 
   async delCmBar(cmSubColId: number, cmBarId: string) {

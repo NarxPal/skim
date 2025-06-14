@@ -80,6 +80,8 @@ export class ColumnsController {
       start_time: number;
       end_time: number;
       clip_duration: number;
+      ruler_start_time: number;
+      ruler_start_time_in_sec: number;
     },
   ) {
     return this.columnsService.updateBar(Number(id), updateBarData);

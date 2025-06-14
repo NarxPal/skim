@@ -26,6 +26,8 @@ type Bar = {
   end_time: number;
   duration: number;
   clip_duration: number;
+  ruler_start_time: number;
+  ruler_start_time_in_sec: number;
 };
 
 type Gap = {

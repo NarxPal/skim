@@ -86,7 +86,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/subCol/${prjId}`,
         updateData
       );
-      // console.log("updatebar CHECK CHECK", updatebar.config.data);
+      // console.log("updatebaraz checko", updatebar.config.data);
     }
     setFetchBars(true);
   };
@@ -123,9 +123,6 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
       console.log("containerWidth:", containerWidth);
       console.log("totalDuration:", totalDuration);
 
-      // let basePxPerSec: number = 10;
-      // let pixelsPerSecond: number = zoomLevel * basePxPerSec; // Pixels per second based on zoom level
-
       const interval = calculateInterval(totalDuration, zoomLevel);
       dispatch(setMarkerInterval(interval));
       console.log("interval", interval);
@@ -159,24 +156,34 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
               ...subCol, // Retain the original `subCol` structure
               bars: subCol?.bars?.map((bar) => {
                 const duration = bar.clip_duration || 0; // zero probly for img
-                console.log("bar.clipduration 1", duration);
                 const width = Math.round(
-                  (duration / interval) * singleTickPxValue //width not useful when resized and zoom level is changed
-                ); // width being calculated here on the fly though we are saving in db through barsData hook
+                  (duration / interval) * singleTickPxValue // width dynamically calculated based upon clip_duration
+                );
 
-                // const left_position =
-                //   bar.left_position !== 0
-                //     ? bar.left_position - singleTickPxValue
-                //     : bar.left_position;
+                const pxPerSecond = singleTickPxValue / interval;
+                const timeToPx = bar.ruler_start_time_in_sec * pxPerSecond;
+
+                console.log("px per sec", pxPerSecond);
+                console.log("timeto px", timeToPx);
+                console.log("ruler st in sec", bar.ruler_start_time_in_sec);
+
+                const left_position =
+                  bar.left_position !== 0 ? timeToPx : bar.left_position;
 
                 // rather than working on lp here i should create gap adjust that which will effect the lp of bars located around gaps
                 api.start((i) => {
                   if (allBars[i].id !== bar.id) return {};
                   return {
                     clipWidth: width,
+                    clipLP: left_position,
                   };
                 });
-                return { ...bar, width };
+                return {
+                  ...bar,
+                  width: width,
+                  left_position: left_position,
+                  ruler_start_time: left_position,
+                };
               }),
               gaps:
                 subCol?.gaps?.map((gap) => {
@@ -221,6 +228,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   const positionToTime = (pos: number) => {
     const pxValueDiffPerMarker = containerWidth / totalDuration; // calculating px value which position the marker
     const pixelValuePerStep = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
+    console.log("marker interval b", markerInterval);
     return pos / pixelValuePerStep;
   };
 

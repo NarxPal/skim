@@ -261,6 +261,8 @@ const Timeline: React.FC<TimelineProps> = ({
             url: parsedItem.url,
             start_time: 0,
             end_time: parsedItem.duration,
+            ruler_start_time: 0,
+            ruler_start_time_in_sec: 0,
           },
         ],
         gaps: [

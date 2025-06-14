@@ -15,6 +15,8 @@ export type bar = {
   thumbnail_url: string;
   start_time: number;
   end_time: number;
+  ruler_start_time: number;
+  ruler_start_time_in_sec: number;
 };
 
 export type gap = {
