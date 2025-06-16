@@ -252,20 +252,17 @@ export class ColumnsService {
   async updateBarToSubCol(id: number, barData: any) {
     try {
       const columns = await this.columnsRepository.find();
-      console.log('bardata', barData);
       for (const column of columns) {
         for (const subColumn of column.sub_columns || []) {
           if (subColumn.sub_col_id === id) {
             const barDataArr = Object.values(barData.addBarData) as BarData[];
-            console.log('bardataarr', barDataArr);
             subColumn.bars = [...barDataArr]; // replace with new bars
+
+            await this.columnsRepository.save(columns);
+            return column;
           }
         }
       }
-
-      await this.columnsRepository.save(columns);
-      const updatedColumns = await this.columnsRepository.find();
-      return updatedColumns;
     } catch (error) {
       console.error('Error updating sub-column bars:', error);
       throw error;

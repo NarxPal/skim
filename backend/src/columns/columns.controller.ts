@@ -42,7 +42,6 @@ export class ColumnsController {
   // get bars from droppped row
   @Get('sub-columns/row/:rowId')
   async dropBarRow(@Param('rowId') rowId: string): Promise<BarData[]> {
-    console.log('row id ', rowId);
     return this.columnsService.dropBarRow(Number(rowId));
   }
 
@@ -105,7 +104,6 @@ export class ColumnsController {
 
   @Patch('sub-columns/updateBar/:id')
   async updateBarToSubCol(@Param('id') id: number, @Body() barData: any) {
-    console.log('updatebar RAN');
     return this.columnsService.updateBarToSubCol(Number(id), barData);
   }
 

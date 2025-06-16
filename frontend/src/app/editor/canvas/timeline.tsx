@@ -226,12 +226,6 @@ const Timeline: React.FC<TimelineProps> = ({
 
     // here, containerWidth = mediaContainerWidth hook, totalDuration = totalMediaDuration hook
     const singleTickPxValue = containerWidth / totalDuration; // equal px value for each marker, it changes based upon zoom level
-    console.log("mediacontainer width", mediaContainerWidth);
-    console.log("total media duration", totalMediaDuration);
-    console.log("singletickpxvalue", singleTickPxValue);
-
-    console.log("pareseditem.duration", parsedItem.duration);
-    console.log("markerinterval", markerInterval);
 
     const barId = Math.floor(Math.random() * 1000000) + (Date.now() % 1000000);
     const subColId =

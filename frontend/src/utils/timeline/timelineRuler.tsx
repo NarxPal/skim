@@ -163,10 +163,6 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
                 const pxPerSecond = singleTickPxValue / interval;
                 const timeToPx = bar.ruler_start_time_in_sec * pxPerSecond;
 
-                console.log("px per sec", pxPerSecond);
-                console.log("timeto px", timeToPx);
-                console.log("ruler st in sec", bar.ruler_start_time_in_sec);
-
                 const left_position =
                   bar.left_position !== 0 ? timeToPx : bar.left_position;
 
