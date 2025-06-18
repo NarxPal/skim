@@ -31,14 +31,6 @@ export class ColumnsController {
     return this.columnsService.findOneByProjectId(project_id);
   }
 
-  // @Get('sub-columns/:dragOverSubColId')
-  // async subColIdBars(
-  //   @Param('dragOverSubColId') dragOverSubColId: number,
-  // ): Promise<OnlySubColDto> {
-  //   console.log('this function is not used anywhere', dragOverSubColId);
-  //   return this.columnsService.subColIdBars(Number(dragOverSubColId));
-  // }
-
   // get bars from droppped row
   @Get('sub-columns/row/:rowId')
   async dropBarRow(@Param('rowId') rowId: string): Promise<BarData[]> {
@@ -87,19 +79,30 @@ export class ColumnsController {
   }
 
   // update gap after resize
-  @Patch('sub-columns/gaps/:id')
+  @Patch('sub-columns/gaps/update/:prjId/:id')
   async updateGap(
+    @Param('prjId') prjId: number,
     @Param('id') id: number,
     @Body()
     updateGapData: Gap,
   ) {
-    return this.columnsService.updateGap(Number(id), updateGapData);
+    return this.columnsService.updateGap(
+      Number(prjId),
+      Number(id),
+      updateGapData,
+    );
   }
 
   // used in updateBarRow function in frontend
   @Patch('sub-columns/:id')
   async addBarToSubCol(@Param('id') id: number, @Body() addBarData: any) {
     return this.columnsService.addBarToSubCol(Number(id), addBarData);
+  }
+
+  // for updateGapRow
+  @Patch('sub-columns/gap/update/:id')
+  async addGapToSubCol(@Param('id') id: number, @Body() addGapData: any) {
+    return this.columnsService.addGapToSubCol(Number(id), addGapData);
   }
 
   @Patch('sub-columns/updateBar/:id')
@@ -143,6 +146,14 @@ export class ColumnsController {
     @Param('cmBarId') cmBarId: string,
   ) {
     return this.columnsService.delCmBar(cmSubColId, cmBarId);
+  }
+
+  @Delete('/sub-columns/gaps/:cmSubColId/:cmGapId')
+  async delCmGap(
+    @Param('cmSubColId') cmSubColId: number,
+    @Param('cmGapId') cmGapId: string,
+  ) {
+    return this.columnsService.delCmGap(cmSubColId, cmGapId);
   }
 
   // for deleting the subcol, (similar path have been used in addBarToSubCol)

@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import styles from "@/styles/timeline.module.css";
-import { BarsProp, sub_column, bar } from "@/interfaces/barsProp";
+import { BarsProp, sub_column, bar, gap } from "@/interfaces/barsProp";
 import axios from "axios";
 import ContextMenu from "./contextMenu";
 import { animated, SpringRef, SpringValue } from "@react-spring/web";
 import { useDrag } from "@use-gesture/react";
-import { useSprings } from "@react-spring/web";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 
@@ -28,7 +27,6 @@ type SpringType = {
 
 interface ClipProps {
   item: sub_column;
-  isEmpty: boolean;
   barsDataChangeAfterZoom: BarsProp | null;
   setBarsDataChangeAfterZoom: React.Dispatch<
     React.SetStateAction<BarsProp | null>
@@ -38,9 +36,7 @@ interface ClipProps {
   setContextMenu: React.Dispatch<React.SetStateAction<ContextMenuState>>;
   mediaContainerWidth: number;
   setFetchBars: React.Dispatch<React.SetStateAction<boolean>>;
-  // bar: bar;
   barIndex: number;
-  bars: bar[];
   setBarsData: React.Dispatch<React.SetStateAction<BarsProp | null>>;
   setUpdateBarsData: React.Dispatch<React.SetStateAction<boolean>>;
   setHoveringOverRow: React.Dispatch<React.SetStateAction<boolean>>;
@@ -57,14 +53,12 @@ interface ClipProps {
     clipWidth: number;
     zIndex: number;
   }>;
-  zoomAllBars: bar[];
   totalDuration: number;
   setBarAfterShift: React.Dispatch<React.SetStateAction<boolean>>;
   barIdsRef: React.MutableRefObject<number[]>;
 }
 const Clip: React.FC<ClipProps> = ({
   item,
-  isEmpty,
   barsDataChangeAfterZoom,
   setBarsDataChangeAfterZoom,
   barsData,
@@ -72,9 +66,7 @@ const Clip: React.FC<ClipProps> = ({
   setContextMenu,
   mediaContainerWidth,
   setFetchBars,
-  // bar,
   barIndex,
-  bars,
   setBarsData,
   setUpdateBarsData,
   setHoveringOverRow,
@@ -84,7 +76,6 @@ const Clip: React.FC<ClipProps> = ({
   prjId,
   zoomSprings,
   zoomApi,
-  zoomAllBars,
   totalDuration,
   setBarAfterShift,
   barIdsRef,
@@ -94,6 +85,7 @@ const Clip: React.FC<ClipProps> = ({
     { label: string; action: () => void }[]
   >([]);
   const [delBarFromRow, setDelBarFromRow] = useState<bar>();
+  const [delGapFromRow, setDelGapFromRow] = useState<gap>();
 
   // redux hooks
   const markerInterval = useSelector(
@@ -110,51 +102,7 @@ const Clip: React.FC<ClipProps> = ({
     text: "/text.png",
   };
 
-  // use gesture and spring
-  // const { clipLP, clipWidth } = springs;
-  let width: number;
-  let left_position: number;
-
-  const zoomBarsMap = new Map();
-  barsDataChangeAfterZoom?.sub_columns?.forEach((subCol) => {
-    subCol?.bars?.forEach((zoomBar) => zoomBarsMap.set(zoomBar.id, zoomBar));
-  });
-
-  // const zoomBar = zoomBarsMap.get(bar?.id);
-  // width = zoomBar?.width || bar?.width; // bar.width and lp are from barsdata hook
-  // left_position = zoomBar?.left_position || bar?.left_position;
-
   const allBars = barsData?.sub_columns.flatMap((row) => row.bars) || [];
-
-  // in the returned array first arg are spring values, second arg is api which control these spring
-  // usespring hook takes either config or function, here using function
-  // const [springs, api] = useSprings(
-  //   allBars.length || 0,
-  //   (i) => ({
-  //     barID: allBars[i].id,
-  //     subColId: allBars[i].sub_col_id,
-  //     clipTop: 0,
-  //     clipLP: allBars[i].left_position || 0, // initial lp
-  //     clipWidth: allBars[i].width || 0, // initial width
-  //     zIndex: 1,
-  //     config: { tension: 300, friction: 30 }, // smooth animation
-  //     immediate: true,
-  //   }),
-  //   []
-  // );
-
-  // useEffect(() => {
-  //   console.log(
-  //     "Springs array:",
-  //     springs.map((s, i) => ({
-  //       index: i,
-  //       barID: s.barID?.get(),
-  //       subColId: s.subColId?.get(),
-  //       clipLP: s.clipLP.get(),
-  //       clipWidth: s.clipWidth.get(),
-  //     }))
-  //   );
-  // }, [springs]);
 
   useEffect(() => {
     console.log(
@@ -171,25 +119,22 @@ const Clip: React.FC<ClipProps> = ({
 
   const handleGap = async (
     subCol: sub_column,
-    gapId: number,
+    barId: number,
     gapWidth: number,
-    startOfGap: number
+    startOfGap: number,
+    endOfGap: number
   ) => {
     try {
-      const gap = await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gaps/${gapId}`,
+      const gapToUpdate = subCol.gaps.find((g) => g.barId === barId);
+      await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gaps/update/${prjId}/${gapToUpdate?.id}`,
         {
-          ...subCol.gaps,
-          width: gapWidth - 1,
+          ...gapToUpdate,
+          width: gapWidth,
           start_gap: startOfGap,
-          end_gap: gapWidth - 1,
+          end_gap: endOfGap,
         }
       );
-      // console.log("gap res", gap.data[0]);
-      const clipAfterResize = gap.data[0];
-      // setBarsData(clipAfterResize);
-      // setBarsDataChangeAfterZoom(clipAfterResize);
-      // setGapData(clipAfterResize);
     } catch (error) {
       console.error("Error updating gap:", error);
     }
@@ -199,33 +144,24 @@ const Clip: React.FC<ClipProps> = ({
     subcol: sub_column,
     bar: bar,
     bars: bar[],
-    barIndex: number
+    barIndex: number,
+    newLP: number
   ) => {
     // calc for first bar clip in the subcol
     if (bar.order === 0) {
       const startOfGap = 0;
-      const gapWidth = bar.left_position; // lp of bar would be the end position of gap
-      handleGap(subcol, bar.id, gapWidth, startOfGap);
+      const endOfGap = newLP;
+      const gapWidth = newLP; // lp of bar would be the end position of gap
+      handleGap(subcol, bar.id, gapWidth, startOfGap, endOfGap);
     }
     // calc for bars clip placed next to first
     else {
-      // start of  gap = w + lp of all the prev bars
-      // end of gap = lp of next bar
-      // width = end gap - start gap
+      const prevBar = bars[barIndex - 1];
 
-      const previousBars = bars.slice(0, barIndex);
-      const startOfGap = previousBars.reduce(
-        (totalWidth, prevBar) => totalWidth + prevBar.width,
-        previousBars[0]?.left_position || 0
-      );
-
-      const endOfGap = bar.left_position;
+      const startOfGap = prevBar ? prevBar.left_position + prevBar.width : 0;
+      const endOfGap = newLP;
       const gapWidth = endOfGap - startOfGap;
-      console.log("end of gap", endOfGap);
-      console.log("start of gap", startOfGap);
-      console.log("gapwidth", gapWidth);
-
-      // console.log("gap, start, end", gapWidth, startOfGap, endOfGap);
+      handleGap(subcol, bar.id, gapWidth, startOfGap, endOfGap);
     }
   };
 
@@ -242,7 +178,6 @@ const Clip: React.FC<ClipProps> = ({
     predictedStartTime?: number
   ) => {
     barsDataChangeAfterZoom?.sub_columns?.map(async (subcol) => {
-      console.log("UPDATE AFTER RESIZE RAN");
       const targetBar = subcol.bars?.find((b) => b.id === bar.id);
 
       const visibleDuration = bar.duration - bar.start_time;
@@ -289,8 +224,7 @@ const Clip: React.FC<ClipProps> = ({
             ruler_start_time_in_sec: rulerStartTimeInSec,
           }
         );
-        await calculateGap(subcol, bar, bars, barIndex);
-        console.log("updatedbar  data", updatebar.data);
+        await calculateGap(subcol, bar, bars, barIndex, newLeftPosition);
         const filteredData = updatebar.data.filter(
           (bar: BarsProp) => bar.project_id === Number(prjId)
         );
@@ -310,6 +244,7 @@ const Clip: React.FC<ClipProps> = ({
     hoveredRowId?: number
   ) => {
     try {
+      console.log("shift bar after drop ran checko");
       await Promise.all(
         data.sub_columns?.map(async (subcol) => {
           // const droppedBar = subcol.bars?.find((b) => b.id === droppedBarId); // fetching all bars except dropped one
@@ -378,10 +313,72 @@ const Clip: React.FC<ClipProps> = ({
     }
   };
 
+  const updateGapRow = async (rowId: number, updatedGapRes: any) => {
+    try {
+      console.log("updated gap res checkko", updatedGapRes);
+      const afterAddingGap = await axios.patch(
+        // sub-columns/gap/:id - patch in backend
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gap/update/${rowId}`,
+        {
+          addGapData: { ...updatedGapRes }, // add gap to dropped subcol
+        }
+      );
+      console.log("after adding gap", afterAddingGap.data);
+      delCmGapId(delGapFromRow?.sub_col_id, delGapFromRow?.id); // delete gap from dragged bar row
+    } catch (error) {
+      console.error("Error in updateGapRow:", error);
+    }
+  };
+
+  const updateGapLPAfterDrop = async (
+    barId: number,
+    newLeftPosition: number,
+    NumHovRowId: number
+  ) => {
+    console.log("update gap lp after drop BRO");
+    barsDataChangeAfterZoom?.sub_columns?.forEach(async (subcol) => {
+      const targetGap = subcol.gaps?.find((g) => g.barId === barId);
+
+      const bars = barsDataChangeAfterZoom?.sub_columns?.flatMap(
+        (subcol) => subcol.bars || []
+      );
+      const filteredBars = bars?.filter(
+        (bar) => bar.sub_col_id === NumHovRowId
+      );
+
+      const prevBar = filteredBars
+        .filter((bar) => bar.left_position < newLeftPosition)
+        .sort((a, b) => b.left_position - a.left_position)[0];
+
+      const startGap = prevBar ? prevBar.left_position + prevBar.width : 0; // 0 for first gap
+      const endGap = newLeftPosition;
+
+      if (!targetGap) return;
+      const updateGap = await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gaps/update/${prjId}/${targetGap.id}`,
+        {
+          ...targetGap,
+          start_gap: startGap,
+          end_gap: endGap,
+          width: endGap - startGap,
+          sub_col_id: NumHovRowId,
+        }
+      );
+      const filteredData = updateGap.data.sub_columns.filter(
+        (subcol: sub_column) => subcol.project_id === Number(prjId)
+      );
+      const updatedGapRes = filteredData
+        .flatMap((subcol: any) => subcol.gaps || [])
+        .find((gap: gap) => gap.id === targetGap.id);
+      console.log("update gaps res checko", updatedGapRes);
+      updateGapRow(NumHovRowId, updatedGapRes);
+    });
+  };
+
   // it adds dragged bar to the row where it has been dropped
   const updateBarRow = async (rowId: number, updatedBarRes: bar) => {
+    console.log("update bar row RAN CHECKO");
     try {
-      console.log("getting UPDATED BAR RES", updatedBarRes);
       const afterAddingBar = await axios.patch(
         // sub-columns/:id - patch in backend
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${rowId}`,
@@ -390,7 +387,7 @@ const Clip: React.FC<ClipProps> = ({
         }
       );
       console.log("after adding bar", afterAddingBar.data);
-      delCmBarId(delBarFromRow?.sub_col_id, delBarFromRow?.id, rowId); // delete dragged bar from its row
+      await delCmBarId(delBarFromRow?.sub_col_id, delBarFromRow?.id, rowId); // delete dragged bar from its row
     } catch (error) {
       console.error("Error in updateBarRow:", error);
     }
@@ -404,7 +401,6 @@ const Clip: React.FC<ClipProps> = ({
     rulerStartTimePxVal: number,
     pxToTime: number
   ) => {
-    console.log("UPDATE BAR LP AFTER DROP");
     const NumHovRowId = Number(hoveredRowId);
     barsDataChangeAfterZoom?.sub_columns?.map(async (subcol) => {
       const targetBar = subcol.bars?.find((b) => b.id === barId); // fetching dragged bar here
@@ -427,7 +423,8 @@ const Clip: React.FC<ClipProps> = ({
           .find((bar: bar) => bar.id === targetBar.id);
         console.log("filtered data CHECK HERE AB", filteredData);
         // setBarsDataChangeAfterZoom(filteredData);
-        updateBarRow(NumHovRowId, updatedBarRes);
+        await updateBarRow(NumHovRowId, updatedBarRes);
+        updateGapLPAfterDrop(barId, newLeftPosition, NumHovRowId);
       }
     });
   };
@@ -510,6 +507,10 @@ const Clip: React.FC<ClipProps> = ({
           const pxToTime = rulerStartTimePxVal / pxPerSecond;
 
           setDelBarFromRow(bar);
+
+          const delGap = subColumn?.gaps?.find((gap) => gap.barId === barId);
+          setDelGapFromRow(delGap);
+
           if (active) {
             //fetch clips from hovered row
             fetchClipsOnHover(hoveredRowId);
@@ -854,7 +855,7 @@ const Clip: React.FC<ClipProps> = ({
           if (last) {
             updateBarAfterResize(
               bar,
-              bars,
+              subColumn.bars,
               barIndex,
               newWidth,
               bar.left_position,
@@ -892,7 +893,7 @@ const Clip: React.FC<ClipProps> = ({
     cmBarId: number | undefined,
     hoveredRowId?: number
   ) => {
-    console.log("cmsubcolid, bar id,", cmSubColId, cmBarId);
+    console.log("del cm bar id RAN CHECKO");
     try {
       const delBar = await axios.delete(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${cmSubColId}/bars/${cmBarId}`
@@ -905,7 +906,22 @@ const Clip: React.FC<ClipProps> = ({
       console.log("updated row bro after delcmbarid", updatedRow);
       // setBarsDataChangeAfterZoom(updatedRow);
       // setFetchBars(true);
-      shiftBarsAfterDrop(updatedRow, cmBarId, hoveredRowId);
+      await shiftBarsAfterDrop(updatedRow, cmBarId, hoveredRowId);
+    } catch (error) {
+      console.log("error deleting bar", error);
+    }
+  };
+
+  const delCmGapId = async (
+    cmSubColId: number | undefined,
+    cmGapId: number | undefined
+  ) => {
+    try {
+      console.log("del cm gap ran checko");
+      const delGap = await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gaps/${cmSubColId}/${cmGapId}`
+      );
+      console.log("del gap checko", delGap);
     } catch (error) {
       console.log("error deleting bar", error);
     }
@@ -947,11 +963,7 @@ const Clip: React.FC<ClipProps> = ({
 
   return (
     <div className={styles.clip_sub_col_div} id={barIndex.toString()}>
-      {item.bars.map((bar: bar, index: number) => {
-        // const spring = springs.find((s) => s.barID?.get() === bar.id);
-        // const zoomSpring = zoomSprings.find((s) => s.barID?.get() === bar.id);
-        // const clipWidthValue = zoomSpring?.clipWidth.get();
-
+      {item.bars.map((bar: bar) => {
         const barIndex = barIdsRef.current.findIndex(
           (id: any) => id === bar.id
         );

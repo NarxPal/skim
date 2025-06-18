@@ -7,7 +7,7 @@ import { setPhPreview } from "@/redux/phPreview";
 import { setMarkerInterval } from "@/redux/markerInterval";
 import { throttle } from "lodash";
 // types / interfaces import
-import { BarsProp, bar } from "@/interfaces/barsProp";
+import { BarsProp, bar, sub_column } from "@/interfaces/barsProp";
 import { SpringRef } from "@react-spring/web";
 import axios from "axios";
 
@@ -70,23 +70,14 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
     }
   }, [scrollPosition]);
 
-  const updateBarAZ = async (barsDurations: BarsProp, interval: number) => {
-    const singleTickPxValue = containerWidth / totalDuration; // equal px value for each marker
-    const updateData = barsDurations.sub_columns.map((subCol) => ({
-      ...subCol,
-      bars: subCol?.bars?.map((bar) => {
-        const duration = bar.clip_duration || 0; // zero probly for img
-        console.log("clip duration in updatbaraz", duration);
-        const width = Math.round((duration / interval) * singleTickPxValue);
-        return { ...bar, width };
-      }),
-    }));
+  const updateBarAZ = async (barsDurations: sub_column[]) => {
+    const updateData = barsDurations;
     if (updateData && updateData.length > 0) {
       const updatebar = await axios.patch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/subCol/${prjId}`,
         updateData
       );
-      // console.log("updatebaraz checko", updatebar.config.data);
+      console.log("updatebaraz checko", updatebar.data);
     }
     setFetchBars(true);
   };
@@ -143,63 +134,67 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
       }
       setTickPos(positions);
 
-      // Loop through barsData to calculate each bar's duration and width
-      const barsDurations: BarsProp = {
-        ...barsData,
-        id: barsData?.id ?? 0, // for handling undefined
-        parent_id: barsData?.parent_id ?? 0,
-        project_id: barsData?.project_id ?? 0,
-        user_id: barsData?.user_id ?? "",
-        sub_columns:
-          barsData?.sub_columns?.map((subCol) => {
-            return {
-              ...subCol, // Retain the original `subCol` structure
-              bars: subCol?.bars?.map((bar) => {
-                const duration = bar.clip_duration || 0; // zero probly for img
-                const width = Math.round(
-                  (duration / interval) * singleTickPxValue // width dynamically calculated based upon clip_duration
-                );
+      const barsDurations: sub_column[] =
+        barsData?.sub_columns?.map((subCol) => {
+          const updatedBars =
+            subCol.bars?.map((bar) => {
+              const duration = bar.clip_duration || 0;
+              const width = Math.round(
+                (duration / interval) * singleTickPxValue
+              );
+              const pxPerSecond = singleTickPxValue / interval;
+              const timeToPx = bar.ruler_start_time_in_sec * pxPerSecond;
+              const left_position =
+                bar.left_position !== 0 ? timeToPx : bar.left_position;
 
-                const pxPerSecond = singleTickPxValue / interval;
-                const timeToPx = bar.ruler_start_time_in_sec * pxPerSecond;
-
-                const left_position =
-                  bar.left_position !== 0 ? timeToPx : bar.left_position;
-
-                // rather than working on lp here i should create gap adjust that which will effect the lp of bars located around gaps
-                api.start((i) => {
-                  if (allBars[i].id !== bar.id) return {};
-                  return {
-                    clipWidth: width,
-                    clipLP: left_position,
-                  };
-                });
+              api.start((i) => {
+                if (allBars[i].id !== bar.id) return {};
                 return {
-                  ...bar,
-                  width: width,
-                  left_position: left_position,
-                  ruler_start_time: left_position,
+                  clipWidth: width,
+                  clipLP: left_position,
                 };
-              }),
-              gaps:
-                subCol?.gaps?.map((gap) => {
-                  const start_gap = gap.start_gap || 0;
-                  const end_gap = gap.end_gap || 0;
-                  const width = end_gap - start_gap;
+              });
 
-                  return {
-                    ...gap,
-                    width,
-                    start_gap,
-                    end_gap,
-                  };
-                }) || [], // fallback for undefined gaps
-            };
-          }) || [],
-      };
-      console.log("bro barsdurations, SETBARSDATA RAN BRO", barsDurations);
-      setBarsDataChangeAfterZoom(barsDurations);
-      updateBarAZ(barsDurations, interval);
+              return {
+                ...bar,
+                width,
+                left_position,
+                ruler_start_time: left_position,
+              };
+            }) || [];
+
+          const updatedGaps =
+            subCol.gaps?.map((gap) => {
+              const barOfGap = updatedBars.find((bar) => bar.id === gap.barId);
+              const prevBar = updatedBars
+                .filter(
+                  (bar) => bar.left_position < (barOfGap?.left_position || 0)
+                )
+                .sort((a, b) => b.left_position - a.left_position)[0];
+
+              const start_gap = prevBar
+                ? prevBar.left_position + prevBar.width
+                : 0;
+              const end_gap = barOfGap ? barOfGap.left_position : 0;
+              const width = end_gap - start_gap;
+
+              return {
+                ...gap,
+                width,
+                start_gap,
+                end_gap,
+              };
+            }) || [];
+
+          return {
+            ...subCol,
+            bars: updatedBars,
+            gaps: updatedGaps,
+          };
+        }) || [];
+
+      console.log("bro barsdurations", barsDurations);
+      updateBarAZ(barsDurations);
     };
     calcTicks();
   }, [zoomLevel, containerWidth, totalDuration]); // adding delCmBarId to again map over the data since barsData will be changed

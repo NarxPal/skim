@@ -3,13 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Columns } from 'src/models/columns.entity';
 import { CreateColumnDto } from './dto/createDTO';
-import {
-  SubColDto,
-  OnlySubColDto,
-  BarData,
-  Gap,
-  Sub_Column,
-} from './dto/createDTO';
+import { OnlySubColDto, BarData, Gap, Sub_Column } from './dto/createDTO';
 
 @Injectable()
 export class ColumnsService {
@@ -25,21 +19,6 @@ export class ColumnsService {
   findOneByProjectId(project_id: number): Promise<Columns> {
     return this.columnsRepository.findOne({ where: { project_id } });
   }
-
-  // async subColIdBars(
-  //   dragOverSubColId: number,
-  // ): Promise<OnlySubColDto | undefined> {
-  //   const columns = await this.columnsRepository.find();
-  //   for (const column of columns) {
-  //     const subColumn = column.sub_columns?.find(
-  //       (subCol) => subCol.id === dragOverSubColId,
-  //     );
-  //     if (subColumn) {
-  //       return subColumn;
-  //     }
-  //   }
-  //   return undefined;
-  // }
 
   async dragBarId(subColId: number, id: number): Promise<BarData | undefined> {
     const columns = await this.columnsRepository.find();
@@ -158,34 +137,36 @@ export class ColumnsService {
     return this.columnsRepository.save(columns);
   }
 
-  async updateGap(id: number, updateGapData: Gap) {
+  async updateGap(prjId: number, id: number, updateGapData: Gap) {
     const columns = await this.columnsRepository.find();
+    const column = columns.find((col) => col.project_id === prjId);
 
-    if (!columns || columns.length === 0) {
-      throw new NotFoundException(`No columns found`);
+    if (!column) {
+      throw new NotFoundException(`Column with project_id ${prjId} not found`);
     }
 
-    let barFound = false;
-    columns.forEach((column) => {
-      if (column.sub_columns) {
-        column.sub_columns.forEach((subColumn) => {
-          subColumn.gaps?.forEach((gap) => {
-            if (gap.barId === id) {
-              gap.width = updateGapData.width;
-              gap.start_gap = updateGapData.start_gap;
-              gap.end_gap = updateGapData.end_gap;
-              barFound = true;
-            }
-          });
-        });
-      }
+    let gapFound = false;
+
+    column.sub_columns?.forEach((subColumn) => {
+      subColumn.gaps?.forEach((gap) => {
+        console.log('id', id);
+        console.log('gap  ', gap);
+        if (gap.id === id) {
+          gap.width = updateGapData.width;
+          gap.start_gap = updateGapData.start_gap;
+          gap.end_gap = updateGapData.end_gap;
+          gap.sub_col_id = updateGapData.sub_col_id;
+          gapFound = true;
+        }
+      });
     });
 
-    if (!barFound) {
-      throw new NotFoundException(`gap with id ${id} not found`);
+    if (!gapFound) {
+      throw new NotFoundException(`Gap with id ${id} not found`);
     }
 
-    return this.columnsRepository.save(columns);
+    await this.columnsRepository.save(column);
+    return column;
   }
 
   async deleteDraggedBar(SubColId: number, BarId: number) {
@@ -240,6 +221,41 @@ export class ColumnsService {
             bars.forEach((bar, index) => {
               bar.order = index;
             });
+          }
+        });
+      }
+    });
+
+    await this.columnsRepository.save(columns);
+    return columns;
+  }
+
+  async addGapToSubCol(id: number, addGapData: any) {
+    const columns = await this.columnsRepository.find();
+
+    columns.forEach((column) => {
+      if (column.sub_columns) {
+        column.sub_columns.forEach((subColumn) => {
+          if (subColumn.sub_col_id == id) {
+            if (!subColumn.gaps) {
+              subColumn.gaps = [];
+            }
+
+            const GapWithOrder = {
+              ...addGapData.addGapData,
+            };
+            const gaps = subColumn?.gaps || [];
+
+            const isDuplicate = gaps.some((gap) => gap.id === GapWithOrder.id);
+            if (isDuplicate) return; // skip insertion
+
+            let insertIndex = gaps.findIndex(
+              (gap) => gap.start_gap > GapWithOrder.start_gap,
+            );
+            // findIndex return -1 if no match found in array
+            if (insertIndex === -1) insertIndex = gaps.length;
+
+            gaps.splice(insertIndex, 0, GapWithOrder);
           }
         });
       }
@@ -324,6 +340,28 @@ export class ColumnsService {
               subColumn.bars = [];
             }
             // If no bars are left, set `bars` to empty arr
+          }
+        });
+      }
+    });
+    await this.columnsRepository.save(columns);
+    return columns;
+  }
+
+  async delCmGap(cmSubColId: number, cmGapId: string) {
+    const columns = await this.columnsRepository.find();
+    columns.forEach((column) => {
+      if (column.sub_columns) {
+        column.sub_columns.forEach((subColumn) => {
+          if (subColumn.sub_col_id === Number(cmSubColId)) {
+            subColumn.gaps = subColumn.gaps?.filter(
+              (gap) => Number(gap.id) !== Number(cmGapId),
+            );
+
+            if (subColumn.gaps && subColumn.gaps.length === 0) {
+              subColumn.gaps = [];
+            }
+            // If no gaps are left, set `gaps` to empty arr
           }
         });
       }

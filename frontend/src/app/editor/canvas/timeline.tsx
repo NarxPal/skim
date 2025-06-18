@@ -9,7 +9,7 @@ import { RootState } from "@/redux/store";
 import { useSprings } from "@react-spring/web";
 
 // types / interfaces import
-import { BarsProp, sub_column, bar } from "@/interfaces/barsProp";
+import { BarsProp, sub_column, bar, gap } from "@/interfaces/barsProp";
 import Clip from "@/components/clip";
 
 type MediaItem = {
@@ -144,6 +144,7 @@ const Timeline: React.FC<TimelineProps> = ({
 
   // use gesture and spring
   const allBars = useMemo(() => {
+    console.log("barsdadta checko memo", barsData);
     // using useMemo since allBars becomes stale and doesn't update after barsData changes
     return (
       barsData?.sub_columns?.flatMap((subCol) =>
@@ -628,41 +629,28 @@ const Timeline: React.FC<TimelineProps> = ({
                       onDragOver={(e) => handleDynamicDragOver(e, item?.id)}
                       onDrop={(e) => handleDynamicDrop(e, item?.id)}
                     >
-                      {/* currently this will only work after resize handle are used since barsdata has not been updated */}
-                      {gapData &&
-                        gapData.sub_columns
-                          .filter(
-                            (oGap: sub_column) =>
-                              oGap.sub_col_id === item.sub_col_id
-                          )
-                          .map((oGap: sub_column) => {
-                            const gapWidth = oGap.gaps.find(
-                              (gap) =>
-                                gap.barId ===
-                                oGap.gaps.find(
-                                  (zoomGap) =>
-                                    zoomGap?.sub_col_id === gap.sub_col_id
-                                )?.barId
-                            )?.width;
-                            return (
-                              <div
-                                key={oGap.id}
-                                className={styles.gap_box_div}
-                                style={{
-                                  width: gapWidth, // width according to stored in db and zoom level
-                                  left: 0,
-                                }}
-                              >
-                                <div className={styles.gap_box}></div>
-                              </div>
-                            );
-                          })}
+                      {item?.gaps?.length > 0 &&
+                        item.gaps.map((gap: gap) => {
+                          const gapWidth = gap.width;
+                          const startGap = gap.start_gap;
+                          return (
+                            <div
+                              key={gap.id}
+                              className={styles.gap_box_div}
+                              style={{
+                                width: gapWidth,
+                                left: startGap,
+                              }}
+                            >
+                              <div className={styles.gap_box}></div>
+                            </div>
+                          );
+                        })}
 
                       {item?.bars?.length > 0 && (
                         <div key={index}>
                           <Clip
                             item={item}
-                            isEmpty={isEmpty}
                             barsDataChangeAfterZoom={barsDataChangeAfterZoom}
                             setBarsDataChangeAfterZoom={
                               setBarsDataChangeAfterZoom
@@ -672,9 +660,7 @@ const Timeline: React.FC<TimelineProps> = ({
                             setContextMenu={setContextMenu}
                             mediaContainerWidth={mediaContainerWidth}
                             setFetchBars={setFetchBars}
-                            // bar={item.bar}
                             barIndex={index}
-                            bars={item.bars}
                             setBarsData={setBarsData}
                             setUpdateBarsData={setUpdateBarsData}
                             setHoveringOverRow={setHoveringOverRow}
@@ -684,7 +670,6 @@ const Timeline: React.FC<TimelineProps> = ({
                             prjId={prjId}
                             zoomSprings={springs}
                             zoomApi={api}
-                            zoomAllBars={allBars}
                             totalDuration={totalMediaDuration}
                             setBarAfterShift={setBarAfterShift}
                             barIdsRef={barIdsRef}
