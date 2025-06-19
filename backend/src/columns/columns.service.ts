@@ -146,11 +146,9 @@ export class ColumnsService {
     }
 
     let gapFound = false;
-
+    console.log('update gap data ', updateGapData);
     column.sub_columns?.forEach((subColumn) => {
       subColumn.gaps?.forEach((gap) => {
-        console.log('id', id);
-        console.log('gap  ', gap);
         if (gap.id === id) {
           gap.width = updateGapData.width;
           gap.start_gap = updateGapData.start_gap;
@@ -163,6 +161,39 @@ export class ColumnsService {
 
     if (!gapFound) {
       throw new NotFoundException(`Gap with id ${id} not found`);
+    }
+
+    await this.columnsRepository.save(column);
+    return column;
+  }
+
+  async updateGapAfterDrop(prjId: number, updateGapData: any) {
+    const columns = await this.columnsRepository.find();
+    const column = columns.find((col) => col.project_id === prjId);
+    if (!column) {
+      throw new NotFoundException(`Column with project_id ${prjId} not found`);
+    }
+
+    let gapFound = false;
+
+    const updatedGaps = updateGapData.updatedGaps;
+    updatedGaps.forEach((newGap: Gap) => {
+      column.sub_columns?.forEach((subColumn) => {
+        if (subColumn.sub_col_id === newGap.sub_col_id) {
+          subColumn.gaps?.forEach((gap) => {
+            if (gap.id === newGap.id) {
+              gap.width = newGap.width;
+              gap.start_gap = newGap.start_gap;
+              gap.end_gap = newGap.end_gap;
+              gapFound = true;
+            }
+          });
+        }
+      });
+    });
+
+    if (!gapFound) {
+      throw new NotFoundException(`Gap not found`);
     }
 
     await this.columnsRepository.save(column);

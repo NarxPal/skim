@@ -93,6 +93,15 @@ export class ColumnsController {
     );
   }
 
+  @Patch('sub-columns/g/update/batchUpdate/:prjId')
+  async updateGapAfterDrop(
+    @Param('prjId') prjId: number,
+    @Body()
+    updateGapData: Gap[],
+  ) {
+    return this.columnsService.updateGapAfterDrop(Number(prjId), updateGapData);
+  }
+
   // used in updateBarRow function in frontend
   @Patch('sub-columns/:id')
   async addBarToSubCol(@Param('id') id: number, @Body() addBarData: any) {

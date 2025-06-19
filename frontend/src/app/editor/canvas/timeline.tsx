@@ -9,7 +9,7 @@ import { RootState } from "@/redux/store";
 import { useSprings } from "@react-spring/web";
 
 // types / interfaces import
-import { BarsProp, sub_column, bar, gap } from "@/interfaces/barsProp";
+import { BarsProp, gap } from "@/interfaces/barsProp";
 import Clip from "@/components/clip";
 
 type MediaItem = {
@@ -299,18 +299,6 @@ const Timeline: React.FC<TimelineProps> = ({
     }
   };
 
-  const getBarsForSubColId = async (dragOverSubColId: number) => {
-    try {
-      const subColIdBars = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${dragOverSubColId}`
-      );
-      // console.log("want BARS", subColIdBars.data);
-      return subColIdBars.data.bars;
-    } catch (error) {
-      console.log("subcolid bars fetching error", error);
-    }
-  };
-
   const addNewSubCol = async () => {
     try {
       const response = await axios.post(
@@ -330,26 +318,6 @@ const Timeline: React.FC<TimelineProps> = ({
       console.log("error creating empty subcol", error);
     }
   };
-
-  // const createTemporarySpace = async (
-  //   barsInSubCol: bar[],
-  //   targetIndex: number,
-  //   previewBarWidth: number
-  // ) => {
-  //   if (barsInSubCol?.length > 0 && targetIndex < barsInSubCol.length) {
-  //     // Shift the target bar and all bars after it
-  //     for (let i = targetIndex; i < barsInSubCol.length; i++) {
-  //       const barElement = document.querySelector(
-  //         `#bar-${barsInSubCol[i].id}`
-  //       ) as HTMLElement;
-  //       if (barElement) {
-  //         barElement.style.left = `${
-  //           barsInSubCol[i].left_position + previewBarWidth
-  //         }px`;
-  //       }
-  //     }
-  //   }
-  // };
 
   // ****** zoom in out ***********
   // it only changes the containerwidth
@@ -423,35 +391,11 @@ const Timeline: React.FC<TimelineProps> = ({
     // setBarDragging(false);
   };
 
-  // const resetBarPositions = async (
-  //   barsInSubCol: bar[],
-  //   dragOverSubColId: number,
-  //   dropSubColId: number
-  // ) => {
-  //   if (
-  //     dragOverSubColId === dropSubColId &&
-  //     dragOverSubColId !== null &&
-  //     dropSubColId !== null
-  //   ) {
-  //     barsInSubCol?.forEach((bar) => {
-  //       const barElement = document.querySelector(
-  //         `#bar-${bar.id}`
-  //       ) as HTMLElement;
-  //       if (barElement) {
-  //         barElement.style.left = `${bar.left_position}px`;
-  //       }
-  //     });
-  //     setPreviewBarPosition(null);
-  //     // deleteTemporarySpace();
-  //   }
-  // };
-
   const handleDynamicDrop = (
     e: React.DragEvent<HTMLDivElement>,
     dropSubColId: number
   ) => {
     if (barDragging) {
-      // resetBarPositions(dropSubColId)
     } else {
       handleMediaDrop(e);
     }
@@ -464,6 +408,139 @@ const Timeline: React.FC<TimelineProps> = ({
     if (barDragging) {
     } else {
       handleDragOver(e);
+    }
+  };
+
+  const shiftGapsAfterGapDelete = async (data: BarsProp, gap: gap) => {
+    try {
+      const allUpdatedGaps = [];
+
+      for (const subcol of data.sub_columns || []) {
+        const changeBarOfDelGap = subcol.bars?.find((b) => b.id === gap.barId);
+        if (!changeBarOfDelGap) continue;
+
+        const barsPresentAfterBarGapDel = subcol.bars
+          .filter((bar) => bar.left_position > changeBarOfDelGap.left_position)
+          .sort((a, b) => a.left_position - b.left_position);
+
+        // get id of all bars present after the deleted gap of bar(changeBarOfDelGap)
+        const barIds = barsPresentAfterBarGapDel.map((bar) => bar.id);
+        // find all gaps related to bars present after bar gap del
+        const relatedGaps = subcol.gaps.filter((gap) =>
+          barIds.includes(gap.barId)
+        );
+
+        for (const gap of relatedGaps) {
+          const bar = barsPresentAfterBarGapDel.find((b) => b.id === gap.barId);
+          if (!bar) continue;
+
+          const prevBar = subcol.bars
+            .filter((b) => b.left_position < bar.left_position)
+            .sort((a, b) => b.left_position - a.left_position)[0];
+
+          const start_gap = prevBar ? prevBar.left_position + prevBar.width : 0;
+          const end_gap = bar.left_position;
+          const width = end_gap - start_gap;
+
+          allUpdatedGaps.push({
+            ...gap,
+            start_gap,
+            end_gap,
+            width,
+          });
+        }
+      }
+      if (allUpdatedGaps.length > 0) {
+        const updatedGap = await axios.patch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/g/update/batchUpdate/${data.project_id}`,
+          { updatedGaps: allUpdatedGaps }
+        );
+        console.log("updated gap checkoo for shift gaps", updatedGap.data);
+        setBarsData(updatedGap.data);
+        setBarsDataChangeAfterZoom(updatedGap.data);
+        setBarAfterShift(true);
+      }
+    } catch (error) {
+      console.error("Error in shiftGapsAfterGapDelete:", error);
+    }
+  };
+
+  const shiftBarsAfterGapDelete = async (data: BarsProp, gap: gap) => {
+    try {
+      console.log("shift bar gap del ran");
+      data.sub_columns?.map(async (subCol) => {
+        const changeBarOfDelGap = subCol.bars?.find(
+          (bar) => bar.id === gap.barId
+        );
+        if (!changeBarOfDelGap) return;
+
+        const singleTickPxValue = mediaContainerWidth / totalMediaDuration;
+        const pxPerSecond = singleTickPxValue / markerInterval;
+
+        changeBarOfDelGap.left_position = gap.start_gap;
+        changeBarOfDelGap.ruler_start_time = gap.start_gap;
+        changeBarOfDelGap.ruler_start_time_in_sec = gap.start_gap / pxPerSecond;
+
+        const barsPresentAfterChangeBar = subCol.bars
+          .filter((bar) => bar.left_position > changeBarOfDelGap.left_position)
+          .sort((a, b) => a.left_position - b.left_position);
+
+        const barsPresentBeforeChangedBar = subCol.bars.filter(
+          (bar) => bar.left_position < changeBarOfDelGap.left_position
+        );
+
+        if (!barsPresentAfterChangeBar) return;
+
+        for (let i = 0; i < barsPresentAfterChangeBar.length; i++) {
+          const curr = barsPresentAfterChangeBar[i];
+          curr.left_position -= gap.width;
+          curr.ruler_start_time = curr.left_position;
+          curr.ruler_start_time_in_sec = curr.left_position / pxPerSecond;
+        }
+
+        const updatedBars = [
+          ...barsPresentBeforeChangedBar.map((bar) => ({ ...bar })),
+          { ...changeBarOfDelGap },
+          ...barsPresentAfterChangeBar.map((bar) => ({ ...bar })),
+        ];
+
+        const updatedData = await axios.patch(
+          // sub-columns/:id - patch in backend
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/updateBar/${gap.sub_col_id}`,
+          {
+            addBarData: { ...updatedBars },
+          }
+        );
+        console.log("updated data.data shift bar gap checko", updatedData.data);
+        const getUpdatedData = updatedData.data;
+        shiftGapsAfterGapDelete(getUpdatedData, gap);
+      });
+    } catch (error) {
+      console.error("Error in shiftBarsAfterGapDelete:", error);
+    }
+  };
+
+  const handleDelGap = async (gap: gap) => {
+    try {
+      const allGaps = barsDataChangeAfterZoom?.sub_columns?.flatMap(
+        (subcol) => subcol.gaps || []
+      );
+      if (!allGaps) return;
+      const targetGap = allGaps.find((g) => g.barId === gap.barId);
+
+      if (!targetGap) return;
+      const startGap = targetGap?.start_gap;
+      const delGap = await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gaps/update/${prjId}/${gap.id}`,
+        { ...targetGap, start_gap: startGap, end_gap: startGap, width: 0 }
+      );
+      console.log("del gap checko ran", delGap.data);
+      setBarsData(delGap.data);
+      setBarsDataChangeAfterZoom(delGap.data);
+      setBarAfterShift(true);
+      shiftBarsAfterGapDelete(delGap.data, gap);
+    } catch (error) {
+      console.log("error in handleDelGap", error);
     }
   };
 
@@ -642,7 +719,22 @@ const Timeline: React.FC<TimelineProps> = ({
                                 left: startGap,
                               }}
                             >
-                              <div className={styles.gap_box}></div>
+                              <div className={styles.gap_box}>
+                                {gapWidth >= 50 && (
+                                  <div
+                                    className={styles.gap_del_icon}
+                                    onClick={() => handleDelGap(gap)}
+                                  >
+                                    <Image
+                                      alt="del"
+                                      src="/delete.png"
+                                      width={15}
+                                      height={15}
+                                      priority={true}
+                                    />
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           );
                         })}

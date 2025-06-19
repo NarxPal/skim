@@ -126,7 +126,7 @@ const Clip: React.FC<ClipProps> = ({
   ) => {
     try {
       const gapToUpdate = subCol.gaps.find((g) => g.barId === barId);
-      await axios.patch(
+      const handleGapRes = await axios.patch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gaps/update/${prjId}/${gapToUpdate?.id}`,
         {
           ...gapToUpdate,
@@ -135,6 +135,9 @@ const Clip: React.FC<ClipProps> = ({
           end_gap: endOfGap,
         }
       );
+      const gapUpdated = handleGapRes.data;
+      setBarsDataChangeAfterZoom(gapUpdated);
+      console.log("handle gap res", handleGapRes.data);
     } catch (error) {
       console.error("Error updating gap:", error);
     }
@@ -145,14 +148,15 @@ const Clip: React.FC<ClipProps> = ({
     bar: bar,
     bars: bar[],
     barIndex: number,
-    newLP: number
+    newLP: number,
+    newWidth: number
   ) => {
     // calc for first bar clip in the subcol
     if (bar.order === 0) {
       const startOfGap = 0;
       const endOfGap = newLP;
       const gapWidth = newLP; // lp of bar would be the end position of gap
-      handleGap(subcol, bar.id, gapWidth, startOfGap, endOfGap);
+      await handleGap(subcol, bar.id, gapWidth, startOfGap, endOfGap);
     }
     // calc for bars clip placed next to first
     else {
@@ -161,7 +165,16 @@ const Clip: React.FC<ClipProps> = ({
       const startOfGap = prevBar ? prevBar.left_position + prevBar.width : 0;
       const endOfGap = newLP;
       const gapWidth = endOfGap - startOfGap;
-      handleGap(subcol, bar.id, gapWidth, startOfGap, endOfGap);
+      await handleGap(subcol, bar.id, gapWidth, startOfGap, endOfGap);
+    }
+
+    // update gap present after dragged/resized bar (i.e., for next bar)
+    const nextBar = bars[barIndex + 1];
+    if (nextBar) {
+      const startOfGap = newLP + newWidth;
+      const endOfGap = nextBar.left_position;
+      const gapWidth = endOfGap - startOfGap;
+      await handleGap(subcol, nextBar.id, gapWidth, startOfGap, endOfGap);
     }
   };
 
@@ -224,7 +237,14 @@ const Clip: React.FC<ClipProps> = ({
             ruler_start_time_in_sec: rulerStartTimeInSec,
           }
         );
-        await calculateGap(subcol, bar, bars, barIndex, newLeftPosition);
+        await calculateGap(
+          subcol,
+          bar,
+          bars,
+          barIndex,
+          newLeftPosition,
+          newWidth
+        );
         const filteredData = updatebar.data.filter(
           (bar: BarsProp) => bar.project_id === Number(prjId)
         );
@@ -244,7 +264,6 @@ const Clip: React.FC<ClipProps> = ({
     hoveredRowId?: number
   ) => {
     try {
-      console.log("shift bar after drop ran checko");
       await Promise.all(
         data.sub_columns?.map(async (subcol) => {
           // const droppedBar = subcol.bars?.find((b) => b.id === droppedBarId); // fetching all bars except dropped one
@@ -255,7 +274,6 @@ const Clip: React.FC<ClipProps> = ({
           );
 
           if (!droppedBar) return;
-          console.log("dropped bar checko", droppedBar);
           const barsPresentAfterDroppedBar = subcol.bars
             .filter((bar) => bar.left_position > droppedBar.left_position)
             .sort((a, b) => a.left_position - b.left_position);
@@ -292,8 +310,6 @@ const Clip: React.FC<ClipProps> = ({
             ...barsPresentAfterDroppedBar.map((bar) => ({ ...bar })),
           ];
 
-          console.log("updated bars", updatedBars);
-          console.log("data", data);
           const updatedData = await axios.patch(
             // sub-columns/:id - patch in backend
             `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/updateBar/${hoveredRowId}`,
@@ -313,9 +329,59 @@ const Clip: React.FC<ClipProps> = ({
     }
   };
 
+  const shiftGapsAfterDrop = async (data: BarsProp) => {
+    try {
+      const allUpdatedGaps = [];
+
+      for (const subcol of data.sub_columns || []) {
+        const droppedBar = subcol.bars?.find((b) => b.id === delBarFromRow?.id);
+        if (!droppedBar) continue;
+
+        const bars = subcol.bars
+          .filter((bar) => bar.left_position > droppedBar.left_position)
+          .sort((a, b) => a.left_position - b.left_position);
+
+        const barIds = bars.map((bar) => bar.id);
+        const relatedGaps = subcol.gaps.filter((gap) =>
+          barIds.includes(gap.barId)
+        );
+
+        for (const gap of relatedGaps) {
+          const bar = bars.find((b) => b.id === gap.barId);
+          if (!bar) continue;
+
+          const prevBar = subcol.bars
+            .filter((b) => b.left_position < bar.left_position)
+            .sort((a, b) => b.left_position - a.left_position)[0];
+
+          const start_gap = prevBar ? prevBar.left_position + prevBar.width : 0;
+          const end_gap = bar.left_position;
+          const width = end_gap - start_gap;
+
+          allUpdatedGaps.push({
+            ...gap,
+            start_gap,
+            end_gap,
+            width,
+          });
+        }
+      }
+      if (allUpdatedGaps.length > 0) {
+        const updatedGap = await axios.patch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/g/update/batchUpdate/${data.project_id}`,
+          { updatedGaps: allUpdatedGaps }
+        );
+        console.log("updated gap checkoo", updatedGap.data);
+        setBarsData(updatedGap.data);
+        setBarsDataChangeAfterZoom(updatedGap.data);
+      }
+    } catch (error) {
+      console.error("Error in shiftGapsAfterDrop:", error);
+    }
+  };
+
   const updateGapRow = async (rowId: number, updatedGapRes: any) => {
     try {
-      console.log("updated gap res checkko", updatedGapRes);
       const afterAddingGap = await axios.patch(
         // sub-columns/gap/:id - patch in backend
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gap/update/${rowId}`,
@@ -335,7 +401,6 @@ const Clip: React.FC<ClipProps> = ({
     newLeftPosition: number,
     NumHovRowId: number
   ) => {
-    console.log("update gap lp after drop BRO");
     barsDataChangeAfterZoom?.sub_columns?.forEach(async (subcol) => {
       const targetGap = subcol.gaps?.find((g) => g.barId === barId);
 
@@ -377,7 +442,6 @@ const Clip: React.FC<ClipProps> = ({
 
   // it adds dragged bar to the row where it has been dropped
   const updateBarRow = async (rowId: number, updatedBarRes: bar) => {
-    console.log("update bar row RAN CHECKO");
     try {
       const afterAddingBar = await axios.patch(
         // sub-columns/:id - patch in backend
@@ -421,8 +485,6 @@ const Clip: React.FC<ClipProps> = ({
         const updatedBarRes = filteredData[0].sub_columns
           .flatMap((subcol: any) => (subcol.bars ? subcol.bars : []))
           .find((bar: bar) => bar.id === targetBar.id);
-        console.log("filtered data CHECK HERE AB", filteredData);
-        // setBarsDataChangeAfterZoom(filteredData);
         await updateBarRow(NumHovRowId, updatedBarRes);
         updateGapLPAfterDrop(barId, newLeftPosition, NumHovRowId);
       }
@@ -622,6 +684,11 @@ const Clip: React.FC<ClipProps> = ({
                     if (newX >= start && newX <= end) {
                       // this condition is when dragged bar is above the bar present in the hovered subcol
                       resolvedX = bar.left_position + bar.width;
+
+                      const rulerStartTimePxVal = resolvedX;
+                      const pxPerSecond = singleTickPxValue / markerInterval;
+                      const pxToTime = rulerStartTimePxVal / pxPerSecond;
+
                       updateBarLPAfterDrop(
                         barId,
                         resolvedX,
@@ -893,7 +960,6 @@ const Clip: React.FC<ClipProps> = ({
     cmBarId: number | undefined,
     hoveredRowId?: number
   ) => {
-    console.log("del cm bar id RAN CHECKO");
     try {
       const delBar = await axios.delete(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${cmSubColId}/bars/${cmBarId}`
@@ -917,11 +983,15 @@ const Clip: React.FC<ClipProps> = ({
     cmGapId: number | undefined
   ) => {
     try {
-      console.log("del cm gap ran checko");
       const delGap = await axios.delete(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gaps/${cmSubColId}/${cmGapId}`
       );
-      console.log("del gap checko", delGap);
+      const filteredData = delGap.data.filter(
+        (gap: BarsProp) => gap.project_id === Number(prjId)
+      );
+      console.log("filtered data gap checko", filteredData);
+      const updatedData = filteredData[0];
+      await shiftGapsAfterDrop(updatedData);
     } catch (error) {
       console.log("error deleting bar", error);
     }

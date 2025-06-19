@@ -75,7 +75,15 @@
 }
 
 .gap_box {
-  @apply hover:bg-editor_gray relative rounded-lg w-full h-full hover:border-2 hover:border-containerGray hover:bg-diagonal-stripes;
+  @apply relative rounded-lg w-full h-full hover:border-2 hover:border-containerGray hover:bg-diagonal-stripes flex;
+}
+
+.gap_del_icon{
+  @apply m-auto p-3 hover:bg-containerGray bg-containerGray bg-opacity-70 rounded-full cursor-pointer hidden  
+}
+
+.gap_box_div:hover .gap_del_icon {
+  display: block;
 }
 
 .clip_sub_col_div {
