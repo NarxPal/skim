@@ -30,6 +30,7 @@ type MediaItem = {
 type ColumnsProps = {
   // column_ids: { id: number }[];
   id: number;
+  sub_col_id: number;
   position: number;
   project_id: number;
   user_id: string;
@@ -301,14 +302,19 @@ const Timeline: React.FC<TimelineProps> = ({
 
   const addNewSubCol = async () => {
     try {
+      const subColId =
+        Math.floor(Math.random() * 1000000) + (Date.now() % 1000000);
+
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
         {
+          sub_col_id: subColId,
           project_id: columns?.project_id,
           user_id: columns?.user_id,
           parent_id: columns?.id,
           // bars will be empty here since this new subcol is for creating subcol having no bars
           bars: [],
+          gaps: [],
         }
       );
       console.log("sub col created for empty bars :", response.data);

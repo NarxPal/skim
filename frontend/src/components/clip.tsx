@@ -520,7 +520,14 @@ const Clip: React.FC<ClipProps> = ({
 
   // use gesture and spring
   const bindDrag = useDrag(
-    ({ movement: [dx, dy], args: [barId], event, last, down, active }) => {
+    ({
+      movement: [dx, dy],
+      args: [barId, subColId],
+      event,
+      last,
+      down,
+      active,
+    }) => {
       if (event.target && (event.target as HTMLElement).closest(".handle"))
         // if the target element or its ancestors contain handle class than stop
         return;
@@ -536,21 +543,14 @@ const Clip: React.FC<ClipProps> = ({
         subColumn?.bars?.forEach((bar, barIndex) => {
           if (bar.id !== barId) return {};
           // for clip movement within the subcol(row)
-          // const minX = 0;
-          // const maxX = mediaContainerWidth - bar.width; // prevent going beyond right edge
-          // let newX = Math.max(minX, Math.min(bar.left_position + dx, maxX));
+          const minX = 0;
+          const maxX = mediaContainerWidth - bar.width; // prevent going beyond right edge
 
           const prevBar = subColumn.bars[barIndex - 1];
           const nextBar = subColumn.bars[barIndex + 1];
 
           const prevX = prevBar ? prevBar.left_position + prevBar.width : 0;
           const nextX = nextBar ? nextBar.left_position : mediaContainerWidth;
-
-          // clamp newX to avoid overlap
-          const newX = Math.max(
-            prevX,
-            Math.min(bar.left_position + dx, nextX - bar.width)
-          );
 
           // for clip movement between the subcol(row)
           const verticalThreshold = 25;
@@ -560,6 +560,24 @@ const Clip: React.FC<ClipProps> = ({
           if (threshold_condition) {
             newY = last ? 0 : dy;
           }
+
+          let newX;
+
+          if (Math.abs(dy) < verticalThreshold) {
+            // clamp newX to avoid overlap
+            // console.log("dx checko", dx);
+            // console.log("prev x", prevX);
+            // console.log("next x", nextX);
+            newX = Math.max(
+              prevX,
+              Math.min(bar.left_position + dx, nextX - bar.width)
+            );
+          } else {
+            // here newX for dragging bw subcols
+            // console.log("dx in else ", dx);
+            newX = Math.max(minX, Math.min(bar.left_position + dx, maxX));
+          }
+
           const hoveredRowId = getRowUnderCursor(event as PointerEvent);
 
           const rulerStartTimePxVal = newX;
@@ -719,7 +737,13 @@ const Clip: React.FC<ClipProps> = ({
                   });
 
                   // when row is empty
-                  // updateBarLPAfterDrop(barId, resolvedX, hoveredRowId);
+                  updateBarLPAfterDrop(
+                    barId,
+                    resolvedX,
+                    hoveredRowId,
+                    rulerStartTimePxVal,
+                    pxToTime
+                  );
                 }
               });
             }
@@ -727,9 +751,7 @@ const Clip: React.FC<ClipProps> = ({
             zoomApi.start((i) => {
               if (i !== getBarIndex) return {};
               return {
-                clipLP: hoveredRowId
-                  ? resolvedX
-                  : threshold_condition
+                clipLP: threshold_condition
                   ? down
                     ? resolvedX
                     : bar.left_position
@@ -941,12 +963,11 @@ const Clip: React.FC<ClipProps> = ({
   );
 
   // run when clip dropped to another sub col
-  const delCmSubColId = async (subColId: number) => {
+  const deleteEmptyRow = async () => {
     try {
       const delSubCol = await axios.delete(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${subColId}`
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/delSubCol/${prjId}`
       );
-
       console.log("del bar res", delSubCol);
       setFetchBars(true);
     } catch (error) {
@@ -970,8 +991,6 @@ const Clip: React.FC<ClipProps> = ({
       );
       const updatedRow = filteredData[0];
       console.log("updated row bro after delcmbarid", updatedRow);
-      // setBarsDataChangeAfterZoom(updatedRow);
-      // setFetchBars(true);
       await shiftBarsAfterDrop(updatedRow, cmBarId, hoveredRowId);
     } catch (error) {
       console.log("error deleting bar", error);
@@ -992,6 +1011,7 @@ const Clip: React.FC<ClipProps> = ({
       console.log("filtered data gap checko", filteredData);
       const updatedData = filteredData[0];
       await shiftGapsAfterDrop(updatedData);
+      deleteEmptyRow();
     } catch (error) {
       console.log("error deleting bar", error);
     }
@@ -999,16 +1019,41 @@ const Clip: React.FC<ClipProps> = ({
 
   // ********** context menu functions ************
 
+  const handleDeleteBarAndGap = async (
+    subColId: number,
+    barId: number,
+    subCol: sub_column
+  ) => {
+    try {
+      await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${subColId}/bars/${barId}`
+      );
+
+      const deleteBarGap = subCol.gaps.find((gap) => gap.barId === barId);
+      await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gaps/${deleteBarGap?.sub_col_id}/${deleteBarGap?.id}`
+      );
+      setFetchBars(true);
+      deleteEmptyRow();
+    } catch (error) {
+      console.log("error deleting bar", error);
+    }
+  };
+
   const handleRightClickBar = (
     e: React.MouseEvent<HTMLDivElement>,
     bar: bar,
     id: number,
-    subColId: number
+    subColId: number,
+    item: sub_column
   ) => {
     e.preventDefault();
     setOptions([
       { label: "edit", action: () => console.log(`Edit ${bar.id}`) },
-      { label: "delete", action: () => delCmBarId(subColId, bar.id) },
+      {
+        label: "delete",
+        action: () => handleDeleteBarAndGap(subColId, bar.id, item),
+      },
     ]);
     const container = e.currentTarget.getBoundingClientRect();
     setContextMenu({
@@ -1042,7 +1087,7 @@ const Clip: React.FC<ClipProps> = ({
         return (
           <animated.div
             key={bar.id}
-            {...bindDrag(bar.id)}
+            {...bindDrag(bar.id, bar.sub_col_id)}
             className={styles.item_box_div}
             style={{
               width: zoomSpring?.clipWidth.to((w) => `${w}px`),
@@ -1053,7 +1098,7 @@ const Clip: React.FC<ClipProps> = ({
             }}
             id={`bar-${bar?.id}`}
             onContextMenu={(e) =>
-              handleRightClickBar(e, bar, bar?.id, item?.sub_col_id)
+              handleRightClickBar(e, bar, bar?.id, item?.sub_col_id, item)
             } // here we are passing bar info
           >
             <div

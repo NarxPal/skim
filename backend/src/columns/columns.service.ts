@@ -146,7 +146,6 @@ export class ColumnsService {
     }
 
     let gapFound = false;
-    console.log('update gap data ', updateGapData);
     column.sub_columns?.forEach((subColumn) => {
       subColumn.gaps?.forEach((gap) => {
         if (gap.id === id) {
@@ -401,18 +400,21 @@ export class ColumnsService {
     return columns;
   }
 
-  async delSubCol(cmSubColId: number): Promise<void> {
+  async delSubCol(prjId: string): Promise<Columns[]> {
     const columns = await this.columnsRepository.find();
 
-    columns.forEach((column) => {
-      if (column.sub_columns) {
-        // Filter out the sub-column with the matching ID
-        column.sub_columns = column.sub_columns.filter(
-          (subColumn) => subColumn.id !== Number(cmSubColId),
-        );
-      }
-    });
+    const filteredColumns = columns
+      .filter((column) => column.project_id === Number(prjId))
+      .map((column) => {
+        if (column.sub_columns) {
+          column.sub_columns = column.sub_columns.filter(
+            (subColumn) => subColumn.bars && subColumn.bars.length > 0,
+          );
+        }
+        return column;
+      });
 
-    await this.columnsRepository.save(columns);
+    await this.columnsRepository.save(filteredColumns);
+    return filteredColumns;
   }
 }

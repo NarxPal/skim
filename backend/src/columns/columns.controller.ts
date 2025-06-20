@@ -78,7 +78,7 @@ export class ColumnsController {
     return this.columnsService.updateBar(Number(id), updateBarData);
   }
 
-  // update gap after resize
+  // updateGapAfterResize and updateGapLPAfterDrop, handleGap, handleDelGap
   @Patch('sub-columns/gaps/update/:prjId/:id')
   async updateGap(
     @Param('prjId') prjId: number,
@@ -93,6 +93,7 @@ export class ColumnsController {
     );
   }
 
+  // used in shiftGapsAfterDrop and shiftGapsAfterGapDelete
   @Patch('sub-columns/g/update/batchUpdate/:prjId')
   async updateGapAfterDrop(
     @Param('prjId') prjId: number,
@@ -165,9 +166,9 @@ export class ColumnsController {
     return this.columnsService.delCmGap(cmSubColId, cmGapId);
   }
 
-  // for deleting the subcol, (similar path have been used in addBarToSubCol)
-  @Delete('/sub-columns/:cmSubColId')
-  async delSubCol(@Param('cmSubColId') cmSubColId: number) {
-    return this.columnsService.delSubCol(cmSubColId);
+  // for deleting the subcol,
+  @Delete('/sub-columns/delSubCol/:prjId')
+  async delSubCol(@Param('prjId') prjId: string) {
+    return this.columnsService.delSubCol(prjId);
   }
 }
