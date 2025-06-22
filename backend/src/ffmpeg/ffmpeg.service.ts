@@ -6,7 +6,7 @@ import { Response } from 'express';
 @Injectable()
 export class FfmpegService {
   async extractFirstFrame(videoPath: string): Promise<Buffer> {
-    return  new Promise<Buffer>((resolve, reject) => {
+    return new Promise<Buffer>((resolve, reject) => {
       const buffers: Buffer[] = [];
 
       ffmpeg(videoPath)
@@ -26,18 +26,17 @@ export class FfmpegService {
 
   async getMediaDuration(filePath: string): Promise<number> {
     const response = await axios.get(filePath, { responseType: 'stream' });
-
+    console.log('file path checko', filePath);
     return new Promise((resolve, reject) => {
-      ffmpeg()
-        .input(response.data) // Use the stream directly from the URL
-        // .inputFormat('mp4') // Adjust input format based on your file type
-        .ffprobe((err, metadata) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(metadata.format.duration); // Duration in seconds
-          }
-        });
+      let command = ffmpeg().input(response.data);
+
+      command.ffprobe((err, metadata) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(metadata.format.duration);
+        }
+      });
     });
   }
 }

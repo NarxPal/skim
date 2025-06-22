@@ -26,6 +26,7 @@ export type gap = {
   start_gap: number;
   end_gap: number;
   width: number;
+  media_type: string;
 };
 
 export type sub_column = {
@@ -34,6 +35,7 @@ export type sub_column = {
   parent_id: number;
   project_id: number;
   user_id: string;
+  media_type: string;
   bars: bar[];
   gaps: gap[];
 };

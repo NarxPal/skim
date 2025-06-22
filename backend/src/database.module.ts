@@ -18,7 +18,7 @@ import { Columns } from './models/columns.entity';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-          entities: [User, Projects, Media, Columns],
+        entities: [User, Projects, Media, Columns],
         synchronize: true, // Auto sync entities with the database, should be false in production, since it could lead to data loss, use migration instead
       }),
     }),

@@ -4,14 +4,12 @@ import {
   Get,
   UploadedFile,
   UseInterceptors,
-  Param,
   Res,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FfmpegService } from './ffmpeg.service';
 import * as multer from 'multer';
-import * as path from 'path';
-import * as fs from 'fs';
 import { Response } from 'express';
 
 @Controller('ffmpeg')
@@ -36,9 +34,10 @@ export class FfmpegController {
     }
   }
 
-  @Get('duration/*')
-  async getDuration(@Param() params: string): Promise<number> {
-    const fileUrl = decodeURIComponent(params[0]); // Decode URL
+  // using query here since public url contains "/" so cant use param
+  @Get('duration')
+  async getDuration(@Query('publicUrl') publicUrl: string): Promise<number> {
+    const fileUrl = decodeURIComponent(publicUrl); // Decode URL
     const duration = await this.ffmpegService.getMediaDuration(fileUrl);
     return duration;
   }

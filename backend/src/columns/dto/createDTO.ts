@@ -43,6 +43,7 @@ export type Gap = {
   start_gap: number;
   end_gap: number;
   width: number;
+  media_type: string;
 };
 
 export type Sub_Column = {
@@ -51,6 +52,7 @@ export type Sub_Column = {
   project_id: number;
   user_id: string;
   parent_id: number;
+  media_type: string;
   bars?: Bar[];
   gaps?: Gap[];
 };
@@ -84,6 +86,7 @@ export class OnlySubColDto {
   project_id: number;
   user_id: string;
   parent_id: number;
+  media_type: string;
   bars?: Bar[];
   gaps?: Gap[];
 }

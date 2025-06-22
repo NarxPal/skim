@@ -2,8 +2,6 @@
 import React, { ReactNode } from "react";
 import styles from "@/styles/sidebar.module.css";
 import { useParams } from "next/navigation";
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
 import { FetchUser } from "./fetchUser";
 
 interface MediaUploadProps {
@@ -21,8 +19,6 @@ const Upload: React.FC<MediaUploadProps> = ({
   const params = useParams<{ uid: string; id: string }>();
 
   FetchUser(params.uid); // calling useeffect to fetch the user_id
-
-  const userId = useSelector((state: RootState) => state.userId.userId);
 
   // Handle drag and drop
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {

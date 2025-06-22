@@ -75,6 +75,7 @@ export class ColumnsService {
       project_id: subColumnData.project_id,
       user_id: subColumnData.user_id,
       parent_id: rootColumnId,
+      media_type: subColumnData.media_type,
       bars: subColumnData.bars,
       gaps: subColumnData.gaps,
     };

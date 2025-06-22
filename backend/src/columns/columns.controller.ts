@@ -10,8 +10,13 @@ import {
 } from '@nestjs/common';
 import { ColumnsService } from './columns.service';
 import { Columns } from 'src/models/columns.entity';
-import { CreateColumnDto, Sub_Column } from './dto/createDTO';
-import { SubColDto, OnlySubColDto, BarData, Gap } from './dto/createDTO';
+import {
+  CreateColumnDto,
+  Sub_Column,
+  OnlySubColDto,
+  BarData,
+  Gap,
+} from './dto/createDTO';
 @Controller('columns')
 export class ColumnsController {
   constructor(private readonly columnsService: ColumnsService) {}
@@ -54,6 +59,7 @@ export class ColumnsController {
     return this.columnsService.addSubColumnToRoot(rootColumnId, subColumnData);
   }
 
+  // it runs in createRootColumn in frontend
   @Post()
   createColumn(@Body() createColumnDto: CreateColumnDto) {
     return this.columnsService.create(createColumnDto);

@@ -1,13 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  OneToMany,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
-// import { Projects } from './projects.entity';
-// import { Expose, Transform } from 'class-transformer';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 type Bar = {
   id: number;
@@ -37,6 +28,7 @@ type Gap = {
   start_gap: number;
   end_gap: number;
   width: number;
+  media_type: string;
 };
 
 type Sub_Column = {
@@ -45,6 +37,7 @@ type Sub_Column = {
   project_id: number;
   user_id: string;
   parent_id: number;
+  media_type: string;
   bars?: Bar[];
   gaps?: Gap[];
 };
@@ -68,9 +61,4 @@ export class Columns {
 
   @Column('json', { nullable: true })
   sub_columns: Sub_Column[];
-
-  // // the above data will be shown in projects entity as well
-  // @ManyToOne(() => Projects, (project) => project.column)
-  // @JoinColumn({ name: 'id' })
-  // project: Projects;
 }

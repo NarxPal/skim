@@ -98,9 +98,9 @@
   /* @apply  */
 }
 
-.m_item_box {
+/* .m_item_box {
   @apply bg-sm_light_gray p-2 rounded-lg h-[4rem] border-dashed border-2 border-white border-opacity-10 hover:border-opacity-70 hover:border-white text-white text-opacity-50 bg-cover font-semibold text-xs;
-}
+} */
 
 .m_item_bar {
   /* @apply relative; */
@@ -154,7 +154,7 @@
 } */
 
 .m_type_label {
-  @apply gap-2 items-center h-full;
+  @apply items-center h-full;
 }
 
 .type_label_content {
@@ -170,7 +170,7 @@
 }
 
 .m_item_label {
-  @apply flex items-end text-[0.7rem] bg-white bg-opacity-10 px-1.5 rounded-md;
+  @apply ml-2 flex items-end text-[0.7rem] bg-white bg-opacity-10 px-1.5 rounded-md;
 }
 
 .add_col_div {
@@ -295,4 +295,74 @@
 
 .ph_time_div {
   @apply text-white;
+}
+
+/* **************** AUDIO TRACK ************************ */
+.clip_row{
+@apply mb-2
+}
+
+.audio_sub_col_div{
+  @apply relative h-8  bg-off_voi rounded-lg;
+}
+
+.audio_clip_box {
+  @apply bg-blue-600 rounded-lg h-8  text-white bg-cover font-medium text-xs px-1 py-1 shadow-2xl relative;
+}
+
+.audio_gap_box_div {
+  @apply absolute rounded-lg h-8 z-10;
+}
+
+.audio_gap_del_icon{
+  @apply m-auto p-1 hover:bg-containerGray bg-containerGray bg-opacity-70 rounded-full cursor-pointer hidden  
+}
+
+.audio_gap_box_div:hover .audio_gap_del_icon {
+  display: block;
+}
+
+.sm_audio_bar_arrow_div{
+  @apply  w-4 bar_arrow_div
+}
+
+.audio_bar_arrow_div {
+  @apply flex h-full items-center cursor-ew-resize;
+}
+
+.audio_arrow_pad {
+  @apply px-1.5 bg-blue-500 items-center rounded-lg flex py-1.5;
+}
+
+.audio_arrow_div {
+  @apply w-2.5 h-2.5 flex pointer-events-none;
+}
+
+.audio_bar_arrow {
+  /* @apply h-[70%] items-center  cursor-ew-resize bg-indigo-600 shadow-2xl rounded-lg px-2 py-4; */
+}
+
+.sm_audio_bar_arrow_left{
+  @apply h-[70%] items-center  cursor-ew-resize  shadow-2xl rounded-lg px-2 py-4;
+}
+
+.audio_bar_arrow_left {
+  @apply audio_bar_arrow  ml-[8px];
+}
+
+
+.audio_bar_arrow_right {
+  @apply audio_bar_arrow  mr-[8px];
+}
+
+.audio_type_icon {
+  @apply bg-blue-500 p-1 shadow-xl rounded-md;
+}
+
+.audio_bg_url{
+@apply w-full h-1/2 flex 
+}
+
+.audio_type_label_content {
+  @apply flex flex-row w-full;
 }

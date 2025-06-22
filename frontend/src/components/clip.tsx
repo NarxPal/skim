@@ -104,19 +104,6 @@ const Clip: React.FC<ClipProps> = ({
 
   const allBars = barsData?.sub_columns.flatMap((row) => row.bars) || [];
 
-  useEffect(() => {
-    console.log(
-      "ZOOM Springs array:",
-      zoomSprings.map((s, i) => ({
-        index: i,
-        // barID: s.barID?.get(),
-        subColId: s.subColId?.get(),
-        clipLP: s.clipLP.get(),
-        clipWidth: s.clipWidth.get(),
-      }))
-    );
-  }, [zoomSprings]);
-
   const handleGap = async (
     subCol: sub_column,
     barId: number,
@@ -515,14 +502,17 @@ const Clip: React.FC<ClipProps> = ({
     const clipsInRow = barsData?.sub_columns.filter(
       (subCol) => subCol.sub_col_id === NumRowId
     );
-    return clipsInRow;
+
+    const mediaType = clipsInRow?.[0]?.media_type;
+
+    return { clipsInRow, mediaType };
   };
 
   // use gesture and spring
   const bindDrag = useDrag(
     ({
       movement: [dx, dy],
-      args: [barId, subColId],
+      args: [barId, subColId, barType],
       event,
       last,
       down,
@@ -642,10 +632,12 @@ const Clip: React.FC<ClipProps> = ({
               console.log("newx in < vertical", newX);
             } else if (Math.abs(dy) > verticalThreshold) {
               // for dragged bar bw the subcol
-              const clipsInRow = fetchClipsOnHover(hoveredRowId);
+              const { clipsInRow, mediaType } = fetchClipsOnHover(hoveredRowId);
+              const rowTypeEquals = mediaType === barType;
               console.log("clips in row ", clipsInRow);
-              clipsInRow?.map((clips) => {
-                if (hoveredRowId) {
+
+              if (hoveredRowId && rowTypeEquals) {
+                clipsInRow?.map((clips) => {
                   const firstBarLp = clips.bars[0]?.left_position;
                   const lastBar = clips.bars?.length - 1;
                   const lastBarLp = clips.bars[lastBar]?.left_position;
@@ -744,8 +736,8 @@ const Clip: React.FC<ClipProps> = ({
                     rulerStartTimePxVal,
                     pxToTime
                   );
-                }
-              });
+                });
+              }
             }
 
             zoomApi.start((i) => {
@@ -1087,7 +1079,7 @@ const Clip: React.FC<ClipProps> = ({
         return (
           <animated.div
             key={bar.id}
-            {...bindDrag(bar.id, bar.sub_col_id)}
+            {...bindDrag(bar.id, bar.sub_col_id, bar.type)}
             className={styles.item_box_div}
             style={{
               width: zoomSpring?.clipWidth.to((w) => `${w}px`),
@@ -1103,14 +1095,12 @@ const Clip: React.FC<ClipProps> = ({
           >
             <div
               className={`${
-                barsData?.sub_columns === null
-                  ? `${styles.m_item_box}`
-                  : `${styles.m_item_box_drop}`
+                item.media_type === "audio"
+                  ? styles.audio_clip_box
+                  : styles.m_item_box_drop
               } group`}
               style={{
-                // transform: x.to((xVal) => `translate(${xVal}px`),
                 cursor: "grab",
-                // touchAction: "none",
               }}
             >
               <div
@@ -1125,9 +1115,9 @@ const Clip: React.FC<ClipProps> = ({
                     <div
                       className={styles.m_item_thumb}
                       style={{
-                        backgroundImage: bar?.thumbnail_url
-                          ? `url(${bar?.thumbnail_url})`
-                          : "none",
+                        backgroundImage: `url(${
+                          bar?.thumbnail_url ? bar.thumbnail_url : ""
+                        })`,
                         backgroundRepeat: "repeat-x",
                         backgroundSize: "auto 100%",
                       }}
@@ -1136,30 +1126,58 @@ const Clip: React.FC<ClipProps> = ({
                 )}
               </div>
 
-              {/* only show barcontent (bar arrow and label) when width of bar is above 125 */}
               <div className={styles.bar_content}>
                 {barsData?.sub_columns?.length ? (
                   <div
                     {...bindLeftResize(bar.id, bar.sub_col_id)}
                     className={`${
-                      bar.width <= 125
+                      bar.type === "audio"
+                        ? bar.width <= 125
+                          ? styles.sm_audio_bar_arrow_div
+                          : styles.audio_bar_arrow_div
+                        : bar.width <= 125
                         ? styles.sm_bar_arrow_div
                         : styles.bar_arrow_div
-                    } flex group-hover:w-[3.5rem] handle`}
+                    } flex ${
+                      bar.type === "video"
+                        ? "group-hover:w-[3.5rem]"
+                        : "group-hover:w-[3.5rem]"
+                    } handle`}
                     style={{
                       touchAction: "none",
                     }}
                   >
+                    {/* only show barcontent (bar arrow and label) when width of bar is above 125 */}
                     {bar.width >= 125 && (
                       <div
                         className={`${
-                          bar.width <= 125
+                          bar.type === "audio"
+                            ? bar.width <= 125
+                              ? styles.sm_audio_bar_arrow_left
+                              : styles.audio_bar_arrow_left
+                            : bar.width <= 125
                             ? styles.sm_bar_arrow_left
                             : styles.bar_arrow_left
-                        } flex group-hover:hidden`}
+                        } flex ${
+                          bar.type === "video"
+                            ? "group-hover:hidden"
+                            : "group-hover:hidden"
+                        }`}
                       >
-                        <div className={styles.arrow_pad}>
-                          <div className={styles.arrow_div}>
+                        <div
+                          className={`${
+                            bar.type === "audio"
+                              ? styles.audio_arrow_pad
+                              : styles.arrow_pad
+                          }`}
+                        >
+                          <div
+                            className={`${
+                              bar.type === "audio"
+                                ? styles.audio_arrow_div
+                                : styles.arrow_div
+                            }`}
+                          >
                             <Image
                               src="/left_arrow.png"
                               alt="left_arrow"
@@ -1178,10 +1196,26 @@ const Clip: React.FC<ClipProps> = ({
                 {bar.width >= 300 && (
                   <div className={styles.clip_center}>
                     <div
-                      className={`${styles.m_type_label} flex group-hover:hidden`}
+                      className={`${
+                        bar.type === "video"
+                          ? "group-hover:hidden"
+                          : "group-hover:hidden"
+                      } ${styles.m_type_label} flex`}
                     >
-                      <div className={styles.type_label_content}>
-                        <div className={styles.type_icon}>
+                      <div
+                        className={`${
+                          bar.type === "video"
+                            ? styles.type_label_content
+                            : styles.audio_type_label_content
+                        }`}
+                      >
+                        <div
+                          className={`${
+                            bar.type === "audio"
+                              ? styles.audio_type_icon
+                              : styles.type_icon
+                          } `}
+                        >
                           {bar?.type in icons && (
                             <Image
                               src={icons[bar?.type as keyof typeof icons]}
@@ -1198,6 +1232,16 @@ const Clip: React.FC<ClipProps> = ({
                             : bar?.name}
                         </span>
                       </div>
+                      {bar.type === "audio" && (
+                        <div
+                          className={styles.audio_bg_url}
+                          style={{
+                            backgroundImage: 'url("/wave.png")',
+                            backgroundRepeat: "repeat-x",
+                            backgroundSize: "auto 100%",
+                          }}
+                        ></div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1206,24 +1250,53 @@ const Clip: React.FC<ClipProps> = ({
                   <div
                     {...bindRightResize(bar.id, bar.sub_col_id)}
                     className={`${
-                      bar.width <= 125
+                      bar.type === "audio"
+                        ? bar.width <= 125
+                          ? styles.sm_audio_bar_arrow_div
+                          : styles.audio_bar_arrow_div
+                        : bar.width <= 125
                         ? styles.sm_bar_arrow_div
                         : styles.bar_arrow_div
-                    } flex group-hover:w-[3.5rem] handle`}
+                    } flex ${
+                      bar.type === "video"
+                        ? "group-hover:w-[3.5rem]"
+                        : "group-hover:w-[3.5rem]"
+                    } handle`}
                     style={{
                       touchAction: "none",
                     }}
                   >
+                    {/* only show barcontent (bar arrow and label) when width of bar is above 125 */}
                     {bar.width >= 125 && (
                       <div
                         className={`${
-                          bar.width <= 125
+                          bar.type === "audio"
+                            ? bar.width <= 125
+                              ? styles.sm_audio_bar_arrow_left
+                              : styles.audio_bar_arrow_right
+                            : bar.width <= 125
                             ? styles.sm_bar_arrow_left
                             : styles.bar_arrow_right
-                        } flex group-hover:hidden`}
+                        } flex ${
+                          bar.type === "video"
+                            ? "group-hover:hidden"
+                            : "group-hover:hidden"
+                        }`}
                       >
-                        <div className={styles.arrow_pad}>
-                          <div className={styles.arrow_div}>
+                        <div
+                          className={`${
+                            bar.type === "audio"
+                              ? styles.audio_arrow_pad
+                              : styles.arrow_pad
+                          }`}
+                        >
+                          <div
+                            className={`${
+                              bar.type === "audio"
+                                ? styles.audio_arrow_div
+                                : styles.arrow_div
+                            }`}
+                          >
                             <Image
                               src="/chevron_right.png"
                               alt="right_arrow"

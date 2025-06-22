@@ -63,11 +63,8 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
 
   // position playhead (basically lp of ph)
   const timeToPosition = (currentTime: number) => {
-    // console.log((currentTime / totalMediaDuration) * mediaContainerWidth);
-    // return (currentTime / totalMediaDuration) * mediaContainerWidth;
-
-    const pxValueDiffPerMarker = mediaContainerWidth / totalMediaDuration; // calculating px value which position the marker
-    const pixelValuePerStep = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
+    const singleTickPxValue = mediaContainerWidth / totalMediaDuration; // calculating px value which position the marker
+    const pixelValuePerStep = singleTickPxValue / markerInterval; // markerinterval is basically gap bw markers in sec
     const pixelsPerSecond = currentTime * pixelValuePerStep;
     return pixelsPerSecond;
   };
@@ -125,31 +122,33 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
   };
 
   const chooseClip = async () => {
-    // pxValueDiffPerMarker gives px value showing diff bw each marker, its gap bw marker in px
-    const pxValueDiffPerMarker = mediaContainerWidth / totalMediaDuration; // calculating px value which position the marker
+    const singleTickPxValue = mediaContainerWidth / totalMediaDuration;
 
     // pixelValuePerStep is the movement with px value at each step
     // markerinterval is basically gap bw markers in sec
     //pixelValuePerStep is px value, for eg 80 / 2.6 = 30 sec, it would take 2.6px value per step to reach 80px where marker would have 30 sec diff
-    const pixelValuePerStep = pxValueDiffPerMarker / markerInterval;
+    const pixelValuePerStep = singleTickPxValue / markerInterval;
 
     const clips = await fetchVideoData(pixelValuePerStep);
     const activeClip = clips.find(
-      // .find will find and return the first clip which match the condition
       (clip) => 0 >= clip?.startTime && 0 < clip?.endTime
     );
     if (activeClip) {
       dispatch(setCurrentClip(activeClip));
       if (videoRef.current) {
-        videoRef.current.play();
-        const time = timeToPosition(videoRef.current.currentTime); // change sec into px for playhead move
-        if (phPosition === null) {
-          setPosition(time);
-        } else {
-          setPosition(time);
-          dispatch(setPhPosition(null));
+        try {
+          await videoRef.current.play();
+          const time = timeToPosition(videoRef.current.currentTime); // change sec into px for playhead move
+          if (phPosition === null) {
+            setPosition(time);
+          } else {
+            setPosition(time);
+            dispatch(setPhPosition(null));
+          }
+          throttledShowPhTimeUpdate(videoRef.current.currentTime);
+        } catch (err) {
+          console.warn("Play was interrupted", err);
         }
-        throttledShowPhTimeUpdate(videoRef.current.currentTime);
       }
     } else {
       stopAnimation(); // stop after reaching end of the clip
@@ -173,8 +172,10 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
 
   const startAnimation = async () => {
     if (!isPlaying) {
+      console.log("is playing, phposition", isPlaying, phPosition);
       setIsPlaying(true);
       if (phPosition !== null) {
+        console.log("ph position checko", phPosition);
         setPosition(phPosition);
       }
       animationFrameRef.current = requestAnimationFrame(syncPlayhead);

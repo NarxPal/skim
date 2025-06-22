@@ -33,7 +33,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
   const userId = useSelector((state: RootState) => state.userId.userId);
 
   useEffect(() => {
-    // Fetch the media based on the selected category
+    // Fetch media for sidebar based on the selected category
     const fetchMedia = async () => {
       setMediaType(selectedCategory);
       console.log("selected category bro", selectedCategory);
@@ -75,6 +75,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
   };
 
   useEffect(() => {
+    // Fetch all media for sidebar after uploading
     const loadMedia = async () => {
       const media_Items = await fetchUserMediaWithUrls();
       console.log("media items bro:", media_Items);
@@ -87,14 +88,28 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
     fileType: string,
     publicUrl: string | undefined
   ) => {
-    // also post the fffmpeg req to get the duration of the video & audio media
-    if ((fileType === "video" || "audio") && publicUrl) {
+    // also post the ffmpeg req to get the duration of the video & audio media
+    if (fileType === "video" && publicUrl) {
       const durationRes: AxiosResponse<number> = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/ffmpeg/duration/${publicUrl}`
-        // publicUrl here as filepath for video media
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/ffmpeg/duration`,
+        {
+          params: {
+            publicUrl,
+          },
+        }
       );
       return durationRes.data;
     }
+  };
+
+  const getAudioDuration = (url: string): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const audio = new Audio(url);
+      audio.addEventListener("loadedmetadata", () => {
+        resolve(audio.duration);
+      });
+      audio.addEventListener("error", reject);
+    });
   };
 
   const handleFiles = async (
@@ -172,6 +187,8 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
           }
         );
 
+        console.log("data upload", uploadRes);
+
         let thumbnailUrl;
         if (fileType === "video") {
           const bufferFormData = new FormData();
@@ -191,7 +208,14 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
           thumbnailUrl = uploadThumbnailRes.url;
         }
 
-        const duration = await fetchDuration(fileType, uploadRes.url);
+        let duration;
+        if (fileType === "audio") {
+          // fetching duration for audio from browser
+          duration = await getAudioDuration(uploadRes.url);
+        } else {
+          // fetching duration for video from ffmpeg
+          duration = await fetchDuration(fileType, uploadRes.url);
+        }
         const roundedDuration = Math.round(Number(duration));
 
         await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/media`, {
@@ -266,10 +290,13 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
                       className={styles.media_preview}
                     />
                   ) : (
-                    <img
-                      src={item.url} // for img media
+                    <Image
+                      src="/wave.png" // for audio media
                       alt={item.name}
-                      className={styles.media_preview}
+                      width={30}
+                      height={30}
+                      priority={true}
+                      // className={styles.media_preview}
                     />
                   )}
                   {/* <p className={styles.media_name}>

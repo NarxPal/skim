@@ -76,7 +76,7 @@
 }
 
 .up_btn_div {
-  @apply bg-voilet_btn text-white font-semibold text-xs px-6 py-3 rounded-lg shadow-md flex justify-center items-center cursor-pointer;
+  @apply bg-blue_btn hover:bg-blue-500 text-white font-semibold text-xs px-6 py-3 rounded-lg shadow-md flex justify-center items-center cursor-pointer;
 }
 
 .overlay {

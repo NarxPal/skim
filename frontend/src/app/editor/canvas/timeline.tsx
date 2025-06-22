@@ -28,7 +28,6 @@ type MediaItem = {
 };
 
 type ColumnsProps = {
-  // column_ids: { id: number }[];
   id: number;
   sub_col_id: number;
   position: number;
@@ -78,8 +77,6 @@ const Timeline: React.FC<TimelineProps> = ({
   // usestate hooks
   const [columns, setColumns] = useState<ColumnsProps | undefined>(undefined); // column and barsdata are having same data
   const [barsData, setBarsData] = useState<BarsProp | null>(null);
-  const [gapData, setGapData] = useState<BarsProp | null>(null);
-  const [barDragging, setBarDragging] = useState<boolean>(false);
   const [fetchBars, setFetchBars] = useState<boolean>(false);
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
@@ -218,62 +215,84 @@ const Timeline: React.FC<TimelineProps> = ({
     }
   }, [prjId, fetchBars, updateBarsData, barAfterShift]);
 
+  const buildSubColumnPayload = (
+    parsedItem: MediaItem,
+    columns: ColumnsProps | undefined,
+    singleTickPxValue: number,
+    markerInterval: number
+  ) => {
+    const barId = Math.floor(Math.random() * 1e6) + (Date.now() % 1e6);
+    const subColId = Math.floor(Math.random() * 1e6) + (Date.now() % 1e6);
+    const duration = parsedItem.duration;
+
+    const payload: any = {
+      sub_col_id: subColId,
+      project_id: parsedItem.project_id,
+      user_id: parsedItem.user_id,
+      parent_id: columns?.id,
+      media_type: parsedItem.type,
+      bars: [
+        {
+          id: barId,
+          sub_col_id: subColId,
+          user_id: parsedItem.user_id,
+          name: parsedItem.name,
+          left_position: 0,
+          width: (duration / markerInterval) * singleTickPxValue,
+          duration,
+          clip_duration: duration,
+          project_id: parsedItem.project_id,
+          type: parsedItem.type,
+          thumbnail_url: parsedItem.thumbnail_url,
+          filepath: parsedItem.filepath,
+          order: 0,
+          url: parsedItem.url,
+          start_time: 0,
+          end_time: duration,
+          ruler_start_time: 0,
+          ruler_start_time_in_sec: 0,
+        },
+      ],
+      gaps: [
+        {
+          id: Math.floor(Math.random() * 1e6),
+          sub_col_id: subColId,
+          barId: barId,
+          start_gap: 0,
+          end_gap: 0,
+          width: 0,
+          media_type: parsedItem.type,
+        },
+      ],
+    };
+    return payload;
+  };
+
   // create sub col for columns entity in db
   const createSubCol = async (
     parsedItem: MediaItem,
     containerWidth: number,
     totalDuration: number
   ) => {
-    // parsedItem contains most of the data for bars but keys like left and width are added during handleaddbartocol
-
     // here, containerWidth = mediaContainerWidth hook, totalDuration = totalMediaDuration hook
     const singleTickPxValue = containerWidth / totalDuration; // equal px value for each marker, it changes based upon zoom level
 
-    const barId = Math.floor(Math.random() * 1000000) + (Date.now() % 1000000);
-    const subColId =
-      Math.floor(Math.random() * 1000000) + (Date.now() % 1000000);
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
-      {
-        sub_col_id: subColId, // subcolid is needed for gaps for connection purpose
-        project_id: parsedItem.project_id,
-        user_id: parsedItem.user_id,
-        parent_id: columns?.id,
-        bars: [
-          {
-            id: barId,
-            sub_col_id: subColId, // adding subcolid here to fetch clips(from respective rows) from usespring
-            user_id: parsedItem.user_id,
-            name: parsedItem.name,
-            left_position: 0, // default left position
-            width: (parsedItem.duration / markerInterval) * singleTickPxValue,
-            duration: parsedItem.duration, // storing duration to use in calcContainerWidth
-            clip_duration: parsedItem.duration, // video len after resizing(needed during zoom lvl changes)
-            project_id: parsedItem.project_id,
-            type: parsedItem.type,
-            thumbnail_url: parsedItem.thumbnail_url,
-            filepath: parsedItem.filepath,
-            order: 0, // initial value 0 since every new bar will be inside newly created sub_col first
-            url: parsedItem.url,
-            start_time: 0,
-            end_time: parsedItem.duration,
-            ruler_start_time: 0,
-            ruler_start_time_in_sec: 0,
-          },
-        ],
-        gaps: [
-          {
-            id: Math.floor(Math.random() * 1000000),
-            sub_col_id: subColId,
-            barId: barId,
-            start_gap: 0,
-            end_gap: 0,
-            width: 0,
-          },
-        ],
-      }
+    // payload could be for both audio and video media
+    const payload = buildSubColumnPayload(
+      parsedItem,
+      columns,
+      singleTickPxValue,
+      markerInterval
     );
-    console.log("create sub col bro:", response.data);
+
+    console.log("payload checko", payload);
+
+    let response;
+    response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
+      payload
+    );
+
     setFetchBars(true);
     return response;
   };
@@ -288,11 +307,6 @@ const Timeline: React.FC<TimelineProps> = ({
     try {
       const [containerWidth, totalDuration] = await calcContainerWidth(
         parsedItem
-      );
-      console.log(
-        "media contain width, totalmedia duration",
-        containerWidth,
-        totalDuration
       );
       createSubCol(parsedItem, containerWidth, totalDuration);
     } catch (error) {
@@ -401,20 +415,14 @@ const Timeline: React.FC<TimelineProps> = ({
     e: React.DragEvent<HTMLDivElement>,
     dropSubColId: number
   ) => {
-    if (barDragging) {
-    } else {
-      handleMediaDrop(e);
-    }
+    handleMediaDrop(e);
   };
 
   const handleDynamicDragOver = (
     e: React.DragEvent<HTMLDivElement>,
     dragOverSubColId: number
   ) => {
-    if (barDragging) {
-    } else {
-      handleDragOver(e);
-    }
+    handleDragOver(e);
   };
 
   const shiftGapsAfterGapDelete = async (data: BarsProp, gap: gap) => {
@@ -701,9 +709,13 @@ const Timeline: React.FC<TimelineProps> = ({
                   barsData?.sub_columns?.length === 0 ||
                   barsData?.sub_columns === null;
                 return !isEmpty ? (
-                  <div key={index}>
+                  <div key={index} className={styles.clip_row}>
                     <div
-                      className={styles.sub_col_div}
+                      className={`${
+                        item.media_type === "audio"
+                          ? styles.audio_sub_col_div
+                          : styles.sub_col_div
+                      }`}
                       id={`subcol-${item?.id}`} // id will contain numeric value for each sub_column
                       data-row-id={item?.sub_col_id}
                       ref={(el) => {
@@ -719,7 +731,11 @@ const Timeline: React.FC<TimelineProps> = ({
                           return (
                             <div
                               key={gap.id}
-                              className={styles.gap_box_div}
+                              className={`${
+                                gap.media_type === "audio"
+                                  ? styles.audio_gap_box_div
+                                  : styles.gap_box_div
+                              }`}
                               style={{
                                 width: gapWidth,
                                 left: startGap,
@@ -728,7 +744,11 @@ const Timeline: React.FC<TimelineProps> = ({
                               <div className={styles.gap_box}>
                                 {gapWidth >= 50 && (
                                   <div
-                                    className={styles.gap_del_icon}
+                                    className={`${
+                                      gap.media_type === "audio"
+                                        ? styles.audio_gap_del_icon
+                                        : styles.gap_del_icon
+                                    }`}
                                     onClick={() => handleDelGap(gap)}
                                   >
                                     <Image
