@@ -14,34 +14,21 @@ const Sm_pane = ({
   return (
     <div className={styles.sm_pane}>
       <div className={styles.sm_inner}>
-        <ul className={styles.ul_items}>
-          <li className={styles.li} onClick={() => handleTabClick("upload")}>
-            <Image
-              src="/upload2.png"
-              alt="upload"
-              height={20}
-              width={20}
-              priority={true}
-            />
-
-            {/* <span className={styles.li_text}>upload</span> */}
-          </li>
-
-          <li className={styles.li} onClick={() => handleTabClick("text")}>
-            <div className={styles.icon_div}>
+        <div className={styles.ul_items}>
+          <div className={styles.all_icons}>
+            <div className={styles.li} onClick={() => handleTabClick("upload")}>
               <Image
-                src="/text2.png"
-                alt="text"
+                src="/upload.png"
+                alt="upload"
                 height={20}
                 width={20}
                 priority={true}
               />
-            </div>
-            {/* <span className={styles.li_text}>text</span> */}
-          </li>
 
-          <li className={styles.li} onClick={() => handleTabClick("video")}>
-            <div className={styles.icon_div}>
+              <span className={styles.li_text}>upload</span>
+            </div>
+
+            <div className={styles.li} onClick={() => handleTabClick("video")}>
               <Image
                 src="/video.png"
                 alt="video"
@@ -49,13 +36,11 @@ const Sm_pane = ({
                 width={20}
                 priority={true}
               />
+
+              <span className={styles.li_text}>video</span>
             </div>
 
-            {/* <span className={styles.li_text}>video</span> */}
-          </li>
-
-          <li className={styles.li} onClick={() => handleTabClick("audio")}>
-            <div className={styles.icon_div}>
+            <div className={styles.li} onClick={() => handleTabClick("audio")}>
               <Image
                 src="/audio.png"
                 alt="audio"
@@ -63,25 +48,11 @@ const Sm_pane = ({
                 width={20}
                 priority={true}
               />
+
+              <span className={styles.li_text}>audio</span>
             </div>
-
-            {/* <span className={styles.li_text}>audio</span> */}
-          </li>
-
-          <li className={styles.li} onClick={() => handleTabClick("image")}>
-            <div className={styles.icon_div}>
-              <Image
-                src="/image.png"
-                alt="image"
-                height={20}
-                width={20}
-                priority={true}
-              />
-            </div>
-
-            {/* <span className={styles.li_text}>image </span> */}
-          </li>
-        </ul>
+          </div>
+        </div>
       </div>
     </div>
   );

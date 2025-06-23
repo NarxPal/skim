@@ -15,7 +15,7 @@
 }
 
 .logo_filename_div {
-  @apply flex flex-row items-center gap-6;
+  @apply flex flex-row items-center gap-6 ml-3;
 }
 
 .logo_div {
@@ -23,48 +23,13 @@
 }
 
 .filename_div {
-}
-
-.input {
-  @apply bg-transparent outline-none border-none opacity-50 text-sm;
-}
-
-.tools {
-  @apply flex   gap-4;
-}
-
-.ur_div {
-  @apply flex flex-row gap-0.5 items-center;
-}
-.uBtn {
-  @apply p-2 rounded-md hover:bg-gray_col;
-}
-.rBtn {
-  @apply p-2 rounded-md hover:bg-gray_col;
-}
-.vertical_line {
-  @apply h-full w-[1px] bg-white opacity-60;
-}
-
-.cd_div {
-  @apply flex flex-row gap-0.5 items-center;
-}
-
-.cursor {
-  @apply p-2 hover:bg-gray_col rounded-md cursor-pointer;
-}
-
-.drag {
-  @apply p-2 hover:bg-gray_col rounded-md cursor-pointer;
+  @apply text-white text-sm font-bold opacity-80
 }
 
 .ex_pf {
   @apply flex flex-row gap-2 items-center;
 }
 
-.pf_export_div {
-  @apply w-auto flex gap-1;
-}
 .pf {
   @apply rounded-full w-6 h-6 bg-white flex border-2 border-green-400;
 }
@@ -73,7 +38,7 @@
 }
 
 .btn {
-  @apply hover:bg-blue-500 bg-blue_btn text-white px-[14px] py-2 rounded-md  items-center text-xs font-semibold;
+  @apply hover:bg-blue-500 bg-blue_btn text-white px-[14px] py-2 rounded-md  items-center text-xs font-semibold w-24;
 }
 
 .pane_div {
@@ -89,7 +54,7 @@
 }
 
 .canvas_expand{
-@apply min-w-[73%] w-[73%]
+@apply min-w-[74%] w-[74%]
 }
 
 .right_pane{
@@ -97,7 +62,7 @@
 }
 
 .rp_expand{
-  @apply min-w-[13%] w-[13%]
+  @apply min-w-[14%] w-[14%]
 }
 
 .right_pane_row{
@@ -111,11 +76,15 @@
   @apply p-1 flex items-center
 }
 .rp_btns{
-  @apply min-w-[3%] w-[3%] flex flex-col p-3 border-l-2 border-off_voi
+  @apply min-w-[3%] w-[3%] flex flex-col border-l-2 border-off_voi items-center 
+}
+
+.rp_mt{
+  @apply mt-2
 }
 
 .toggle_btn{
-@apply hover:bg-gray-500 rounded-lg  
+@apply hover:bg-editor_gray p-2 rounded-lg  
 }
 
 .resizer {

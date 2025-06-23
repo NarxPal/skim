@@ -137,7 +137,6 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
       dispatch(setCurrentClip(activeClip));
       if (videoRef.current) {
         try {
-          await videoRef.current.play();
           const time = timeToPosition(videoRef.current.currentTime); // change sec into px for playhead move
           if (phPosition === null) {
             setPosition(time);
@@ -174,10 +173,15 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
     if (!isPlaying) {
       console.log("is playing, phposition", isPlaying, phPosition);
       setIsPlaying(true);
-      if (phPosition !== null) {
-        console.log("ph position checko", phPosition);
-        setPosition(phPosition);
+      if (phPosition !== null) setPosition(phPosition);
+      if (videoRef.current) {
+        try {
+          await videoRef.current.play();
+        } catch (e) {
+          console.warn("Play error", e);
+        }
       }
+
       animationFrameRef.current = requestAnimationFrame(syncPlayhead);
     }
   };

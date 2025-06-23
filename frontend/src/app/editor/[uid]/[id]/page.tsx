@@ -32,6 +32,7 @@ const UserId = () => {
   const [position, setPosition] = useState<number>(0); // position of ph
   const [showPhTime, setShowPhTime] = useState<string>("00::00::00");
   const [openRightPane, setOpenRightPane] = useState<boolean>(false);
+  const [filename, setFilename] = useState<string>("");
 
   // useref hooks
   const isDragging = useRef(false);
@@ -47,6 +48,7 @@ const UserId = () => {
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/projects/${params.id}`
         );
+        setFilename(response.data.name);
         setId(response.data.id);
       } catch (error) {
         console.error("Error fetching project with provided id :", error);
@@ -103,78 +105,10 @@ const UserId = () => {
           <div className={styles.dash_header}>
             <div className={styles.logo_filename_div}>
               <div className={styles.logo_div}></div>
-              <div className={styles.filename_div}>
-                <input
-                  type="text"
-                  placeholder="Untitled project"
-                  className={styles.input}
-                />
-              </div>
-            </div>
-
-            <div className={styles.tools}>
-              <div className={styles.cd_div}>
-                <div className={styles.cursor}>
-                  <Image
-                    src="/cursor.png"
-                    alt="cursor"
-                    width={15}
-                    height={15}
-                    priority={true}
-                  />
-                </div>
-
-                <div className={styles.drag}>
-                  <Image
-                    src="/drag.png"
-                    alt="drag"
-                    width={15}
-                    height={15}
-                    priority={true}
-                  />
-                </div>
-              </div>
-
-              <div className={styles.vertical_line}></div>
-
-              <div className={styles.ur_div}>
-                <div className={styles.undo_div}>
-                  <button className={styles.uBtn}>
-                    <Image
-                      src="/undo.png"
-                      alt="undo"
-                      width={15}
-                      height={15}
-                      priority={true}
-                    />
-                  </button>
-                </div>
-
-                <div className={styles.redo_div}>
-                  <button className={styles.rBtn}>
-                    <Image
-                      src="/redo.png"
-                      alt="redo"
-                      width={15}
-                      height={15}
-                      priority={true}
-                    />
-                  </button>
-                </div>
-              </div>
+              <div className={styles.filename_div}>{filename}</div>
             </div>
 
             <div className={styles.ex_pf}>
-              {/* <div className={styles.pf_export_div}>
-                <div className={styles.pf}></div>
-
-                <div className={styles.pf}></div>
-
-                <div className={styles.pf}></div>
-
-                <div className={styles.pf}></div>
-              </div> */}
-
               <div className={styles.export_btn}>
                 <button className={styles.btn}>Export</button>
               </div>
@@ -241,19 +175,21 @@ const UserId = () => {
           </div>
 
           <div className={styles.rp_btns}>
-            <div className={styles.rp_icon}>
-              <button
-                className={styles.toggle_btn}
-                onClick={() => setOpenRightPane(!openRightPane)}
-              >
-                <Image
-                  alt="controls"
-                  src="/controls.png"
-                  width={30}
-                  height={30}
-                  priority={true}
-                />
-              </button>
+            <div className={styles.rp_mt}>
+              <div className={styles.rp_icon}>
+                <button
+                  className={styles.toggle_btn}
+                  onClick={() => setOpenRightPane(!openRightPane)}
+                >
+                  <Image
+                    alt="controls"
+                    src="/controls.png"
+                    width={30}
+                    height={30}
+                    priority={true}
+                  />
+                </button>
+              </div>
             </div>
           </div>
         </div>

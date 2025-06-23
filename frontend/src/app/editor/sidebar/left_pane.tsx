@@ -283,27 +283,32 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
                   onDragStart={(e) => handleDragStart(e, item)}
                   onDragEnd={handleDragEnd}
                 >
-                  {item.type === "video" && item.thumbnail_url ? (
-                    <img
-                      src={item.thumbnail_url}
-                      alt={item.name}
-                      className={styles.media_preview}
-                    />
-                  ) : (
-                    <Image
-                      src="/wave.png" // for audio media
-                      alt={item.name}
-                      width={30}
-                      height={30}
-                      priority={true}
-                      // className={styles.media_preview}
-                    />
-                  )}
-                  {/* <p className={styles.media_name}>
-                    {item.name.length > 20
-                      ? item.name.substring(0, 20) + "..."
-                      : item.name}
-                  </p> */}
+                  <div className={styles.media_details}>
+                    <div className={styles.media_icon}>
+                      {item.type === "video" && item.thumbnail_url ? (
+                        <img
+                          src={item.thumbnail_url}
+                          alt={item.name}
+                          className={styles.media_preview}
+                        />
+                      ) : (
+                        <Image
+                          src="/audio.png" // for audio media
+                          alt={item.name}
+                          width={50}
+                          height={50}
+                          priority={true}
+                          className={styles.media_preview}
+                        />
+                      )}
+                    </div>
+
+                    <div className={styles.media_name}>
+                      {item.name.length > 20
+                        ? item.name.substring(0, 20) + "..."
+                        : item.name}
+                    </div>
+                  </div>
                 </div>
               ))}
           </div>

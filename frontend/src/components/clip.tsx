@@ -98,8 +98,6 @@ const Clip: React.FC<ClipProps> = ({
   const icons: { [key: string]: string } = {
     audio: "/audio.png",
     video: "/video.png",
-    image: "/image.png",
-    text: "/text.png",
   };
 
   const allBars = barsData?.sub_columns.flatMap((row) => row.bars) || [];
