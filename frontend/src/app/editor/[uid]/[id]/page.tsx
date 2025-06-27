@@ -11,7 +11,6 @@ import axios from "axios";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { FetchUser } from "@/components/fetchUser";
-
 // types / interfaces import
 import { BarsProp } from "@/interfaces/barsProp";
 import Right_pane from "../../sidebar/right_pane";
@@ -37,6 +36,7 @@ const UserId = () => {
   // useref hooks
   const isDragging = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const phLeftRef = useRef<HTMLDivElement>(null);
 
   const { loading } = FetchUser(params.uid); // calling useeffect to fetch the user_id
   // redux hooks
@@ -104,7 +104,15 @@ const UserId = () => {
         <div className={styles.dash_header_div}>
           <div className={styles.dash_header}>
             <div className={styles.logo_filename_div}>
-              <div className={styles.logo_div}></div>
+              <div className={styles.logo_div}>
+                <Image
+                  src="/skim.png"
+                  alt="logo"
+                  width={70}
+                  height={70}
+                  priority={true}
+                />
+              </div>
               <div className={styles.filename_div}>{filename}</div>
             </div>
 
@@ -135,6 +143,7 @@ const UserId = () => {
               setPosition={setPosition}
               setShowPhTime={setShowPhTime}
               videoRef={videoRef}
+              phLeftRef={phLeftRef}
             />
             <div
               className={styles.resizer}
@@ -157,6 +166,7 @@ const UserId = () => {
               setShowPhTime={setShowPhTime}
               showPhTime={showPhTime}
               videoRef={videoRef}
+              phLeftRef={phLeftRef}
             />
           </div>
 

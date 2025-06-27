@@ -11,11 +11,11 @@
 }
 
 .head_content {
-  @apply flex flex-row justify-between p-4 items-center;
+  @apply flex flex-row justify-between items-center;
 }
 
 .profileBtn {
-  @apply bg-blue_btn text-white px-4 py-2 font-semibold rounded-md text-xs shadow-md cursor-pointer;
+  @apply bg-blue_btn text-white px-4 py-2 font-semibold rounded-md text-xs shadow-md cursor-pointer mr-8;
 }
 
 .pane_div {

@@ -127,7 +127,15 @@ const Project = () => {
       <div className={styles.col_div}>
         <div className={styles.header}>
           <div className={styles.head_content}>
-            <div className={styles.logo}>skim</div>
+            <div className={styles.logo}>
+              <Image
+                src="/skim.png"
+                alt="logo"
+                width={90}
+                height={90}
+                priority={true}
+              />
+            </div>
             <div className={styles.profileBtn}>
               <button className={styles.pf_btn}>
                 Narendra Pal <span>&#x25BC;</span>

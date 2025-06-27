@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import styles from "@/styles/canvas.module.css";
 import Image from "next/image";
 import { useSelector } from "react-redux";
@@ -20,6 +20,7 @@ interface CanvasProps {
   setPosition: React.Dispatch<React.SetStateAction<number>>;
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
   videoRef: React.RefObject<HTMLVideoElement>;
+  phLeftRef: React.RefObject<HTMLDivElement>;
 }
 
 const Canvas: React.FC<CanvasProps> = ({
@@ -31,6 +32,7 @@ const Canvas: React.FC<CanvasProps> = ({
   setPosition,
   setShowPhTime,
   videoRef,
+  phLeftRef,
 }) => {
   // redux state hooks
   const currentClip = useSelector(
@@ -38,29 +40,7 @@ const Canvas: React.FC<CanvasProps> = ({
   );
 
   // usestate hooks
-  // const [currentClip, setCurrentClip] = useState<Clip | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-
-  // useRef hooks
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // const fetchVideoData = async (pixelsPerSecond: number): Promise<Clip[]> => {
-  //   const clips = barsDataChangeAfterZoom?.sub_columns?.flatMap((subCol) => {
-  //     return subCol.bars?.map((bar) => {
-  //       const startTime = bar.left_position / pixelsPerSecond; // Convert left position to time
-  //       const endTime = startTime + (bar.duration || 0);
-
-  //       return {
-  //         startTime,
-  //         endTime,
-  //         videoUrl: bar.url,
-  //       };
-  //     });
-  //   });
-
-  //   // console.log("Generated Clips:", clips);
-  //   return clips ?? []; // fallback to empty array if undefined
-  // };
 
   const handleMuteToggle = () => {
     const video = videoRef.current;
@@ -76,15 +56,11 @@ const Canvas: React.FC<CanvasProps> = ({
       style={{ height: `calc(${canvasHeight}% - 4px)` }} // -4 for resize line
     >
       <div className={styles.canvas_content}>
-        {/*
-       <canvas ref={canvasRef} className={styles.canvas_tag}>
-        </canvas> 
- */}
-        {currentClip && (
-          <video ref={videoRef} className={styles.video_tag} controls>
-            <source src={currentClip.videoUrl} type="video/mp4" />
-          </video>
-        )}
+        {/* {currentClip && ( */}
+        <video ref={videoRef} className={styles.video_tag} controls>
+          {" "}
+        </video>
+        {/* )} */}
       </div>
       <div className={styles.video_btns}>
         <PhAnimation
@@ -95,7 +71,7 @@ const Canvas: React.FC<CanvasProps> = ({
           totalMediaDuration={totalMediaDuration}
           barsDataChangeAfterZoom={barsDataChangeAfterZoom}
           setShowPhTime={setShowPhTime}
-          canvasRef={canvasRef}
+          phLeftRef={phLeftRef}
         />
 
         <div className={styles.vdo_feature_btns}>

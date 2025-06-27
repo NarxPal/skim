@@ -815,7 +815,7 @@ const Clip: React.FC<ClipProps> = ({
                 (filterBar) => filterBar.order < bar.order
               );
               const prevBar = filteredBars[filteredBars.length - 1];
-              const minPosition = prevBar.left_position + prevBar.width;
+              const minPosition = prevBar?.left_position + prevBar?.width;
 
               if (predictedStartTime >= 0) {
                 let calcNewX =

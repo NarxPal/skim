@@ -51,9 +51,9 @@ const Playhead: React.FC<PlayheadProps> = ({
   // for converting ph position px value to time in seconds
   const positionToTime = (pos: number) => {
     const pxValueDiffPerMarker = mediaContainerWidth / totalDuration; // calculating px value which position the marker
-    const pixelValuePerStep = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
+    const pxPerSecond = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
 
-    return pos / pixelValuePerStep;
+    return pos / pxPerSecond;
   };
 
   // todo: throttledShowPhTimeUpdate formatTime are used in playhead, phanimation and timelineRuler file so optimize it
@@ -182,17 +182,15 @@ const Playhead: React.FC<PlayheadProps> = ({
         ref={phDivRef}
       >
         <div
-          // className={styles.ph_left}
+          className={styles.ph_left}
           // style={{
-          //   left: `${phPosition !== null ? phPosition : position}px`,
+          //   transform: `translateX(${
+          //     phPosition !== null ? phPosition : position
+          //   }px)`,
           // }}
 
-          className={styles.ph_left}
-          style={{
-            transform: `translateX(${
-              phPosition !== null ? phPosition : position
-            }px)`,
-          }}
+          //phposition was during drag of playhead, mouse down on ruler and position was used during media play
+          // style={{ transform: `translateX(${position}px)` }} // for gap
           ref={phLeftRef}
         >
           <div className={styles.ph_line_notch}>

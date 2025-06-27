@@ -1,16 +1,12 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { bar } from "@/interfaces/barsProp";
 
-type Clip = {
-  startTime: number;
-  endTime: number;
-  videoUrl: string;
-};
 type currentClip = {
-  currentClip: Clip | null;
+  currentClip: boolean;
 };
 
 const initialState: currentClip = {
-  currentClip: null,
+  currentClip: false,
 };
 
 const currentClipSlice = createSlice({

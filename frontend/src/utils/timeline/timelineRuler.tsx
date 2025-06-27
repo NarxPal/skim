@@ -218,9 +218,9 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   };
   const positionToTime = (pos: number) => {
     const pxValueDiffPerMarker = containerWidth / totalDuration; // calculating px value which position the marker
-    const pixelValuePerStep = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
+    const pxPerSecond = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
     console.log("marker interval b", markerInterval);
-    return pos / pixelValuePerStep;
+    return pos / pxPerSecond;
   };
 
   const throttledShowPhTimeUpdate = useRef(

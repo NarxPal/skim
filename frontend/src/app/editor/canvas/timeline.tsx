@@ -51,6 +51,7 @@ interface TimelineProps {
   showPhTime: string;
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
   videoRef: React.RefObject<HTMLVideoElement>;
+  phLeftRef: React.RefObject<HTMLDivElement>;
 }
 
 const Timeline: React.FC<TimelineProps> = ({
@@ -67,6 +68,7 @@ const Timeline: React.FC<TimelineProps> = ({
   showPhTime,
   setShowPhTime,
   videoRef,
+  phLeftRef,
 }) => {
   // redux state hooks
   // const userId = useSelector((state: RootState) => state.userId.userId); // userid has been set in project/uid
@@ -97,7 +99,7 @@ const Timeline: React.FC<TimelineProps> = ({
 
   // use ref hooks
   const mediaParentRef = useRef<HTMLDivElement | null>(null);
-  const phLeftRef = useRef<HTMLDivElement>(null);
+  // const phLeftRef = useRef<HTMLDivElement>(null);
   const addSubColRef = useRef<HTMLDivElement>(null);
   const rowsRef = useRef<(HTMLDivElement | null)[]>([]);
 
