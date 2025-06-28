@@ -49,12 +49,15 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
 
   // useRef
   const animationFrameRef = useRef<number | null>(null);
+  const audioAnimationFrameRef = useRef<number | null>(null);
   const previousPhPositionRef = useRef(phPosition);
   const startTimeRef = useRef<number>(0);
+  const audioPhStartTimeRef = useRef<number>(0);
   const isPlayingRef = useRef<boolean>(false);
   const lastClipId = useRef<number | null>(null);
   const prevVisibleUnderClipRef = useRef<bar | null>(null);
   const prevActiveClipRef = useRef<bar | null>(null);
+  const audioInstancesRef = useRef<Map<number, HTMLAudioElement>>(new Map());
 
   // Stop playhead when clicked over timelineruler, while ph is running
   useEffect(() => {
@@ -158,77 +161,94 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
           });
       }) ?? [];
 
-    return [audioClips];
+    return audioClips;
   };
 
-  const updatePlayhead = async (now: number, leastGap: gap) => {
-    console.log("update play runing");
-    if (startTimeRef.current !== null && animationFrameRef.current !== null) {
-      // console.log("update playhead ran");
-      const elapsed = (now - startTimeRef.current) / 1000; // seconds
-      console.log("now - starttimeref", now, startTimeRef.current);
+  const runAudioClips = async (newPosition: number) => {
+    const audioClips = await fetchAudioData();
+    // console.log("audio clips", audioClips);
+
+    const activeAudioClips = audioClips
+      .filter(
+        (clip) =>
+          newPosition >= clip.ruler_start_time &&
+          newPosition < clip.ruler_start_time + clip.width
+      )
+      .sort(
+        (a, b) =>
+          (subColOrderMap.get(a.sub_col_id) ?? Infinity) -
+          (subColOrderMap.get(b.sub_col_id) ?? Infinity)
+      );
+
+    // console.log("active audio clips", activeAudioClips);
+
+    const activeClipIds = new Set(activeAudioClips.map((clip) => clip.id));
+    const currentInstances = audioInstancesRef.current;
+
+    // Stop clips that are no longer active
+    for (const [id, audio] of currentInstances.entries()) {
+      if (!activeClipIds.has(id)) {
+        audio.pause();
+        currentInstances.delete(id);
+      }
+    }
+
+    // Start new active clips
+    for (const clip of activeAudioClips) {
+      if (!currentInstances.has(clip.id)) {
+        const audio = new Audio(clip.url);
+        const clipStartOffsetSec =
+          (newPosition - clip.ruler_start_time) / timeToPosition(1); // convert px to sec
+        audio.currentTime = clip.start_time + clipStartOffsetSec;
+        audio.play();
+        currentInstances.set(clip.id, audio);
+      }
+    }
+  };
+
+  const updatePlayhead = async (now: number) => {
+    // console.log("update play runing");
+    if (
+      audioPhStartTimeRef.current !== null &&
+      audioAnimationFrameRef.current !== null
+    ) {
+      const elapsed = (now - audioPhStartTimeRef.current) / 1000; // seconds
       const newPosition = timeToPosition(elapsed); // convert seconds to px
-      // setPosition(newPosition);
-      // dispatch(setPhPosition(null));
 
-      const gaps = await fetchGapsData();
-      const videoGaps = gaps.filter((gap) => gap.media_type === "video");
-      videoGaps.sort((a, b) => a.end_gap - b.end_gap);
+      await runAudioClips(newPosition);
 
-      const videoClips = await fetchVideoData();
-      const phMovingOverVid = videoClips.find(
-        (vid) =>
-          newPosition >= vid.ruler_start_time &&
-          newPosition <= vid.ruler_start_time + vid.width
-      );
-
-      // console.log("video gaps checko", videoGaps);
-
-      const phMovingInGap = videoGaps.find(
-        (gap) => newPosition >= gap.start_gap && newPosition <= gap.end_gap
-      );
-
-      //start video once playhead reaches the clip
-      // if (Math.floor(newPosition) === Math.floor(leastGap.end_gap)) {
-      //   console.log("new pos, end gap", newPosition, leastGap.end_gap);
-      //   // stopManualTimer();
-      //   startAnimation();
-      //   // return;
-      // }
-      console.log("new position", newPosition);
-      console.log("ph moving in gap", phMovingInGap);
-      if (phMovingInGap) {
-        if (phLeftRef.current) {
-          phLeftRef.current.style.transform = `translateX(${newPosition}px)`;
-          // console.log("new position after stop", newPosition);
-        }
-      } else {
-        console.log("ran start animation from up");
-        startAnimation();
-        return;
+      if (phLeftRef.current) {
+        phLeftRef.current.style.transform = `translateX(${newPosition}px)`;
       }
 
-      animationFrameRef.current = requestAnimationFrame((nextNow) =>
-        updatePlayhead(nextNow, leastGap)
+      audioAnimationFrameRef.current = requestAnimationFrame((nextNow) =>
+        updatePlayhead(nextNow)
       );
     }
   };
 
-  const startManualTimer = (leastGap: gap) => {
-    if (!isPlaying) setIsPlaying(true);
+  const startManualTimer = () => {
     console.log("start manual timer ran");
-    startTimeRef.current = performance.now();
-    animationFrameRef.current = requestAnimationFrame((now) =>
-      updatePlayhead(now, leastGap)
+    if (!isPlaying) setIsPlaying(true);
+    audioPhStartTimeRef.current = performance.now();
+    audioAnimationFrameRef.current = requestAnimationFrame((now) =>
+      updatePlayhead(now)
     );
   };
 
   const stopManualTimer = () => {
-    if (animationFrameRef.current)
-      cancelAnimationFrame(animationFrameRef.current);
+    if (audioAnimationFrameRef.current)
+      cancelAnimationFrame(audioAnimationFrameRef.current);
     console.log("stop manual time ran");
-    animationFrameRef.current = null;
-    startTimeRef.current = 0;
+
+    // Stop all currently playing audio
+    audioInstancesRef.current.forEach((audio) => {
+      audio.pause();
+    });
+    audioInstancesRef.current.clear();
+
+    audioAnimationFrameRef.current = null;
+    audioPhStartTimeRef.current = 0;
     setIsPlaying(false);
   };
 
@@ -250,6 +270,7 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
       const elapsed = (now - startTimeRef.current) / 1000; // seconds
       const newPosition = timeToPosition(elapsed); // convert seconds to px
 
+      await runAudioClips(newPosition);
       const videoClips = await fetchVideoData();
 
       const activeClip = videoClips
@@ -373,85 +394,33 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
     }
   };
 
-  const prepareVideoClips = async () => {
-    console.log("prep video clip");
+  const prepareAudioClips = async () => {
     const videoClips = await fetchVideoData();
 
-    const currentTime = videoRef.current?.currentTime ?? 0;
-
-    const transform = phLeftRef.current?.style.transform; // e.g., "translateX(120px)"
-    const match = transform?.match(/translateX\(([-\d.]+)px\)/);
-    const phTime = match ? Math.ceil(parseFloat(match[1])) : 0;
-
-    console.log("ct , ph time", currentTime, phTime);
-    if (currentTime === null) return;
-    let activeClip: bar | gap;
-
-    const gaps = await fetchGapsData();
-    const videoGaps = gaps.filter((gap) => gap.media_type === "video");
-    console.log("video gaps", videoGaps);
-    console.log("video clips", videoClips);
-
-    const leastGap = videoGaps.reduce((min, gap) =>
-      gap.end_gap < min.end_gap ? gap : min
-    );
-    console.log("lest gap", leastGap);
-
-    activeClip = videoClips
-      .filter(
-        (clip) =>
-          phTime >= clip.ruler_start_time &&
-          phTime < clip.ruler_start_time + clip.width
-      )
-      .sort(
-        (a, b) =>
-          (subColOrderMap.get(a.sub_col_id) ?? Infinity) -
-          (subColOrderMap.get(b.sub_col_id) ?? Infinity)
-      )[0]; // topmost (leftmost)
-
-    console.log("acitve clip", activeClip);
-    if (activeClip === undefined) {
-      console.log("undefined starat manual time running now");
-      startManualTimer(leastGap);
+    if (videoClips.length === 0) {
+      // only run startmanual timer when there is no video clips
+      console.log("st about to run");
+      startManualTimer();
     }
-
-    // if (activeClip === undefined) {
-    //   const [audioClips] = await fetchAudioData();
-
-    //   const audioGaps = gaps.filter((gap) => gap.media_type === "audio");
-    //   console.log("audio gaps", audioGaps);
-    //   console.log("audio clips", audioClips);
-    // }
-
-    return { activeClip, leastGap };
   };
 
   const startAnimation = async () => {
     console.log("start animation");
+    await prepareAudioClips();
+    console.log("after prepare audio clips");
 
-    // const result = await prepareVideoClips();
-    // if (!result) return;
-    // const { activeClip, leastGap } = result;
-    // startManualTimer(leastGap);
-
-    // if (activeClip) {
-    // dispatch(setCurrentClip(activeClip));
-    // startManualTimer(leastGap);
     if (isPlaying === false) {
       startTimeRef.current = performance.now();
-      // console.log("whats active clip", activeClip);
       setIsPlaying(true);
       animationFrameRef.current = requestAnimationFrame((now) =>
         syncPlayhead(now)
       );
     }
-    // }
   };
 
   return (
     <div className={styles.playback_btns}>
       <div onClick={isPlaying ? stopAnimation : startAnimation}>
-        {/* <div onClick={isPlaying ? stopManualTimer : startManualTimer}> */}
         <Image
           src={isPlaying ? "/pause.png" : "/play.png"}
           width={25}

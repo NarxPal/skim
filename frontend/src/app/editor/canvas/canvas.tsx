@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import styles from "@/styles/canvas.module.css";
 import Image from "next/image";
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
 import PhAnimation from "@/utils/timeline/phAnimation";
 // import { throttle } from "lodash";
 
@@ -35,9 +33,6 @@ const Canvas: React.FC<CanvasProps> = ({
   phLeftRef,
 }) => {
   // redux state hooks
-  const currentClip = useSelector(
-    (state: RootState) => state.currentClip.currentClip
-  );
 
   // usestate hooks
   const [isMuted, setIsMuted] = useState(false);
@@ -50,17 +45,33 @@ const Canvas: React.FC<CanvasProps> = ({
     }
   };
 
+  const handleFullScreen = () => {
+    if (videoRef.current) {
+      if (videoRef.current.requestFullscreen) {
+        videoRef.current.requestFullscreen(); // for modern browsers
+      } else if ((videoRef.current as any).webkitRequestFullscreen) {
+        (videoRef.current as any).webkitRequestFullscreen();
+      } else if ((videoRef.current as any).mozRequestFullScreen) {
+        (videoRef.current as any).mozRequestFullScreen();
+      } else if ((videoRef.current as any).msRequestFullscreen) {
+        (videoRef.current as any).msRequestFullscreen();
+      }
+    }
+  };
+
   return (
     <div
       className={styles.canvas}
       style={{ height: `calc(${canvasHeight}% - 4px)` }} // -4 for resize line
     >
       <div className={styles.canvas_content}>
-        {/* {currentClip && ( */}
-        <video ref={videoRef} className={styles.video_tag} controls>
-          {" "}
-        </video>
-        {/* )} */}
+        <video
+          ref={videoRef}
+          className={styles.video_tag}
+          controls={false} // remove default controls
+          disablePictureInPicture
+          controlsList="nodownload nofullscreen noremoteplayback"
+        />
       </div>
       <div className={styles.video_btns}>
         <PhAnimation
@@ -85,7 +96,7 @@ const Canvas: React.FC<CanvasProps> = ({
               draggable={false}
             />
           </div>
-          <div>
+          <div onClick={handleFullScreen}>
             <Image
               src="/fullScreen.png"
               width={15}

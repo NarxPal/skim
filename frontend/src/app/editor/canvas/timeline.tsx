@@ -9,7 +9,7 @@ import { RootState } from "@/redux/store";
 import { useSprings } from "@react-spring/web";
 
 // types / interfaces import
-import { BarsProp, gap } from "@/interfaces/barsProp";
+import { BarsProp, gap, bar } from "@/interfaces/barsProp";
 import Clip from "@/components/clip";
 
 type MediaItem = {
@@ -153,7 +153,7 @@ const Timeline: React.FC<TimelineProps> = ({
     );
   }, [barsData]);
 
-  barIdsRef.current = allBars.map((b: any) => b.id);
+  barIdsRef.current = allBars.map((b: bar) => b.id);
   const [springs, api] = useSprings(
     allBars.length || 0,
     (i) => ({
@@ -410,7 +410,6 @@ const Timeline: React.FC<TimelineProps> = ({
   // *********** drag and drop functions ***************
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    // setBarDragging(false);
   };
 
   const handleDynamicDrop = (

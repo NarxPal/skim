@@ -47,7 +47,7 @@
 }
 
 .common_sub_col {
-  @apply relative h-16  bg-off_voi rounded-lg;
+  @apply relative h-12 bg-off_voi rounded-lg;
 }
 
 .add_sub_col{
@@ -71,7 +71,7 @@
 }
 
 .gap_box_div {
-  @apply absolute rounded-lg h-16 z-10;
+  @apply absolute rounded-lg h-12 z-10;
 }
 
 .gap_box {
@@ -107,7 +107,7 @@
 }
 
 .m_item_box_drop {
-  @apply bg-indigo-600 rounded-lg h-16  text-white bg-cover font-medium text-xs px-1 py-1 shadow-2xl relative;
+  @apply bg-indigo-600 rounded-lg h-12 text-white bg-cover font-medium text-xs px-1 py-1 shadow-2xl relative;
 }
 
 .bar_content {
@@ -115,7 +115,7 @@
 }
 
 .bar_arrow {
-  @apply h-[70%] items-center  cursor-ew-resize bg-indigo-600 shadow-2xl rounded-lg px-2 py-4;
+  @apply h-[70%] items-center  cursor-ew-resize bg-indigo-600 shadow-2xl rounded-lg px-1 py-1;
 }
 
 .bar_arrow_right {

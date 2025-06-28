@@ -194,8 +194,8 @@ const UserId = () => {
                   <Image
                     alt="controls"
                     src="/controls.png"
-                    width={30}
-                    height={30}
+                    width={20}
+                    height={20}
                     priority={true}
                   />
                 </button>

@@ -26,7 +26,6 @@ export class FfmpegService {
 
   async getMediaDuration(filePath: string): Promise<number> {
     const response = await axios.get(filePath, { responseType: 'stream' });
-    console.log('file path checko', filePath);
     return new Promise((resolve, reject) => {
       let command = ffmpeg().input(response.data);
 
