@@ -17,6 +17,7 @@ export type bar = {
   end_time: number;
   ruler_start_time: number;
   ruler_start_time_in_sec: number;
+  volume: number;
 };
 
 export type gap = {
@@ -30,9 +31,9 @@ export type gap = {
 };
 
 export type sub_column = {
-  id: number;
+  id: number | null;
   sub_col_id: number;
-  parent_id: number;
+  parent_id: number | undefined;
   project_id: number;
   user_id: string;
   media_type: string;

@@ -48,6 +48,19 @@ export class ColumnsService {
     return [];
   }
 
+  async fetchMediaClipForVolume(id: number): Promise<BarData> {
+    const columns = await this.columnsRepository.find();
+
+    for (const column of columns) {
+      for (const subCol of column.sub_columns || []) {
+        const bar = subCol.bars.find((b) => b.id === id);
+        if (bar) return bar;
+      }
+    }
+
+    throw new NotFoundException(`Clip with id ${id} not found`);
+  }
+
   // Create a new column (root or sub-column)
   async create(createColumnDto: CreateColumnDto) {
     const column = this.columnsRepository.create(createColumnDto);
@@ -136,6 +149,39 @@ export class ColumnsService {
     }
 
     return this.columnsRepository.save(columns);
+  }
+
+  async updateClipVolume(id: number, updatedClipData: BarData) {
+    const columns = await this.columnsRepository.find();
+    if (!columns || columns.length === 0) {
+      throw new NotFoundException(`No columns found`);
+    }
+
+    const matchingProjectColumns = columns.filter(
+      (col) => col.project_id === updatedClipData.project_id,
+    );
+
+    if (matchingProjectColumns.length === 0) {
+      throw new NotFoundException(`No columns found for project`);
+    }
+
+    for (const column of matchingProjectColumns) {
+      const subCol = column.sub_columns.find(
+        (sub) => sub.sub_col_id === updatedClipData.sub_col_id,
+      );
+
+      if (subCol) {
+        const bar = subCol.bars.find((b) => b.id === updatedClipData.id);
+
+        if (bar) {
+          bar.volume = updatedClipData.volume;
+          await this.columnsRepository.save(column);
+          return bar;
+        }
+      }
+    }
+
+    throw new NotFoundException(`Clip with id ${id} not found`);
   }
 
   async updateGap(prjId: number, id: number, updateGapData: Gap) {

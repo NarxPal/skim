@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import Image from "next/image";
 import styles from "@/styles/timeline.module.css";
 import { BarsProp, sub_column, bar, gap } from "@/interfaces/barsProp";
@@ -41,8 +41,6 @@ interface ClipProps {
   setUpdateBarsData: React.Dispatch<React.SetStateAction<boolean>>;
   setHoveringOverRow: React.Dispatch<React.SetStateAction<boolean>>;
   rowsRef: React.RefObject<(HTMLDivElement | null)[]>;
-  addSubColRef: React.RefObject<HTMLDivElement>;
-  mediaParentRef: React.RefObject<HTMLDivElement | null>;
   prjId: string;
   zoomSprings: SpringType[];
   zoomApi: SpringRef<{
@@ -56,6 +54,8 @@ interface ClipProps {
   totalDuration: number;
   setBarAfterShift: React.Dispatch<React.SetStateAction<boolean>>;
   barIdsRef: React.MutableRefObject<number[]>;
+  setBarForVolume: React.Dispatch<React.SetStateAction<bar | null>>;
+  setOpenRightPane: React.Dispatch<React.SetStateAction<boolean>>;
 }
 const Clip: React.FC<ClipProps> = ({
   item,
@@ -71,14 +71,14 @@ const Clip: React.FC<ClipProps> = ({
   setUpdateBarsData,
   setHoveringOverRow,
   rowsRef,
-  addSubColRef,
-  mediaParentRef,
   prjId,
   zoomSprings,
   zoomApi,
   totalDuration,
   setBarAfterShift,
   barIdsRef,
+  setBarForVolume,
+  setOpenRightPane,
 }) => {
   //state hooks
   const [options, setOptions] = useState<
@@ -365,7 +365,7 @@ const Clip: React.FC<ClipProps> = ({
     }
   };
 
-  const updateGapRow = async (rowId: number, updatedGapRes: any) => {
+  const updateGapRow = async (rowId: number, updatedGapRes: gap) => {
     try {
       const afterAddingGap = await axios.patch(
         // sub-columns/gap/:id - patch in backend
@@ -418,7 +418,7 @@ const Clip: React.FC<ClipProps> = ({
         (subcol: sub_column) => subcol.project_id === Number(prjId)
       );
       const updatedGapRes = filteredData
-        .flatMap((subcol: any) => subcol.gaps || [])
+        .flatMap((subcol: sub_column) => subcol.gaps || [])
         .find((gap: gap) => gap.id === targetGap.id);
       console.log("update gaps res checko", updatedGapRes);
       updateGapRow(NumHovRowId, updatedGapRes);
@@ -468,7 +468,7 @@ const Clip: React.FC<ClipProps> = ({
           (bar: BarsProp) => bar.project_id === Number(prjId)
         );
         const updatedBarRes = filteredData[0].sub_columns
-          .flatMap((subcol: any) => (subcol.bars ? subcol.bars : []))
+          .flatMap((subcol: sub_column) => (subcol.bars ? subcol.bars : []))
           .find((bar: bar) => bar.id === targetBar.id);
         await updateBarRow(NumHovRowId, updatedBarRes);
         updateGapLPAfterDrop(barId, newLeftPosition, NumHovRowId);
@@ -510,7 +510,7 @@ const Clip: React.FC<ClipProps> = ({
   const bindDrag = useDrag(
     ({
       movement: [dx, dy],
-      args: [barId, subColId, barType],
+      args: [barId, barType],
       event,
       last,
       down,
@@ -519,14 +519,15 @@ const Clip: React.FC<ClipProps> = ({
       if (event.target && (event.target as HTMLElement).closest(".handle"))
         // if the target element or its ancestors contain handle class than stop
         return;
-      let isOverRow = false;
-      let clientY = 0;
+      const isOverRow = false;
 
-      if ("clientY" in event) {
-        clientY = event.clientY;
-      } else if ("touches" in event && event.touches.length > 0) {
-        clientY = event.touches[0].clientY;
-      }
+      // let clientY = 0;
+      // if ("clientY" in event) {
+      //   clientY = event.clientY;
+      // } else if ("touches" in event && event.touches.length > 0) {
+      //   clientY = event.touches[0].clientY;
+      // }
+
       barsDataChangeAfterZoom?.sub_columns?.forEach((subColumn) => {
         subColumn?.bars?.forEach((bar, barIndex) => {
           if (bar.id !== barId) return {};
@@ -553,16 +554,12 @@ const Clip: React.FC<ClipProps> = ({
 
           if (Math.abs(dy) < verticalThreshold) {
             // clamp newX to avoid overlap
-            // console.log("dx checko", dx);
-            // console.log("prev x", prevX);
-            // console.log("next x", nextX);
             newX = Math.max(
               prevX,
               Math.min(bar.left_position + dx, nextX - bar.width)
             );
           } else {
             // here newX for dragging bw subcols
-            // console.log("dx in else ", dx);
             newX = Math.max(minX, Math.min(bar.left_position + dx, maxX));
           }
 
@@ -818,7 +815,7 @@ const Clip: React.FC<ClipProps> = ({
               const minPosition = prevBar?.left_position + prevBar?.width;
 
               if (predictedStartTime >= 0) {
-                let calcNewX =
+                const calcNewX =
                   newWidth >= width
                     ? Math.max(
                         bar.left_position + dx,
@@ -829,7 +826,7 @@ const Clip: React.FC<ClipProps> = ({
                         bar.left_position + bar.width - newWidth
                       );
 
-                let calcMinNewX = Math.max(calcNewX, minPosition);
+                const calcMinNewX = Math.max(calcNewX, minPosition);
                 if (calcMinNewX === minPosition) {
                   newX = calcMinNewX;
                   newWidth = bar.width - (minPosition - bar.left_position);
@@ -1030,6 +1027,11 @@ const Clip: React.FC<ClipProps> = ({
     }
   };
 
+  const handleClipVolumeUsingCm = (bar: bar) => {
+    setOpenRightPane(true);
+    setBarForVolume(bar);
+  };
+
   const handleRightClickBar = (
     e: React.MouseEvent<HTMLDivElement>,
     bar: bar,
@@ -1039,13 +1041,16 @@ const Clip: React.FC<ClipProps> = ({
   ) => {
     e.preventDefault();
     setOptions([
-      { label: "edit", action: () => console.log(`Edit ${bar.id}`) },
+      { label: "volume", action: () => handleClipVolumeUsingCm(bar) },
       {
         label: "delete",
         action: () => handleDeleteBarAndGap(subColId, bar.id, item),
       },
     ]);
-    const container = e.currentTarget.getBoundingClientRect();
+    const wrapper = e.currentTarget.closest("#cm-clips-wrapper");
+    if (!wrapper) return;
+    const container = wrapper.getBoundingClientRect();
+
     setContextMenu({
       visible: true,
       x: e.clientX - container.left,
@@ -1066,18 +1071,24 @@ const Clip: React.FC<ClipProps> = ({
     setContextMenu({ visible: false, x: 0, y: 0, id: null });
   };
 
+  const handleClipVolume = (bar: bar) => {
+    console.log("u clicked me bro", bar);
+    setBarForVolume(bar);
+  };
+
   return (
     <div className={styles.clip_sub_col_div} id={barIndex.toString()}>
       {item.bars.map((bar: bar) => {
         const barIndex = barIdsRef.current.findIndex(
-          (id: any) => id === bar.id
+          (id: number) => id === bar.id
         );
         const zoomSpring = zoomSprings[barIndex];
 
         return (
           <animated.div
             key={bar.id}
-            {...bindDrag(bar.id, bar.sub_col_id, bar.type)}
+            onClick={() => handleClipVolume(bar)}
+            {...bindDrag(bar.id, bar.type)}
             className={styles.item_box_div}
             style={{
               width: zoomSpring?.clipWidth.to((w) => `${w}px`),

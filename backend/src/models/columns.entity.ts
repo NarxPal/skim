@@ -19,6 +19,7 @@ type Bar = {
   clip_duration: number;
   ruler_start_time: number;
   ruler_start_time_in_sec: number;
+  volume: number;
 };
 
 type Gap = {

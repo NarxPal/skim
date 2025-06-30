@@ -9,7 +9,7 @@ import { RootState } from "@/redux/store";
 import { useSprings } from "@react-spring/web";
 
 // types / interfaces import
-import { BarsProp, gap, bar } from "@/interfaces/barsProp";
+import { BarsProp, gap, bar, sub_column } from "@/interfaces/barsProp";
 import Clip from "@/components/clip";
 
 type MediaItem = {
@@ -46,12 +46,16 @@ interface TimelineProps {
   setMediaContainerWidth: React.Dispatch<React.SetStateAction<number>>;
   totalMediaDuration: number;
   setTotalMediaDuration: React.Dispatch<React.SetStateAction<number>>;
-  position: number;
-  setPosition: React.Dispatch<React.SetStateAction<number>>;
   showPhTime: string;
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
   videoRef: React.RefObject<HTMLVideoElement>;
   phLeftRef: React.RefObject<HTMLDivElement>;
+  manualPhLeftRef: React.MutableRefObject<number | null>;
+  phLeftRefAfterMediaStop: React.MutableRefObject<number | null>;
+  setBarForVolume: React.Dispatch<React.SetStateAction<bar | null>>;
+  lastClipId: React.MutableRefObject<number | null>;
+  setOpenRightPane: React.Dispatch<React.SetStateAction<boolean>>;
+  mediaParentRef: React.MutableRefObject<HTMLDivElement | null>;
 }
 
 const Timeline: React.FC<TimelineProps> = ({
@@ -63,19 +67,17 @@ const Timeline: React.FC<TimelineProps> = ({
   setMediaContainerWidth,
   totalMediaDuration,
   setTotalMediaDuration,
-  position,
-  setPosition,
   showPhTime,
   setShowPhTime,
   videoRef,
   phLeftRef,
+  manualPhLeftRef,
+  phLeftRefAfterMediaStop,
+  setBarForVolume,
+  lastClipId,
+  setOpenRightPane,
+  mediaParentRef,
 }) => {
-  // redux state hooks
-  // const userId = useSelector((state: RootState) => state.userId.userId); // userid has been set in project/uid
-  const phPosition = useSelector(
-    (state: RootState) => state.phPosition.phPosition
-  );
-
   // usestate hooks
   const [columns, setColumns] = useState<ColumnsProps | undefined>(undefined); // column and barsdata are having same data
   const [barsData, setBarsData] = useState<BarsProp | null>(null);
@@ -98,9 +100,6 @@ const Timeline: React.FC<TimelineProps> = ({
   const [barAfterShift, setBarAfterShift] = useState<boolean>(false);
 
   // use ref hooks
-  const mediaParentRef = useRef<HTMLDivElement | null>(null);
-  // const phLeftRef = useRef<HTMLDivElement>(null);
-  const addSubColRef = useRef<HTMLDivElement>(null);
   const rowsRef = useRef<(HTMLDivElement | null)[]>([]);
 
   const barIdsRef = useRef<number[]>([]);
@@ -110,27 +109,14 @@ const Timeline: React.FC<TimelineProps> = ({
     (state: RootState) => state.markerInterval.markerInterval
   );
 
-  // Update the scrollleft of media_parent_div when playhead moves out of view
-  useEffect(() => {
-    if (phLeftRef.current && mediaParentRef.current) {
-      const playheadBounds = phLeftRef.current.getBoundingClientRect();
-      const parentBounds = mediaParentRef.current.getBoundingClientRect();
-      if (
-        playheadBounds.left < parentBounds.left ||
-        playheadBounds.right > parentBounds.right
-      ) {
-        const scrollOffset = playheadBounds.left - parentBounds.left;
-        mediaParentRef.current.scrollLeft += scrollOffset;
-      }
-    }
-  }, [phPosition, position]);
-
+  // needed for scrolling ruler when scrolled using thumb
   const handleScroll = () => {
     if (mediaParentRef.current) {
       setScrollPosition(mediaParentRef.current.scrollLeft);
     }
   };
 
+  // needed for scrolling ruler when scrolled using thumb
   useEffect(() => {
     if (mediaParentRef.current) {
       const mediaParent = mediaParentRef.current;
@@ -227,7 +213,8 @@ const Timeline: React.FC<TimelineProps> = ({
     const subColId = Math.floor(Math.random() * 1e6) + (Date.now() % 1e6);
     const duration = parsedItem.duration;
 
-    const payload: any = {
+    const payload: sub_column = {
+      id: null, // it won't be null, adding id in backend code
       sub_col_id: subColId,
       project_id: parsedItem.project_id,
       user_id: parsedItem.user_id,
@@ -253,6 +240,7 @@ const Timeline: React.FC<TimelineProps> = ({
           end_time: duration,
           ruler_start_time: 0,
           ruler_start_time_in_sec: 0,
+          volume: 1.0,
         },
       ],
       gaps: [
@@ -289,8 +277,7 @@ const Timeline: React.FC<TimelineProps> = ({
 
     console.log("payload checko", payload);
 
-    let response;
-    response = await axios.post(
+    const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
       payload
     );
@@ -410,20 +397,6 @@ const Timeline: React.FC<TimelineProps> = ({
   // *********** drag and drop functions ***************
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-  };
-
-  const handleDynamicDrop = (
-    e: React.DragEvent<HTMLDivElement>,
-    dropSubColId: number
-  ) => {
-    handleMediaDrop(e);
-  };
-
-  const handleDynamicDragOver = (
-    e: React.DragEvent<HTMLDivElement>,
-    dragOverSubColId: number
-  ) => {
-    handleDragOver(e);
   };
 
   const shiftGapsAfterGapDelete = async (data: BarsProp, gap: gap) => {
@@ -659,10 +632,10 @@ const Timeline: React.FC<TimelineProps> = ({
               scrollPosition={scrollPosition}
               phLeftRef={phLeftRef}
               mediaContainerWidth={mediaContainerWidth}
-              position={position}
-              setPosition={setPosition}
               videoRef={videoRef}
               totalDuration={totalMediaDuration}
+              manualPhLeftRef={manualPhLeftRef}
+              phLeftRefAfterMediaStop={phLeftRefAfterMediaStop}
               setShowPhTime={setShowPhTime}
             />
           )}
@@ -672,15 +645,17 @@ const Timeline: React.FC<TimelineProps> = ({
           zoomLevel={zoomLevel}
           containerWidth={mediaContainerWidth}
           scrollPosition={scrollPosition}
-          setBarsDataChangeAfterZoom={setBarsDataChangeAfterZoom}
           barsData={barsData}
-          setBarsData={setBarsData}
           videoRef={videoRef}
-          setShowPhTime={setShowPhTime}
           api={api}
           setFetchBars={setFetchBars}
           prjId={prjId}
           allBars={allBars}
+          phLeftRef={phLeftRef}
+          manualPhLeftRef={manualPhLeftRef}
+          phLeftRefAfterMediaStop={phLeftRefAfterMediaStop}
+          lastClipId={lastClipId}
+          setShowPhTime={setShowPhTime}
         />
         <div className={styles.media_parent_div} ref={mediaParentRef}>
           <div
@@ -700,6 +675,8 @@ const Timeline: React.FC<TimelineProps> = ({
                     ? `${mediaContainerWidth}px`
                     : "100%",
               }}
+              onDragOver={(e) => handleDragOver(e)}
+              onDrop={(e) => handleMediaDrop(e)}
             >
               {((barsData && barsData.sub_columns === null) ||
               barsData?.sub_columns?.length === 0
@@ -722,8 +699,6 @@ const Timeline: React.FC<TimelineProps> = ({
                       ref={(el) => {
                         rowsRef.current[index] = el;
                       }}
-                      onDragOver={(e) => handleDynamicDragOver(e, item?.id)}
-                      onDrop={(e) => handleDynamicDrop(e, item?.id)}
                     >
                       {item?.gaps?.length > 0 &&
                         item.gaps.map((gap: gap) => {
@@ -767,7 +742,11 @@ const Timeline: React.FC<TimelineProps> = ({
                         })}
 
                       {item?.bars?.length > 0 && (
-                        <div key={index}>
+                        <div
+                          className={styles.cm_clips_wrapper}
+                          key={index}
+                          id="cm-clips-wrapper"
+                        >
                           <Clip
                             item={item}
                             barsDataChangeAfterZoom={barsDataChangeAfterZoom}
@@ -784,20 +763,20 @@ const Timeline: React.FC<TimelineProps> = ({
                             setUpdateBarsData={setUpdateBarsData}
                             setHoveringOverRow={setHoveringOverRow}
                             rowsRef={rowsRef}
-                            addSubColRef={addSubColRef}
-                            mediaParentRef={mediaParentRef}
                             prjId={prjId}
                             zoomSprings={springs}
                             zoomApi={api}
                             totalDuration={totalMediaDuration}
                             setBarAfterShift={setBarAfterShift}
                             barIdsRef={barIdsRef}
+                            setBarForVolume={setBarForVolume}
+                            setOpenRightPane={setOpenRightPane}
                           />
                         </div>
                       )}
                     </div>
 
-                    <div className={styles.add_sub_col} ref={addSubColRef}>
+                    <div className={styles.add_sub_col}>
                       <div
                         className={`${styles.add_line} ${
                           hoveringOverRow ? "hover:bg-blue_btn" : ""
@@ -809,8 +788,8 @@ const Timeline: React.FC<TimelineProps> = ({
                   <div
                     className={styles.empty_parent}
                     key={index}
-                    onDragOver={(e) => handleDynamicDragOver(e, item?.id)}
-                    onDrop={(e) => handleDynamicDrop(e, item?.id)}
+                    onDragOver={(e) => handleDragOver(e)}
+                    onDrop={(e) => handleMediaDrop(e)}
                   >
                     <div className={styles.empty_sub_col}></div>
                   </div>

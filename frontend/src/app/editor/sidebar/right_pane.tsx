@@ -1,7 +1,89 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
+import styles from "@/styles/dash.module.css";
+import Image from "next/image";
+import { bar } from "@/interfaces/barsProp";
+import axios from "axios";
 
-const Right_pane = () => {
-  return <div>right_pane</div>;
+interface RightPane {
+  barForVolume: bar | null;
+}
+const RightPane: React.FC<RightPane> = ({ barForVolume }) => {
+  const sliderRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const fetchMediaClipForVolume = async () => {
+      console.log("fetch media clip vol ran", barForVolume);
+      if (!barForVolume) return;
+      const updateClipVolume = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/clips/${barForVolume.id}`
+      );
+
+      if (sliderRef.current) {
+        const value = updateClipVolume.data.volume;
+        console.log("value ran", value);
+        sliderRef.current.value = value.toString();
+        sliderRef.current.style.background = `linear-gradient(to right, #2a6fff ${
+          value * 100
+        }%, #ccc ${value * 100}%)`;
+      }
+    };
+    fetchMediaClipForVolume();
+  }, [barForVolume]);
+
+  const handleVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value);
+    e.target.style.background = `linear-gradient(to right, #2a6fff ${
+      value * 100
+    }%, #ccc ${value * 100}%)`;
+  };
+
+  const handleUpdateVolume = async () => {
+    const value = parseFloat(sliderRef.current?.value || "1");
+    if (!barForVolume) return;
+    console.log("bar for volume ch3cko", barForVolume);
+    const updateClipVolume = await axios.patch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/clips/${barForVolume.id}`,
+      {
+        ...barForVolume,
+        volume: value,
+      }
+    );
+    console.log("updated volume checko babe", updateClipVolume);
+  };
+
+  return (
+    <div className={styles.vol_div}>
+      {barForVolume ? (
+        <div className={styles.icon_text}>
+          <div>
+            <Image
+              alt="vol"
+              src="/sound_on.png"
+              width={15}
+              height={15}
+              priority={true}
+            />
+          </div>
+          <input
+            type="range"
+            ref={sliderRef}
+            min="0"
+            max="1"
+            step="0.01"
+            onChange={handleVolume}
+            onMouseUp={handleUpdateVolume}
+            className="w-40 h-1 rounded appearance-none"
+          />
+        </div>
+      ) : (
+        <div>
+          <p className={styles.vol_pane_text}>
+            tap on any media clip to change its volume
+          </p>
+        </div>
+      )}
+    </div>
+  );
 };
 
-export default Right_pane;
+export default RightPane;

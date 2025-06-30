@@ -289,7 +289,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
                         <img
                           src={item.thumbnail_url}
                           alt={item.name}
-                          className={styles.media_preview}
+                          className={styles.vid_preview}
                         />
                       ) : (
                         <Image

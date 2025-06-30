@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import styles from "@/styles/canvas.module.css";
 import Image from "next/image";
 import PhAnimation from "@/utils/timeline/phAnimation";
-// import { throttle } from "lodash";
 
 // types / interfaces import
 import { BarsProp } from "@/interfaces/barsProp";
@@ -14,11 +13,13 @@ interface CanvasProps {
   >;
   mediaContainerWidth: number;
   totalMediaDuration: number;
-  position: number;
-  setPosition: React.Dispatch<React.SetStateAction<number>>;
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
   videoRef: React.RefObject<HTMLVideoElement>;
   phLeftRef: React.RefObject<HTMLDivElement>;
+  manualPhLeftRef: React.MutableRefObject<number | null>;
+  phLeftRefAfterMediaStop: React.MutableRefObject<number | null>;
+  lastClipId: React.MutableRefObject<number | null>;
+  mediaParentRef: React.MutableRefObject<HTMLDivElement | null>;
 }
 
 const Canvas: React.FC<CanvasProps> = ({
@@ -26,11 +27,13 @@ const Canvas: React.FC<CanvasProps> = ({
   barsDataChangeAfterZoom,
   mediaContainerWidth,
   totalMediaDuration,
-  position,
-  setPosition,
-  setShowPhTime,
   videoRef,
   phLeftRef,
+  manualPhLeftRef,
+  phLeftRefAfterMediaStop,
+  lastClipId,
+  setShowPhTime,
+  mediaParentRef,
 }) => {
   // redux state hooks
 
@@ -46,16 +49,20 @@ const Canvas: React.FC<CanvasProps> = ({
   };
 
   const handleFullScreen = () => {
-    if (videoRef.current) {
-      if (videoRef.current.requestFullscreen) {
-        videoRef.current.requestFullscreen(); // for modern browsers
-      } else if ((videoRef.current as any).webkitRequestFullscreen) {
-        (videoRef.current as any).webkitRequestFullscreen();
-      } else if ((videoRef.current as any).mozRequestFullScreen) {
-        (videoRef.current as any).mozRequestFullScreen();
-      } else if ((videoRef.current as any).msRequestFullscreen) {
-        (videoRef.current as any).msRequestFullscreen();
-      }
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.requestFullscreen) {
+      video.requestFullscreen();
+    } else {
+      const vid = video as unknown as {
+        webkitRequestFullscreen?: () => void;
+        mozRequestFullScreen?: () => void;
+        msRequestFullscreen?: () => void;
+      };
+      vid.webkitRequestFullscreen?.();
+      vid.mozRequestFullScreen?.();
+      vid.msRequestFullscreen?.();
     }
   };
 
@@ -75,14 +82,16 @@ const Canvas: React.FC<CanvasProps> = ({
       </div>
       <div className={styles.video_btns}>
         <PhAnimation
-          setPosition={setPosition}
-          position={position}
           videoRef={videoRef}
           mediaContainerWidth={mediaContainerWidth}
           totalMediaDuration={totalMediaDuration}
           barsDataChangeAfterZoom={barsDataChangeAfterZoom}
-          setShowPhTime={setShowPhTime}
           phLeftRef={phLeftRef}
+          manualPhLeftRef={manualPhLeftRef}
+          phLeftRefAfterMediaStop={phLeftRefAfterMediaStop}
+          lastClipId={lastClipId}
+          setShowPhTime={setShowPhTime}
+          mediaParentRef={mediaParentRef}
         />
 
         <div className={styles.vdo_feature_btns}>

@@ -11,7 +11,7 @@
 }
 
 .dash_header {
-  @apply flex flex-row w-full h-full text-white justify-between p-2;
+  @apply flex flex-row w-full h-full text-white justify-between p-2 pl-0;
 }
 
 .logo_filename_div {
@@ -46,11 +46,11 @@
 }
 
 .canvas_shrink{
-@apply min-w-[60%] w-[60%]
+@apply min-w-[61%] w-[61%]
 }
 
 .canvas_expand{
-@apply min-w-[74%] w-[74%]
+@apply min-w-[75%] w-[75%]
 }
 
 .right_pane{
@@ -89,4 +89,13 @@
 
 .resizer_pad {
   @apply absolute h-full w-full p-2 top-[-4px];
+}
+
+/************ VOLUME ******************/
+.icon_text{
+  @apply p-7 flex items-center justify-evenly  flex-row
+}
+
+.vol_pane_text{
+  @apply  text-sm text-gray-500 select-none p-7
 }

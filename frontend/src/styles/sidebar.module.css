@@ -23,7 +23,7 @@
 }
 
 .text_head {
-  @apply text-white opacity-90 text-sm font-semibold;
+  @apply text-white text-xs font-semibold;
 }
 
 /* upload.tsx content */
@@ -47,11 +47,15 @@
 }
 
 .media_icon{
-@apply h-9 w-9
+@apply h-9 w-9 
+}
+
+.vid_preview{
+@apply h-9 w-9 rounded-lg
 }
 
 .media_preview{
-  @apply h-9 w-9
+  @apply rounded-lg bg-black_bg p-2
 }
 
 .media_name {
@@ -60,7 +64,7 @@
 
 /* ****** sm_pane.tsx content ********* */
 .sm_pane {
-  @apply flex-none flex-col  min-w-[4%] w-[4%] justify-between;
+  @apply flex-none flex-col  min-w-[3%] w-[3%] justify-between;
 }
 
 .sm_inner {
@@ -72,15 +76,19 @@
 }
 
 .all_icons{
-  @apply mt-5
+  @apply mt-5 flex flex-col
 }
 
 .li_text {
   @apply text-white font-medium text-xs;
 }
 
+.img_text{
+  @apply  flex flex-col items-center p-3 hover:bg-editor_gray rounded-lg 
+}
+
 .li {
-  @apply items-center flex flex-col cursor-pointer rounded-md gap-2 p-2 ;
+  @apply items-center flex flex-col cursor-pointer rounded-md gap-2;
 }
 
 .up_btn_div {

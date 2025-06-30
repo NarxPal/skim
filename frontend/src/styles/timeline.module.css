@@ -196,14 +196,18 @@
 }
 
 .menu_div {
-  @apply absolute bg-editor_bg w-40 text-white font-medium drop-shadow-2xl rounded-md z-50 p-1.5 border-2 border-editor_gray text-xs translate-y-3 transition-opacity;
+  @apply absolute bg-editor_bg w-40 text-white font-medium drop-shadow-2xl rounded-md z-50 p-1 border-2 border-editor_gray text-xs translate-y-3 transition-opacity;
 }
 
 .cm_option {
-  @apply p-3 cursor-pointer font-semibold rounded-md text-xs;
+  @apply p-2 cursor-pointer font-bold rounded-md text-xs;
 }
 .menu_option {
   @apply hover:bg-gray_col cm_option;
+}
+
+.cm_icon_text{
+  @apply flex flex-row gap-2 items-center 
 }
 
 .del_option {

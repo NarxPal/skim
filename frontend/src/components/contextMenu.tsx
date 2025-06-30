@@ -1,5 +1,6 @@
 import React from "react";
 import styles from "@/styles/timeline.module.css";
+import Image from "next/image";
 
 interface ContextMenuProps {
   x: number;
@@ -33,7 +34,16 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             onClick={() => onOptionClick(option)}
             className={styles.del_option}
           >
-            {option.label}
+            <div className={styles.cm_icon_text}>
+              <Image
+                src="/delete.png"
+                alt="delete"
+                width={15}
+                height={15}
+                priority={true}
+              />
+              {option.label}
+            </div>
           </div>
         ) : (
           <div
@@ -41,7 +51,16 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             onClick={() => onOptionClick(option)}
             className={styles.menu_option}
           >
-            {option.label}
+            <div className={styles.cm_icon_text}>
+              <Image
+                src="/sound_on.png"
+                alt="sound"
+                width={15}
+                height={15}
+                priority={true}
+              />
+              {option.label}
+            </div>
           </div>
         )
       )}

@@ -9,31 +9,28 @@ import { throttle } from "lodash";
 interface PlayheadProps {
   phLeftRef: React.RefObject<HTMLDivElement>;
   mediaContainerWidth: number;
-  position: number;
-  setPosition: React.Dispatch<React.SetStateAction<number>>;
   scrollPosition: number;
   setScrollPosition: React.Dispatch<React.SetStateAction<number>>;
   videoRef: React.RefObject<HTMLVideoElement>;
   totalDuration: number;
+  manualPhLeftRef: React.MutableRefObject<number | null>;
+  phLeftRefAfterMediaStop: React.MutableRefObject<number | null>;
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const Playhead: React.FC<PlayheadProps> = ({
   phLeftRef,
   mediaContainerWidth,
-  position,
-  setPosition,
   scrollPosition,
   setScrollPosition,
   videoRef,
   totalDuration,
+  manualPhLeftRef,
+  phLeftRefAfterMediaStop,
   setShowPhTime,
 }) => {
   const dispatch = useDispatch();
   //redux state hooks
-  const phPosition = useSelector(
-    (state: RootState) => state.phPosition.phPosition
-  );
   const phPreview = useSelector(
     (state: RootState) => state.phPreview.phPreview
   );
@@ -77,6 +74,7 @@ const Playhead: React.FC<PlayheadProps> = ({
   ).current;
 
   // Here lodash throttle will help to reduce state update to 50ms
+  // using phPosition here to stop the playhead after dragging completes in ruler
   const throttledSetPosition = useRef(
     throttle((position: number) => dispatch(setPhPosition(position)), 50) // Update every 50ms
   ).current;
@@ -113,7 +111,11 @@ const Playhead: React.FC<PlayheadProps> = ({
       const hoverPosition = Math.max(0, Math.floor(clientX));
 
       if (hoverPosition !== undefined) {
-        setPosition(hoverPosition);
+        if (phLeftRef.current) {
+          manualPhLeftRef.current = hoverPosition;
+          phLeftRefAfterMediaStop.current = hoverPosition;
+          phLeftRef.current.style.transform = `translateX(${hoverPosition}px)`;
+        }
         throttledSetPosition(hoverPosition); // Since redux state setPhPosition is causing state limits error
         if (videoRef.current && hoverPosition) {
           const time = positionToTime(hoverPosition);
@@ -190,7 +192,6 @@ const Playhead: React.FC<PlayheadProps> = ({
           // }}
 
           //phposition was during drag of playhead, mouse down on ruler and position was used during media play
-          // style={{ transform: `translateX(${position}px)` }} // for gap
           ref={phLeftRef}
         >
           <div className={styles.ph_line_notch}>

@@ -42,6 +42,11 @@ export class ColumnsController {
     return this.columnsService.dropBarRow(Number(rowId));
   }
 
+  @Get('sub-columns/clips/:id')
+  async fetchMediaClipForVolume(@Param('id') id: string): Promise<BarData> {
+    return this.columnsService.fetchMediaClipForVolume(Number(id));
+  }
+
   // filter to get dragged bar id
   @Get(':subColId/bars/:id')
   async dragBarId(
@@ -82,6 +87,15 @@ export class ColumnsController {
     },
   ) {
     return this.columnsService.updateBar(Number(id), updateBarData);
+  }
+
+  @Patch('sub-columns/clips/:id')
+  async updateClipVolume(
+    @Param('id') id: number,
+    @Body()
+    updatedClipData: BarData,
+  ) {
+    return this.columnsService.updateClipVolume(Number(id), updatedClipData);
   }
 
   // updateGapAfterResize and updateGapLPAfterDrop, handleGap, handleDelGap

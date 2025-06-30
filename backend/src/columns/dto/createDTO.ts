@@ -33,7 +33,7 @@ type Bar = {
   clip_duration: number;
   ruler_start_time: number;
   ruler_start_time_in_sec: number;
-  // not having here column_id
+  volume: number;
 };
 
 export type Gap = {
@@ -111,4 +111,5 @@ export class BarData {
   clip_duration: number;
   ruler_start_time: number;
   ruler_start_time_in_sec: number;
+  volume: number;
 }

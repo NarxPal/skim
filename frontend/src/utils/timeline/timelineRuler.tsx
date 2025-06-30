@@ -5,7 +5,6 @@ import { RootState } from "@/redux/store";
 import { setPhPosition } from "@/redux/phPosition";
 import { setPhPreview } from "@/redux/phPreview";
 import { setMarkerInterval } from "@/redux/markerInterval";
-import { throttle } from "lodash";
 // types / interfaces import
 import { BarsProp, bar, sub_column } from "@/interfaces/barsProp";
 import { SpringRef } from "@react-spring/web";
@@ -16,13 +15,8 @@ interface TimelineRulerProps {
   zoomLevel: number;
   containerWidth: number;
   scrollPosition: number;
-  setBarsDataChangeAfterZoom: React.Dispatch<
-    React.SetStateAction<BarsProp | null>
-  >;
   barsData: BarsProp | null;
-  setBarsData: React.Dispatch<React.SetStateAction<BarsProp | null>>;
   videoRef: React.RefObject<HTMLVideoElement>;
-  setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
   api: SpringRef<{
     // barID: number;
     subColId: number;
@@ -34,6 +28,11 @@ interface TimelineRulerProps {
   setFetchBars: React.Dispatch<React.SetStateAction<boolean>>;
   prjId: string;
   allBars: bar[];
+  phLeftRef: React.RefObject<HTMLDivElement>;
+  manualPhLeftRef: React.MutableRefObject<number | null>;
+  phLeftRefAfterMediaStop: React.MutableRefObject<number | null>;
+  lastClipId: React.MutableRefObject<number | null>;
+  setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const TimelineRuler: React.FC<TimelineRulerProps> = ({
@@ -41,15 +40,17 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   zoomLevel,
   containerWidth,
   scrollPosition,
-  setBarsDataChangeAfterZoom,
   barsData,
-  setBarsData,
   videoRef,
-  setShowPhTime,
   api,
   setFetchBars,
   prjId,
   allBars,
+  phLeftRef,
+  manualPhLeftRef,
+  phLeftRefAfterMediaStop,
+  lastClipId,
+  setShowPhTime,
 }) => {
   // usestate hooks
   const [tickPos, setTickPos] = useState<number[]>(); // having array since we are mapping tickpos in dom
@@ -219,16 +220,8 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   const positionToTime = (pos: number) => {
     const pxValueDiffPerMarker = containerWidth / totalDuration; // calculating px value which position the marker
     const pxPerSecond = pxValueDiffPerMarker / markerInterval; // markerinterval is basically gap bw markers in sec
-    console.log("marker interval b", markerInterval);
     return pos / pxPerSecond;
   };
-
-  const throttledShowPhTimeUpdate = useRef(
-    throttle(async (currentTime) => {
-      const formattedTime = formatTime(currentTime);
-      setShowPhTime(formattedTime);
-    }, 500) // Throttle updates every 500ms
-  ).current;
 
   const handleMousePos = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
@@ -236,11 +229,20 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
     const hoverPosition = getHoverPosition(event);
     console.log("hp", hoverPosition);
     dispatch(setPhPosition(hoverPosition));
+    if (phLeftRef.current) {
+      phLeftRef.current.style.transform = `translateX(${hoverPosition}px)`;
+      manualPhLeftRef.current = hoverPosition ?? null;
+      phLeftRefAfterMediaStop.current = hoverPosition ?? null;
+    }
+
+    lastClipId.current = null;
+    console.log("null", lastClipId.current);
     if (videoRef.current && hoverPosition) {
       const time = positionToTime(hoverPosition);
       console.log("time bro", time);
       videoRef.current.currentTime = time || 0; // in case there is no clip the time would return nothing so fall to 0
-      throttledShowPhTimeUpdate(time);
+      const formattedTime = formatTime(time);
+      setShowPhTime(formattedTime);
     }
   };
 

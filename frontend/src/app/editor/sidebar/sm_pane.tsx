@@ -17,39 +17,45 @@ const Sm_pane = ({
         <div className={styles.ul_items}>
           <div className={styles.all_icons}>
             <div className={styles.li} onClick={() => handleTabClick("upload")}>
-              <Image
-                src="/upload.png"
-                alt="upload"
-                height={20}
-                width={20}
-                priority={true}
-              />
+              <div className={styles.img_text}>
+                <Image
+                  src="/upload.png"
+                  alt="upload"
+                  height={20}
+                  width={20}
+                  priority={true}
+                />
 
-              <span className={styles.li_text}>upload</span>
+                {/* <span className={styles.li_text}>upload</span> */}
+              </div>
             </div>
 
             <div className={styles.li} onClick={() => handleTabClick("video")}>
-              <Image
-                src="/video.png"
-                alt="video"
-                height={20}
-                width={20}
-                priority={true}
-              />
+              <div className={styles.img_text}>
+                <Image
+                  src="/video.png"
+                  alt="video"
+                  height={20}
+                  width={20}
+                  priority={true}
+                />
 
-              <span className={styles.li_text}>video</span>
+                {/* <span className={styles.li_text}>video</span> */}
+              </div>
             </div>
 
             <div className={styles.li} onClick={() => handleTabClick("audio")}>
-              <Image
-                src="/audio.png"
-                alt="audio"
-                height={20}
-                width={20}
-                priority={true}
-              />
+              <div className={styles.img_text}>
+                <Image
+                  src="/audio.png"
+                  alt="audio"
+                  height={20}
+                  width={20}
+                  priority={true}
+                />
 
-              <span className={styles.li_text}>audio</span>
+                {/* <span className={styles.li_text}>audio</span> */}
+              </div>
             </div>
           </div>
         </div>

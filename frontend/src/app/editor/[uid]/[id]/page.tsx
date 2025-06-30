@@ -12,8 +12,8 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { FetchUser } from "@/components/fetchUser";
 // types / interfaces import
-import { BarsProp } from "@/interfaces/barsProp";
-import Right_pane from "../../sidebar/right_pane";
+import { BarsProp, bar } from "@/interfaces/barsProp";
+import RightPane from "../../sidebar/right_pane";
 
 const UserId = () => {
   const params = useParams<{ uid: string; id: string }>();
@@ -28,15 +28,19 @@ const UserId = () => {
     useState<BarsProp | null>(null);
   const [mediaContainerWidth, setMediaContainerWidth] = useState<number>(0);
   const [totalMediaDuration, setTotalMediaDuration] = useState<number>(0);
-  const [position, setPosition] = useState<number>(0); // position of ph
   const [showPhTime, setShowPhTime] = useState<string>("00::00::00");
   const [openRightPane, setOpenRightPane] = useState<boolean>(false);
   const [filename, setFilename] = useState<string>("");
+  const [barForVolume, setBarForVolume] = useState<bar | null>(null);
 
   // useref hooks
   const isDragging = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const phLeftRef = useRef<HTMLDivElement>(null);
+  const manualPhLeftRef = useRef<number | null>(null);
+  const phLeftRefAfterMediaStop = useRef<number | null>(null);
+  const lastClipId = useRef<number | null>(null);
+  const mediaParentRef = useRef<HTMLDivElement | null>(null);
 
   const { loading } = FetchUser(params.uid); // calling useeffect to fetch the user_id
   // redux hooks
@@ -108,8 +112,8 @@ const UserId = () => {
                 <Image
                   src="/skim.png"
                   alt="logo"
-                  width={70}
-                  height={70}
+                  width={60}
+                  height={60}
                   priority={true}
                 />
               </div>
@@ -139,11 +143,13 @@ const UserId = () => {
               setBarsDataChangeAfterZoom={setBarsDataChangeAfterZoom}
               mediaContainerWidth={mediaContainerWidth}
               totalMediaDuration={totalMediaDuration}
-              position={position}
-              setPosition={setPosition}
-              setShowPhTime={setShowPhTime}
               videoRef={videoRef}
               phLeftRef={phLeftRef}
+              manualPhLeftRef={manualPhLeftRef}
+              phLeftRefAfterMediaStop={phLeftRefAfterMediaStop}
+              lastClipId={lastClipId}
+              setShowPhTime={setShowPhTime}
+              mediaParentRef={mediaParentRef}
             />
             <div
               className={styles.resizer}
@@ -161,12 +167,16 @@ const UserId = () => {
               setMediaContainerWidth={setMediaContainerWidth}
               totalMediaDuration={totalMediaDuration}
               setTotalMediaDuration={setTotalMediaDuration}
-              position={position}
-              setPosition={setPosition}
-              setShowPhTime={setShowPhTime}
-              showPhTime={showPhTime}
               videoRef={videoRef}
               phLeftRef={phLeftRef}
+              manualPhLeftRef={manualPhLeftRef}
+              phLeftRefAfterMediaStop={phLeftRefAfterMediaStop}
+              setBarForVolume={setBarForVolume}
+              lastClipId={lastClipId}
+              showPhTime={showPhTime}
+              setShowPhTime={setShowPhTime}
+              setOpenRightPane={setOpenRightPane}
+              mediaParentRef={mediaParentRef}
             />
           </div>
 
@@ -178,7 +188,7 @@ const UserId = () => {
             <div className={styles.right_pane_row}>
               {openRightPane && (
                 <div className={styles.pane_content}>
-                  <Right_pane />
+                  <RightPane barForVolume={barForVolume} />
                 </div>
               )}
             </div>

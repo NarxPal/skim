@@ -1,38 +1,38 @@
-import React, { useState, useRef, useEffect, useCallback, act } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import styles from "@/styles/canvas.module.css";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
-import { setPhPosition } from "@/redux/phPosition";
-import { setCurrentClip } from "@/redux/currentClip";
 import Image from "next/image";
-import { mapKeys, throttle } from "lodash";
-import { bar, gap } from "@/interfaces/barsProp";
+import { throttle } from "lodash";
+import { bar } from "@/interfaces/barsProp";
 
 // types / interfaces import
 import { BarsProp } from "@/interfaces/barsProp";
 
 interface PhAnimationProps {
-  setPosition: React.Dispatch<React.SetStateAction<number>>;
   videoRef: React.RefObject<HTMLVideoElement>;
   mediaContainerWidth: number;
   totalMediaDuration: number;
   barsDataChangeAfterZoom: BarsProp | null;
-  position: number;
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
   phLeftRef: React.RefObject<HTMLDivElement>;
+  manualPhLeftRef: React.MutableRefObject<number | null>;
+  phLeftRefAfterMediaStop: React.MutableRefObject<number | null>;
+  lastClipId: React.MutableRefObject<number | null>;
+  mediaParentRef: React.MutableRefObject<HTMLDivElement | null>;
 }
 const PhAnimation: React.FC<PhAnimationProps> = ({
-  setPosition,
   videoRef,
   totalMediaDuration,
   mediaContainerWidth,
   barsDataChangeAfterZoom,
-  // position,
-  setShowPhTime,
   phLeftRef,
+  manualPhLeftRef,
+  phLeftRefAfterMediaStop,
+  lastClipId,
+  setShowPhTime,
+  mediaParentRef,
 }) => {
-  const dispatch = useDispatch();
-
   const subColOrderMap = new Map<number, number>();
 
   //redux state hooks
@@ -54,7 +54,6 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
   const startTimeRef = useRef<number>(0);
   const audioPhStartTimeRef = useRef<number>(0);
   const isPlayingRef = useRef<boolean>(false);
-  const lastClipId = useRef<number | null>(null);
   const prevVisibleUnderClipRef = useRef<bar | null>(null);
   const prevActiveClipRef = useRef<bar | null>(null);
   const audioInstancesRef = useRef<Map<number, HTMLAudioElement>>(new Map());
@@ -68,15 +67,6 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
 
     previousPhPositionRef.current = phPosition;
   }, [phPosition]);
-
-  useEffect(() => {
-    return () => {
-      if (animationFrameRef.current) {
-        console.log("animation frame ref", animationFrameRef.current);
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
@@ -133,20 +123,6 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
     return videoClips ?? []; // fallback to empty array if undefined
   };
 
-  const fetchGapsData = async () => {
-    let order = 0;
-    const gaps =
-      barsDataChangeAfterZoom?.sub_columns?.flatMap((subCol) => {
-        return subCol.gaps.map((gap) => {
-          if (!subColOrderMap.has(gap.sub_col_id)) {
-            subColOrderMap.set(gap.sub_col_id, order++);
-          }
-          return gap;
-        });
-      }) ?? [];
-    return gaps;
-  };
-
   const fetchAudioData = async () => {
     let order = 0;
     const audioClips =
@@ -162,6 +138,21 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
       }) ?? [];
 
     return audioClips;
+  };
+
+  // Update the scrollleft of media_parent_div when playhead moves out of view
+  const checkScrollIntoView = () => {
+    if (phLeftRef.current && mediaParentRef.current) {
+      const playheadBounds = phLeftRef.current.getBoundingClientRect();
+      const parentBounds = mediaParentRef.current.getBoundingClientRect();
+      if (
+        playheadBounds.left < parentBounds.left ||
+        playheadBounds.right > parentBounds.right
+      ) {
+        const scrollOffset = playheadBounds.left - parentBounds.left;
+        mediaParentRef.current.scrollLeft += scrollOffset;
+      }
+    }
   };
 
   const runAudioClips = async (newPosition: number) => {
@@ -200,6 +191,7 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
         const clipStartOffsetSec =
           (newPosition - clip.ruler_start_time) / timeToPosition(1); // convert px to sec
         audio.currentTime = clip.start_time + clipStartOffsetSec;
+        audio.volume = clip.volume ?? 1; // default volume 1
         audio.play();
         currentInstances.set(clip.id, audio);
       }
@@ -207,19 +199,25 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
   };
 
   const updatePlayhead = async (now: number) => {
-    // console.log("update play runing");
     if (
       audioPhStartTimeRef.current !== null &&
       audioAnimationFrameRef.current !== null
     ) {
       const elapsed = (now - audioPhStartTimeRef.current) / 1000; // seconds
-      const newPosition = timeToPosition(elapsed); // convert seconds to px
+      const basePosition = manualPhLeftRef.current ?? 0;
+      const newPosition = basePosition + timeToPosition(elapsed); // convert seconds to px
+
+      const showTime = positionToTime(newPosition); // for showing playhead time
+      throttledShowPhTimeUpdate(showTime);
 
       await runAudioClips(newPosition);
 
       if (phLeftRef.current) {
         phLeftRef.current.style.transform = `translateX(${newPosition}px)`;
+        phLeftRefAfterMediaStop.current = newPosition; // for keeping ph position where it was left when stopanimation ran
       }
+
+      checkScrollIntoView();
 
       audioAnimationFrameRef.current = requestAnimationFrame((nextNow) =>
         updatePlayhead(nextNow)
@@ -262,13 +260,17 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
     }
     animationFrameRef.current = null;
     setIsPlaying(false);
+    manualPhLeftRef.current = phLeftRefAfterMediaStop.current;
     stopManualTimer();
   };
 
   const chooseClip = async (now: number) => {
     if (animationFrameRef.current !== null) {
       const elapsed = (now - startTimeRef.current) / 1000; // seconds
-      const newPosition = timeToPosition(elapsed); // convert seconds to px
+      const basePosition = manualPhLeftRef.current ?? 0;
+      const newPosition = basePosition + timeToPosition(elapsed); // convert seconds to px
+      const showTime = positionToTime(newPosition);
+      throttledShowPhTimeUpdate(showTime);
 
       await runAudioClips(newPosition);
       const videoClips = await fetchVideoData();
@@ -330,11 +332,13 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
           }
         }
 
-        let effectiveStartTime = activeClip.start_time;
+        // let effectiveStartTime = activeClip.start_time;
+        const offsetPx = newPosition - activeClip.ruler_start_time;
+        const offsetTime = positionToTime(offsetPx);
 
+        let effectiveStartTime = activeClip.start_time + offsetTime;
         if (prevVisibleUnderClipRef.current && prevActiveClipRef.current) {
           if (activeClip.id === prevVisibleUnderClipRef.current.id) {
-            // console.log("visible und er clip", visibleUnderClip);
             const topClipEnd =
               prevActiveClipRef.current.ruler_start_time +
               prevActiveClipRef.current.width;
@@ -348,33 +352,36 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
           }
         }
 
-        if (activeClip.id !== lastClipId.current) {
+        if (activeClip.id !== lastClipId.current || videoRef.current?.paused) {
           lastClipId.current = activeClip.id;
 
-          const clipSrc = `${activeClip.url}?id=${activeClip.id}`; // adding clip id to each url to run onloadmetadata even when same url
-          // Only assign .src if the clip is actually new
-          if (videoRef.current.src !== activeClip.url) {
-            videoRef.current.src = clipSrc;
-            videoRef.current.load();
-          }
+          const clipSrc = activeClip.url; // adding clip id to each url to run onloadmetadata even when same url
+          videoRef.current.src = clipSrc;
+          videoRef.current.load();
 
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current?.pause();
-            if (videoRef.current) {
-              if (activeClip) {
-                videoRef.current.currentTime = effectiveStartTime;
-                prevVisibleUnderClipRef.current = visibleUnderClip;
-                prevActiveClipRef.current = activeClip;
+          videoRef.current.onloadedmetadata = async () => {
+            try {
+              videoRef.current?.pause();
+              if (videoRef.current) {
+                if (activeClip) {
+                  videoRef.current.currentTime = effectiveStartTime;
+                  videoRef.current.volume = activeClip.volume ?? 1; // default volume 1
+                  prevVisibleUnderClipRef.current = visibleUnderClip;
+                  prevActiveClipRef.current = activeClip;
+                }
+              }
+              await videoRef.current?.play();
+            } catch (err) {
+              if (err instanceof DOMException && err.name !== "AbortError") {
+                console.error("Video play error:", err);
               }
             }
-            videoRef.current?.play();
           };
         }
 
         phLeftRef.current.style.transform = `translateX(${newPosition}px)`;
       } else {
         // either gaps or audio clip present
-        // console.log("no active clip", activeClip);
         if (videoRef.current) {
           videoRef.current.src = "";
         }
@@ -382,6 +389,9 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
           phLeftRef.current.style.transform = `translateX(${newPosition}px)`;
         }
       }
+
+      phLeftRefAfterMediaStop.current = newPosition; // for keeping ph position where it was left when stopanimation ran
+      checkScrollIntoView();
     }
   };
 
@@ -402,19 +412,19 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
       console.log("st about to run");
       startManualTimer();
     }
+    return videoClips;
   };
 
   const startAnimation = async () => {
-    console.log("start animation");
-    await prepareAudioClips();
-    console.log("after prepare audio clips");
-
-    if (isPlaying === false) {
-      startTimeRef.current = performance.now();
-      setIsPlaying(true);
-      animationFrameRef.current = requestAnimationFrame((now) =>
-        syncPlayhead(now)
-      );
+    const videoClips = await prepareAudioClips();
+    if (videoClips.length !== 0) {
+      if (isPlaying === false) {
+        startTimeRef.current = performance.now();
+        setIsPlaying(true);
+        animationFrameRef.current = requestAnimationFrame((now) =>
+          syncPlayhead(now)
+        );
+      }
     }
   };
 
