@@ -6,8 +6,12 @@ import axios from "axios";
 
 interface RightPane {
   barForVolume: bar | null;
+  setFetchDataAfterVolChange: React.Dispatch<React.SetStateAction<boolean>>;
 }
-const RightPane: React.FC<RightPane> = ({ barForVolume }) => {
+const RightPane: React.FC<RightPane> = ({
+  barForVolume,
+  setFetchDataAfterVolChange,
+}) => {
   const sliderRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -40,7 +44,6 @@ const RightPane: React.FC<RightPane> = ({ barForVolume }) => {
   const handleUpdateVolume = async () => {
     const value = parseFloat(sliderRef.current?.value || "1");
     if (!barForVolume) return;
-    console.log("bar for volume ch3cko", barForVolume);
     const updateClipVolume = await axios.patch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/clips/${barForVolume.id}`,
       {
@@ -48,6 +51,7 @@ const RightPane: React.FC<RightPane> = ({ barForVolume }) => {
         volume: value,
       }
     );
+    setFetchDataAfterVolChange(true);
     console.log("updated volume checko babe", updateClipVolume);
   };
 

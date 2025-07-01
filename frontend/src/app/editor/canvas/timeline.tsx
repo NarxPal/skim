@@ -56,6 +56,12 @@ interface TimelineProps {
   lastClipId: React.MutableRefObject<number | null>;
   setOpenRightPane: React.Dispatch<React.SetStateAction<boolean>>;
   mediaParentRef: React.MutableRefObject<HTMLDivElement | null>;
+  setSplitClip: React.Dispatch<React.SetStateAction<boolean>>;
+  setStopPhAfterZoom: React.Dispatch<React.SetStateAction<boolean>>;
+  fetchDataAfterSplit: boolean;
+  setFetchDataAfterSplit: React.Dispatch<React.SetStateAction<boolean>>;
+  fetchDataAfterVolChange: boolean;
+  setFetchDataAfterVolChange: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const Timeline: React.FC<TimelineProps> = ({
@@ -77,6 +83,12 @@ const Timeline: React.FC<TimelineProps> = ({
   lastClipId,
   setOpenRightPane,
   mediaParentRef,
+  setSplitClip,
+  setStopPhAfterZoom,
+  fetchDataAfterSplit,
+  setFetchDataAfterSplit,
+  fetchDataAfterVolChange,
+  setFetchDataAfterVolChange,
 }) => {
   // usestate hooks
   const [columns, setColumns] = useState<ColumnsProps | undefined>(undefined); // column and barsdata are having same data
@@ -196,12 +208,21 @@ const Timeline: React.FC<TimelineProps> = ({
       setFetchBars(false);
       setBarAfterShift(false);
       setUpdateBarsData(false);
+      setFetchDataAfterSplit(false);
+      setFetchDataAfterVolChange(false);
       console.log("ALL BARS ", allBars);
     };
     if (prjId) {
       fetchRootColumn();
     }
-  }, [prjId, fetchBars, updateBarsData, barAfterShift]);
+  }, [
+    prjId,
+    fetchBars,
+    updateBarsData,
+    barAfterShift,
+    fetchDataAfterSplit,
+    fetchDataAfterVolChange,
+  ]);
 
   const buildSubColumnPayload = (
     parsedItem: MediaItem,
@@ -288,11 +309,18 @@ const Timeline: React.FC<TimelineProps> = ({
 
   const handleMediaDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    const dropped_Item = event.dataTransfer.getData("text/plain"); // the data here is passed from leftpane.tsx using .setData
-    const parsedItem = JSON.parse(dropped_Item);
-    console.log("media dropped parsed item bro", parsedItem);
+    const dropped_Item = event.dataTransfer.getData("text/plain");
+    if (!dropped_Item) return;
 
-    // adding the dropped bar to root column, currently each dropped bar will create it's own sub-column
+    let parsedItem;
+    try {
+      parsedItem = JSON.parse(dropped_Item);
+      console.log("media dropped parsed item bro", parsedItem);
+    } catch (error) {
+      console.error("Invalid dropped item:", dropped_Item);
+      return; // prevent further execution
+    }
+
     try {
       const [containerWidth, totalDuration] = await calcContainerWidth(
         parsedItem
@@ -376,6 +404,7 @@ const Timeline: React.FC<TimelineProps> = ({
       console.log("zooom in", zoomLevel);
       setZoomLevel((prev) => Math.max(prev - 2, MAX_ZOOM_LEVEL));
       // setFetchBars(true); // it will fetch the barsData which will run the useEffect calcTicks in timelineruler file
+      setStopPhAfterZoom(true);
     }
   };
 
@@ -385,6 +414,7 @@ const Timeline: React.FC<TimelineProps> = ({
       console.log("zooom out", zoomLevel);
       setZoomLevel((prev) => Math.min(prev + 2, MIN_ZOOM_LEVEL));
       // setFetchBars(true);
+      setStopPhAfterZoom(true);
     }
   };
 
@@ -540,29 +570,7 @@ const Timeline: React.FC<TimelineProps> = ({
       <div className={styles.tm_top}>
         <div className={styles.top_icons}>
           <div className={styles.tm_icon_div}>
-            <div className={styles.tm_icon}>
-              <Image
-                src="/delete.png"
-                width={15}
-                height={15}
-                alt="delete"
-                priority={true}
-                draggable={false}
-              />
-            </div>
-
-            <div className={styles.tm_icon}>
-              <Image
-                src="/duplicate.png"
-                width={15}
-                height={15}
-                alt="duplicate"
-                priority={true}
-                draggable={false}
-              />
-            </div>
-
-            <div className={styles.tm_icon}>
+            <div className={styles.tm_icon} onClick={() => setSplitClip(true)}>
               <Image
                 src="/split.png"
                 width={15}
@@ -690,7 +698,7 @@ const Timeline: React.FC<TimelineProps> = ({
                   <div key={index} className={styles.clip_row}>
                     <div
                       className={`${
-                        item.media_type === "audio"
+                        item?.media_type === "audio"
                           ? styles.audio_sub_col_div
                           : styles.sub_col_div
                       }`}
@@ -785,12 +793,7 @@ const Timeline: React.FC<TimelineProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <div
-                    className={styles.empty_parent}
-                    key={index}
-                    onDragOver={(e) => handleDragOver(e)}
-                    onDrop={(e) => handleMediaDrop(e)}
-                  >
+                  <div className={styles.empty_parent} key={index}>
                     <div className={styles.empty_sub_col}></div>
                   </div>
                 );

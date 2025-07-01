@@ -155,6 +155,22 @@ export class ColumnsController {
     return this.columnsService.updateBarAZ(Number(prjId), data);
   }
 
+  @Patch('sub-columns/split/update/:prjId')
+  async updateBarAfterSplit(
+    @Param('prjId') prjId: number,
+    @Body() splitBarData: any,
+  ) {
+    return this.columnsService.updateBarAfterSplit(Number(prjId), splitBarData);
+  }
+
+  @Patch('sub-columns/splitGaps/update/:prjId')
+  async updateGapAfterSplit(
+    @Param('prjId') prjId: number,
+    @Body() splitGapData: any,
+  ) {
+    return this.columnsService.updateGapAfterSplit(Number(prjId), splitGapData);
+  }
+
   @Delete('/:projectId')
   async deleteRootCol(
     @Param('projectId') project_id: number,

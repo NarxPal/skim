@@ -32,6 +32,12 @@ const UserId = () => {
   const [openRightPane, setOpenRightPane] = useState<boolean>(false);
   const [filename, setFilename] = useState<string>("");
   const [barForVolume, setBarForVolume] = useState<bar | null>(null);
+  const [splitClip, setSplitClip] = useState<boolean>(false);
+  const [stopPhAfterZoom, setStopPhAfterZoom] = useState<boolean>(false);
+  const [fetchDataAfterSplit, setFetchDataAfterSplit] =
+    useState<boolean>(false);
+  const [fetchDataAfterVolChange, setFetchDataAfterVolChange] =
+    useState<boolean>(false);
 
   // useref hooks
   const isDragging = useRef(false);
@@ -138,6 +144,7 @@ const UserId = () => {
             onMouseMove={handleResizeMouseMove}
           >
             <Canvas
+              prjId={params.id}
               canvasHeight={canvasHeight}
               barsDataChangeAfterZoom={barsDataChangeAfterZoom}
               setBarsDataChangeAfterZoom={setBarsDataChangeAfterZoom}
@@ -150,6 +157,11 @@ const UserId = () => {
               lastClipId={lastClipId}
               setShowPhTime={setShowPhTime}
               mediaParentRef={mediaParentRef}
+              splitClip={splitClip}
+              setSplitClip={setSplitClip}
+              stopPhAfterZoom={stopPhAfterZoom}
+              setStopPhAfterZoom={setStopPhAfterZoom}
+              setFetchDataAfterSplit={setFetchDataAfterSplit}
             />
             <div
               className={styles.resizer}
@@ -177,6 +189,12 @@ const UserId = () => {
               setShowPhTime={setShowPhTime}
               setOpenRightPane={setOpenRightPane}
               mediaParentRef={mediaParentRef}
+              setSplitClip={setSplitClip}
+              setStopPhAfterZoom={setStopPhAfterZoom}
+              fetchDataAfterSplit={fetchDataAfterSplit}
+              setFetchDataAfterSplit={setFetchDataAfterSplit}
+              fetchDataAfterVolChange={fetchDataAfterVolChange}
+              setFetchDataAfterVolChange={setFetchDataAfterVolChange}
             />
           </div>
 
@@ -188,7 +206,10 @@ const UserId = () => {
             <div className={styles.right_pane_row}>
               {openRightPane && (
                 <div className={styles.pane_content}>
-                  <RightPane barForVolume={barForVolume} />
+                  <RightPane
+                    barForVolume={barForVolume}
+                    setFetchDataAfterVolChange={setFetchDataAfterVolChange}
+                  />
                 </div>
               )}
             </div>

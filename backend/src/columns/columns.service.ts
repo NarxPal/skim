@@ -403,6 +403,71 @@ export class ColumnsService {
     return column;
   }
 
+  async updateBarAfterSplit(prjId: number, splitBarData: any) {
+    const columns = await this.columnsRepository.find();
+    const column = columns.find((col) => col.project_id === prjId);
+    if (!column) {
+      throw new NotFoundException(`Column with project_id ${prjId} not found`);
+    }
+
+    for (const clip of splitBarData.combinedClips) {
+      const subColId = clip.sub_col_id;
+      const subCol = column.sub_columns?.find(
+        (sc) => sc.sub_col_id === subColId,
+      );
+      if (!subCol) continue;
+
+      if (!subCol.bars) subCol.bars = [];
+
+      const isDuplicate = subCol.bars.some((bar) => bar.id === clip.id);
+      if (isDuplicate) continue;
+
+      subCol.bars.push(clip);
+    }
+
+    column.sub_columns?.forEach((subCol) => {
+      if (!subCol.bars) return;
+      subCol.bars = subCol.bars.filter(
+        (bar) => !splitBarData.clipIdsToDelete.includes(bar.id),
+      );
+      subCol.bars.sort((a, b) => a.left_position - b.left_position);
+      subCol.bars.forEach((bar, idx) => {
+        bar.order = idx;
+      });
+    });
+
+    await this.columnsRepository.save(column);
+    return column;
+  }
+
+  async updateGapAfterSplit(prjId: number, splitGapData: any) {
+    const columns = await this.columnsRepository.find();
+    const column = columns.find((col) => col.project_id === prjId);
+    if (!column) {
+      throw new NotFoundException(`Column with project_id ${prjId} not found`);
+    }
+
+    const { combinedGaps, clipIdsToDelete } = splitGapData;
+
+    for (const subCol of column.sub_columns || []) {
+      if (!subCol.gaps) subCol.gaps = [];
+
+      // Remove gaps whose barId is in clipIdsToDelete
+      subCol.gaps = subCol.gaps.filter(
+        (gap: Gap) => !clipIdsToDelete.includes(gap.barId),
+      );
+
+      const newGaps = combinedGaps.filter(
+        (gap: Gap) => gap.sub_col_id === subCol.sub_col_id,
+      );
+
+      subCol.gaps.push(...newGaps);
+    }
+
+    await this.columnsRepository.save(column);
+    return column;
+  }
+
   async delCmBar(cmSubColId: number, cmBarId: string) {
     const columns = await this.columnsRepository.find();
     columns.forEach((column) => {

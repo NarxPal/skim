@@ -5,6 +5,7 @@ import { RootState } from "@/redux/store";
 import Image from "next/image";
 import { throttle } from "lodash";
 import { bar } from "@/interfaces/barsProp";
+import axios from "axios";
 
 // types / interfaces import
 import { BarsProp } from "@/interfaces/barsProp";
@@ -20,6 +21,12 @@ interface PhAnimationProps {
   phLeftRefAfterMediaStop: React.MutableRefObject<number | null>;
   lastClipId: React.MutableRefObject<number | null>;
   mediaParentRef: React.MutableRefObject<HTMLDivElement | null>;
+  splitClip: boolean;
+  setSplitClip: React.Dispatch<React.SetStateAction<boolean>>;
+  stopPhAfterZoom: boolean;
+  setStopPhAfterZoom: React.Dispatch<React.SetStateAction<boolean>>;
+  prjId: string;
+  setFetchDataAfterSplit: React.Dispatch<React.SetStateAction<boolean>>;
 }
 const PhAnimation: React.FC<PhAnimationProps> = ({
   videoRef,
@@ -32,6 +39,12 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
   lastClipId,
   setShowPhTime,
   mediaParentRef,
+  splitClip,
+  setSplitClip,
+  stopPhAfterZoom,
+  setStopPhAfterZoom,
+  prjId,
+  setFetchDataAfterSplit,
 }) => {
   const subColOrderMap = new Map<number, number>();
 
@@ -71,6 +84,164 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
+
+  // for splitting
+  const handleGapAfterSplit = async (
+    combinedClips: bar[],
+    clipIdsToDelete: number[]
+  ) => {
+    const groupedBySubCol: Record<number, bar[]> = {};
+
+    combinedClips.forEach((clip) => {
+      if (!groupedBySubCol[clip.sub_col_id])
+        groupedBySubCol[clip.sub_col_id] = [];
+      groupedBySubCol[clip.sub_col_id].push(clip);
+    });
+
+    const combinedGaps: any[] = [];
+
+    Object.entries(groupedBySubCol).forEach(([subColIdStr, clips]) => {
+      const subColId = Number(subColIdStr);
+      const sortedClips = clips.sort(
+        (a, b) => a.left_position - b.left_position
+      );
+
+      for (let i = 0; i < sortedClips.length; i++) {
+        const current = sortedClips[i];
+
+        let startGap: number;
+        let endGap: number;
+
+        if (i === 0) {
+          startGap = 0;
+          endGap = current.left_position;
+        } else {
+          const prev = sortedClips[i - 1];
+          startGap = prev.left_position + prev.width;
+          endGap = current.left_position;
+        }
+        const gapWidth = endGap - startGap;
+
+        combinedGaps.push({
+          id: Math.floor(Math.random() * 1e6),
+          sub_col_id: subColId,
+          barId: current.id,
+          start_gap: startGap,
+          end_gap: endGap,
+          width: gapWidth,
+          media_type: current.type,
+        });
+      }
+    });
+
+    try {
+      await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/splitGaps/update/${prjId}`,
+        { combinedGaps, clipIdsToDelete }
+      );
+    } catch (error) {
+      console.error("Error in gaps after split:", error);
+    }
+
+    console.log("combined gaps checkko", combinedGaps);
+  };
+
+  const handleClipsAfterSplit = async () => {
+    const transform = phLeftRef.current?.style.transform;
+    const match = transform?.match(/translateX\(([-\d.]+)px\)/);
+    const currentX = match ? parseFloat(match[1]) : 0;
+
+    const videoClips = await fetchVideoData();
+    const audioClips = await fetchAudioData();
+
+    const splitClipAtX = (clip: bar, currentX: number) => {
+      const pxToSec = clip.clip_duration / clip.width;
+      const splitOffsetPx = currentX - clip.ruler_start_time;
+      const splitOffsetSec = splitOffsetPx * pxToSec;
+      const newRulerStartTimeInSec = positionToTime(currentX);
+
+      const firstHalf = {
+        ...clip,
+        id: Math.floor(Math.random() * 1e6) + (Date.now() % 1e6),
+        width: splitOffsetPx,
+        clip_duration: splitOffsetSec,
+        end_time: clip.start_time + splitOffsetSec,
+      };
+
+      const secondHalf = {
+        ...clip,
+        id: Math.floor(Math.random() * 1e6) + (Date.now() % 1e6),
+        left_position: currentX,
+        order: firstHalf.order + 1,
+        ruler_start_time: currentX,
+        ruler_start_time_in_sec: newRulerStartTimeInSec,
+        width: clip.width - splitOffsetPx,
+        clip_duration: clip.clip_duration - splitOffsetSec,
+        start_time: clip.start_time + splitOffsetSec,
+      };
+
+      return [firstHalf, secondHalf];
+    };
+
+    const newVideoClips: bar[] = [];
+    const clipIdsToDelete: number[] = [];
+    videoClips.forEach((clip) => {
+      if (
+        currentX >= clip.ruler_start_time &&
+        currentX < clip.ruler_start_time + clip.width
+      ) {
+        const [first, second] = splitClipAtX(clip, currentX);
+        newVideoClips.push(first, second);
+        clipIdsToDelete.push(clip.id);
+      } else {
+        newVideoClips.push(clip);
+      }
+    });
+
+    const newAudioClips: bar[] = [];
+    audioClips.forEach((clip) => {
+      if (
+        currentX >= clip.ruler_start_time &&
+        currentX < clip.ruler_start_time + clip.width
+      ) {
+        const [first, second] = splitClipAtX(clip, currentX);
+        newAudioClips.push(first, second);
+        clipIdsToDelete.push(clip.id);
+      } else {
+        newAudioClips.push(clip);
+      }
+    });
+
+    const combinedClips = [...newVideoClips, ...newAudioClips];
+
+    try {
+      await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/split/update/${prjId}`,
+        { combinedClips, clipIdsToDelete }
+      );
+      setFetchDataAfterSplit(true);
+    } catch (error) {
+      console.error("Error in splitting clips:", error);
+    }
+    return [combinedClips, clipIdsToDelete];
+  };
+
+  useEffect(() => {
+    const handleSplitting = async () => {
+      const [combinedClips, clipIdsToDelete] = await handleClipsAfterSplit();
+      handleGapAfterSplit(combinedClips as bar[], clipIdsToDelete as number[]);
+      setSplitClip(false);
+    };
+    if (splitClip) handleSplitting();
+  }, [splitClip]);
+
+  useEffect(() => {
+    const handleStopPhAfterZoom = () => {
+      stopAnimation();
+      setStopPhAfterZoom(false);
+    };
+    handleStopPhAfterZoom();
+  }, [stopPhAfterZoom]);
 
   // ********** playhead animation *************
 

@@ -6,6 +6,7 @@ import PhAnimation from "@/utils/timeline/phAnimation";
 // types / interfaces import
 import { BarsProp } from "@/interfaces/barsProp";
 interface CanvasProps {
+  prjId: string;
   canvasHeight: number;
   barsDataChangeAfterZoom: BarsProp | null;
   setBarsDataChangeAfterZoom: React.Dispatch<
@@ -20,9 +21,15 @@ interface CanvasProps {
   phLeftRefAfterMediaStop: React.MutableRefObject<number | null>;
   lastClipId: React.MutableRefObject<number | null>;
   mediaParentRef: React.MutableRefObject<HTMLDivElement | null>;
+  splitClip: boolean;
+  setSplitClip: React.Dispatch<React.SetStateAction<boolean>>;
+  stopPhAfterZoom: boolean;
+  setStopPhAfterZoom: React.Dispatch<React.SetStateAction<boolean>>;
+  setFetchDataAfterSplit: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const Canvas: React.FC<CanvasProps> = ({
+  prjId,
   canvasHeight,
   barsDataChangeAfterZoom,
   mediaContainerWidth,
@@ -34,6 +41,11 @@ const Canvas: React.FC<CanvasProps> = ({
   lastClipId,
   setShowPhTime,
   mediaParentRef,
+  splitClip,
+  setSplitClip,
+  stopPhAfterZoom,
+  setStopPhAfterZoom,
+  setFetchDataAfterSplit,
 }) => {
   // redux state hooks
 
@@ -82,6 +94,7 @@ const Canvas: React.FC<CanvasProps> = ({
       </div>
       <div className={styles.video_btns}>
         <PhAnimation
+          prjId={prjId}
           videoRef={videoRef}
           mediaContainerWidth={mediaContainerWidth}
           totalMediaDuration={totalMediaDuration}
@@ -92,6 +105,11 @@ const Canvas: React.FC<CanvasProps> = ({
           lastClipId={lastClipId}
           setShowPhTime={setShowPhTime}
           mediaParentRef={mediaParentRef}
+          splitClip={splitClip}
+          setSplitClip={setSplitClip}
+          stopPhAfterZoom={stopPhAfterZoom}
+          setStopPhAfterZoom={setStopPhAfterZoom}
+          setFetchDataAfterSplit={setFetchDataAfterSplit}
         />
 
         <div className={styles.vdo_feature_btns}>
