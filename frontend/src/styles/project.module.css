@@ -75,7 +75,7 @@
 }
 
 .main_pane {
-  @apply h-full w-[78%] overflow-scroll;
+  @apply h-full w-[78%] overflow-auto;
 }
 
 .main_content {
@@ -107,7 +107,7 @@
 }
 
 .name_ic {
-  @apply flex flex-row justify-between;
+  @apply flex flex-row justify-between items-center;
 }
 
 .icons_ul {

@@ -140,6 +140,11 @@ export class ColumnsController {
     return this.columnsService.updateBarToSubCol(Number(id), barData);
   }
 
+  @Patch('sub-columns/addBar/newRow/:id')
+  async addBarToNewSubCol(@Param('id') id: number, @Body() barData: any) {
+    return this.columnsService.addBarToNewSubCol(Number(id), barData);
+  }
+
   // for updating lp of bars present after dropped bar
   @Patch('sub-columns/updateBarLP/:dropSubColId')
   async updateBarLp(

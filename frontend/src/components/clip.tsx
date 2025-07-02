@@ -251,8 +251,6 @@ const Clip: React.FC<ClipProps> = ({
     try {
       await Promise.all(
         data.sub_columns?.map(async (subcol) => {
-          // const droppedBar = subcol.bars?.find((b) => b.id === droppedBarId); // fetching all bars except dropped one
-
           const clonedSubCol = structuredClone(subcol);
           const droppedBar = clonedSubCol.bars?.find(
             (b) => b.id === droppedBarId
@@ -451,6 +449,7 @@ const Clip: React.FC<ClipProps> = ({
     pxToTime: number
   ) => {
     const NumHovRowId = Number(hoveredRowId);
+    console.log("CHECK HOVER ROW ID ", NumHovRowId);
     barsDataChangeAfterZoom?.sub_columns?.map(async (subcol) => {
       const targetBar = subcol.bars?.find((b) => b.id === barId); // fetching dragged bar here
       if (targetBar) {
@@ -471,6 +470,37 @@ const Clip: React.FC<ClipProps> = ({
           .flatMap((subcol: sub_column) => (subcol.bars ? subcol.bars : []))
           .find((bar: bar) => bar.id === targetBar.id);
         await updateBarRow(NumHovRowId, updatedBarRes);
+        updateGapLPAfterDrop(barId, newLeftPosition, NumHovRowId);
+      }
+    });
+  };
+
+  const addBarToNewSubCol = (
+    barId: number,
+    newLeftPosition: number,
+    hoveredRowId: string,
+    rulerStartTimePxVal: number,
+    pxToTime: number
+  ) => {
+    const NumHovRowId = Number(hoveredRowId);
+    barsDataChangeAfterZoom?.sub_columns?.map(async (subcol) => {
+      const targetBar = subcol.bars?.find((b) => b.id === barId); // fetching dragged bar here
+      if (targetBar) {
+        await axios.patch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/addBar/newRow/${targetBar.id}`,
+          {
+            ...targetBar,
+            left_position: newLeftPosition,
+            sub_col_id: NumHovRowId,
+            ruler_start_time: rulerStartTimePxVal,
+            ruler_start_time_in_sec: pxToTime,
+          }
+        );
+        await delCmBarId(
+          delBarFromRow?.sub_col_id,
+          delBarFromRow?.id,
+          NumHovRowId
+        ); // delete dragged bar from its row
         updateGapLPAfterDrop(barId, newLeftPosition, NumHovRowId);
       }
     });
@@ -722,16 +752,17 @@ const Clip: React.FC<ClipProps> = ({
                       console.log("px to time", pxToTime);
                     }
                   });
-
-                  // when row is empty
-                  updateBarLPAfterDrop(
-                    barId,
-                    resolvedX,
-                    hoveredRowId,
-                    rulerStartTimePxVal,
-                    pxToTime
-                  );
                 });
+              } else {
+                if (!hoveredRowId) return;
+                // when row is empty
+                addBarToNewSubCol(
+                  barId,
+                  resolvedX,
+                  hoveredRowId,
+                  rulerStartTimePxVal,
+                  pxToTime
+                );
               }
             }
 
@@ -1072,7 +1103,6 @@ const Clip: React.FC<ClipProps> = ({
   };
 
   const handleClipVolume = (bar: bar) => {
-    console.log("u clicked me bro", bar);
     setBarForVolume(bar);
   };
 

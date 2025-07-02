@@ -27,7 +27,6 @@ export function FetchUser(uid: string | string[] | undefined) {
             },
           }
         );
-        console.log("User data from fetchUser:", response.data);
         const res_uid = response.data.user_id;
         dispatch(setUserId(res_uid));
         setLoading(false);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import styles from "@/styles/timeline.module.css";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/redux/store";
@@ -14,7 +14,6 @@ interface TimelineRulerProps {
   totalDuration: number;
   zoomLevel: number;
   containerWidth: number;
-  scrollPosition: number;
   barsData: BarsProp | null;
   videoRef: React.RefObject<HTMLVideoElement>;
   api: SpringRef<{
@@ -33,13 +32,13 @@ interface TimelineRulerProps {
   phLeftRefAfterMediaStop: React.MutableRefObject<number | null>;
   lastClipId: React.MutableRefObject<number | null>;
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
+  rulerRef: React.MutableRefObject<HTMLDivElement | null>;
 }
 
 const TimelineRuler: React.FC<TimelineRulerProps> = ({
   totalDuration,
   zoomLevel,
   containerWidth,
-  scrollPosition,
   barsData,
   videoRef,
   api,
@@ -51,12 +50,11 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   phLeftRefAfterMediaStop,
   lastClipId,
   setShowPhTime,
+  rulerRef,
 }) => {
   // usestate hooks
   const [tickPos, setTickPos] = useState<number[]>(); // having array since we are mapping tickpos in dom
   const [formattedMarkers, setFormattedMarkers] = useState<string[]>([]);
-
-  const rulerRef = useRef<HTMLDivElement | null>(null);
 
   // redux state hooks
   const markerInterval = useSelector(
@@ -64,12 +62,6 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   );
 
   const dispatch = useDispatch();
-
-  useEffect(() => {
-    if (rulerRef.current) {
-      rulerRef.current.scrollLeft = scrollPosition; // Sync scroll position
-    }
-  }, [scrollPosition]);
 
   const updateBarAZ = async (barsDurations: sub_column[]) => {
     const updateData = barsDurations;

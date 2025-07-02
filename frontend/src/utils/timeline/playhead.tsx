@@ -9,25 +9,23 @@ import { throttle } from "lodash";
 interface PlayheadProps {
   phLeftRef: React.RefObject<HTMLDivElement>;
   mediaContainerWidth: number;
-  scrollPosition: number;
-  setScrollPosition: React.Dispatch<React.SetStateAction<number>>;
   videoRef: React.RefObject<HTMLVideoElement>;
   totalDuration: number;
   manualPhLeftRef: React.MutableRefObject<number | null>;
   phLeftRefAfterMediaStop: React.MutableRefObject<number | null>;
   setShowPhTime: React.Dispatch<React.SetStateAction<string>>;
+  playheadRef: React.RefObject<HTMLDivElement>;
 }
 
 const Playhead: React.FC<PlayheadProps> = ({
   phLeftRef,
   mediaContainerWidth,
-  scrollPosition,
-  setScrollPosition,
   videoRef,
   totalDuration,
   manualPhLeftRef,
   phLeftRefAfterMediaStop,
   setShowPhTime,
+  playheadRef,
 }) => {
   const dispatch = useDispatch();
   //redux state hooks
@@ -43,7 +41,6 @@ const Playhead: React.FC<PlayheadProps> = ({
 
   //useref
   const phDivRef = useRef<HTMLDivElement | null>(null); // for calc new position of ph while dragging
-  const playheadRef = useRef<HTMLDivElement>(null);
 
   // for converting ph position px value to time in seconds
   const positionToTime = (pos: number) => {
@@ -78,25 +75,6 @@ const Playhead: React.FC<PlayheadProps> = ({
   const throttledSetPosition = useRef(
     throttle((position: number) => dispatch(setPhPosition(position)), 50) // Update every 50ms
   ).current;
-
-  const handlePhScroll = () => {
-    if (playheadRef.current) {
-      setScrollPosition(playheadRef.current.scrollLeft);
-    }
-  };
-
-  // It helps playhead container to scroll along with the media_parent_div
-  useEffect(() => {
-    if (playheadRef.current) {
-      playheadRef.current.scrollLeft = scrollPosition; // Sync scroll position for playhead
-      const playhead = playheadRef.current;
-      playhead.addEventListener("scroll", handlePhScroll);
-
-      return () => {
-        playhead.removeEventListener("scroll", handlePhScroll);
-      };
-    }
-  }, [scrollPosition]);
 
   // new position of ph is being calculated here while dragging
   const handleMousePhHover = (event: MouseEvent): void => {
@@ -183,17 +161,7 @@ const Playhead: React.FC<PlayheadProps> = ({
         style={{ width: mediaContainerWidth }}
         ref={phDivRef}
       >
-        <div
-          className={styles.ph_left}
-          // style={{
-          //   transform: `translateX(${
-          //     phPosition !== null ? phPosition : position
-          //   }px)`,
-          // }}
-
-          //phposition was during drag of playhead, mouse down on ruler and position was used during media play
-          ref={phLeftRef}
-        >
+        <div className={styles.ph_left} ref={phLeftRef}>
           <div className={styles.ph_line_notch}>
             <div className={styles.ph_line}>
               <div

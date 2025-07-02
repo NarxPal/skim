@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import Image from "next/image";
 import { throttle } from "lodash";
-import { bar } from "@/interfaces/barsProp";
+import { bar, gap } from "@/interfaces/barsProp";
 import axios from "axios";
 
 // types / interfaces import
@@ -27,6 +27,7 @@ interface PhAnimationProps {
   setStopPhAfterZoom: React.Dispatch<React.SetStateAction<boolean>>;
   prjId: string;
   setFetchDataAfterSplit: React.Dispatch<React.SetStateAction<boolean>>;
+  isUserScrollingRef: React.MutableRefObject<boolean>;
 }
 const PhAnimation: React.FC<PhAnimationProps> = ({
   videoRef,
@@ -45,6 +46,7 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
   setStopPhAfterZoom,
   prjId,
   setFetchDataAfterSplit,
+  isUserScrollingRef,
 }) => {
   const subColOrderMap = new Map<number, number>();
 
@@ -98,7 +100,7 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
       groupedBySubCol[clip.sub_col_id].push(clip);
     });
 
-    const combinedGaps: any[] = [];
+    const combinedGaps: gap[] = [];
 
     Object.entries(groupedBySubCol).forEach(([subColIdStr, clips]) => {
       const subColId = Number(subColIdStr);
@@ -313,6 +315,7 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
 
   // Update the scrollleft of media_parent_div when playhead moves out of view
   const checkScrollIntoView = () => {
+    if (isUserScrollingRef.current) return; // stop autoscroll when manual scroll working
     if (phLeftRef.current && mediaParentRef.current) {
       const playheadBounds = phLeftRef.current.getBoundingClientRect();
       const parentBounds = mediaParentRef.current.getBoundingClientRect();
@@ -397,7 +400,6 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
   };
 
   const startManualTimer = () => {
-    console.log("start manual timer ran");
     if (!isPlaying) setIsPlaying(true);
     audioPhStartTimeRef.current = performance.now();
     audioAnimationFrameRef.current = requestAnimationFrame((now) =>
@@ -408,7 +410,6 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
   const stopManualTimer = () => {
     if (audioAnimationFrameRef.current)
       cancelAnimationFrame(audioAnimationFrameRef.current);
-    console.log("stop manual time ran");
 
     // Stop all currently playing audio
     audioInstancesRef.current.forEach((audio) => {
@@ -423,10 +424,11 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
 
   const stopAnimation = () => {
     if (animationFrameRef.current) {
-      console.log("stop animation ran ", animationFrameRef.current);
       cancelAnimationFrame(animationFrameRef.current);
       if (videoRef.current) {
         videoRef.current.pause(); //pause video
+        videoRef.current.src = "";
+        videoRef.current.load();
       }
     }
     animationFrameRef.current = null;
@@ -523,10 +525,13 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
           }
         }
 
-        if (activeClip.id !== lastClipId.current || videoRef.current?.paused) {
+        if (
+          activeClip.id !== lastClipId.current ||
+          (videoRef.current?.paused && videoRef.current?.src !== activeClip.url)
+        ) {
           lastClipId.current = activeClip.id;
 
-          const clipSrc = activeClip.url; // adding clip id to each url to run onloadmetadata even when same url
+          const clipSrc = activeClip.url;
           videoRef.current.src = clipSrc;
           videoRef.current.load();
 
@@ -546,6 +551,11 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
               if (err instanceof DOMException && err.name !== "AbortError") {
                 console.error("Video play error:", err);
               }
+              // if (videoRef.current)
+              //   videoRef.current.onerror = () => {
+              //     const error = videoRef.current?.error;
+              //     console.error("Video load error:", error);
+              //   };
             }
           };
         }

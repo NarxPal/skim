@@ -16,8 +16,11 @@ export class ColumnsService {
     return this.columnsRepository.find();
   }
 
-  findOneByProjectId(project_id: number): Promise<Columns> {
-    return this.columnsRepository.findOne({ where: { project_id } });
+  async findOneByProjectId(project_id: number): Promise<Columns> {
+    const columns = await this.columnsRepository.findOne({
+      where: { project_id },
+    });
+    return columns;
   }
 
   async dragBarId(subColId: number, id: number): Promise<BarData | undefined> {
@@ -362,6 +365,28 @@ export class ColumnsService {
     }
   }
 
+  async addBarToNewSubCol(id: number, barData: BarData) {
+    const columns = await this.columnsRepository.find();
+    const column = columns.find((col) => col.project_id === barData.project_id);
+    if (!column) {
+      throw new NotFoundException(
+        `Column with project_id ${barData.project_id} not found`,
+      );
+    }
+
+    const subCol = column.sub_columns.find(
+      (sc) => sc.sub_col_id === barData.sub_col_id,
+    );
+    if (!subCol) throw new NotFoundException(`Sub-column not found`);
+
+    subCol.media_type = barData.type;
+    subCol.bars.push({ ...barData, id });
+
+    await this.columnsRepository.save(column);
+
+    return column;
+  }
+
   async updateBarLp(id: number, lpBars: BarData[]) {
     const columns = await this.columnsRepository.find();
     let updatedBars: BarData[] = [];
@@ -458,7 +483,9 @@ export class ColumnsService {
       );
 
       const newGaps = combinedGaps.filter(
-        (gap: Gap) => gap.sub_col_id === subCol.sub_col_id,
+        (gap: Gap) =>
+          gap.sub_col_id === subCol.sub_col_id &&
+          !subCol.gaps.some((existing) => existing.barId === gap.barId),
       );
 
       subCol.gaps.push(...newGaps);

@@ -47,6 +47,7 @@ const UserId = () => {
   const phLeftRefAfterMediaStop = useRef<number | null>(null);
   const lastClipId = useRef<number | null>(null);
   const mediaParentRef = useRef<HTMLDivElement | null>(null);
+  const isUserScrollingRef = useRef<boolean>(false);
 
   const { loading } = FetchUser(params.uid); // calling useeffect to fetch the user_id
   // redux hooks
@@ -162,6 +163,7 @@ const UserId = () => {
               stopPhAfterZoom={stopPhAfterZoom}
               setStopPhAfterZoom={setStopPhAfterZoom}
               setFetchDataAfterSplit={setFetchDataAfterSplit}
+              isUserScrollingRef={isUserScrollingRef}
             />
             <div
               className={styles.resizer}
@@ -195,6 +197,7 @@ const UserId = () => {
               setFetchDataAfterSplit={setFetchDataAfterSplit}
               fetchDataAfterVolChange={fetchDataAfterVolChange}
               setFetchDataAfterVolChange={setFetchDataAfterVolChange}
+              isUserScrollingRef={isUserScrollingRef}
             />
           </div>
 

@@ -26,6 +26,7 @@ interface CanvasProps {
   stopPhAfterZoom: boolean;
   setStopPhAfterZoom: React.Dispatch<React.SetStateAction<boolean>>;
   setFetchDataAfterSplit: React.Dispatch<React.SetStateAction<boolean>>;
+  isUserScrollingRef: React.MutableRefObject<boolean>;
 }
 
 const Canvas: React.FC<CanvasProps> = ({
@@ -46,6 +47,7 @@ const Canvas: React.FC<CanvasProps> = ({
   stopPhAfterZoom,
   setStopPhAfterZoom,
   setFetchDataAfterSplit,
+  isUserScrollingRef,
 }) => {
   // redux state hooks
 
@@ -110,6 +112,7 @@ const Canvas: React.FC<CanvasProps> = ({
           stopPhAfterZoom={stopPhAfterZoom}
           setStopPhAfterZoom={setStopPhAfterZoom}
           setFetchDataAfterSplit={setFetchDataAfterSplit}
+          isUserScrollingRef={isUserScrollingRef}
         />
 
         <div className={styles.vdo_feature_btns}>

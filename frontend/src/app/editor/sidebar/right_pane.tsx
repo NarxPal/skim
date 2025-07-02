@@ -82,7 +82,8 @@ const RightPane: React.FC<RightPane> = ({
       ) : (
         <div>
           <p className={styles.vol_pane_text}>
-            tap on any media clip to change its volume
+            tap on any media clip to change its volume or right click on media
+            clips and select volume.
           </p>
         </div>
       )}

@@ -36,7 +36,6 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
     // Fetch media for sidebar based on the selected category
     const fetchMedia = async () => {
       setMediaType(selectedCategory);
-      console.log("selected category bro", selectedCategory);
     };
 
     fetchMedia();
@@ -166,8 +165,14 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
         const extension = file.name.split(".").pop()?.toLowerCase();
         const fileType = extension === "mp4" ? "video" : "audio";
 
+        const cleanedFile = new File(
+          [file],
+          file.name.replace(/\.mp4$/i, ""), // remove extension from name
+          { type: file.type }
+        );
+
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", cleanedFile);
 
         let postData;
         if (fileType === "video") {
@@ -192,7 +197,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
         let thumbnailUrl;
         if (fileType === "video") {
           const bufferFormData = new FormData();
-          const Thumbfile = new File([postData], `${file.name}.jpg`, {
+          const Thumbfile = new File([postData], `${cleanedFile.name}.jpg`, {
             type: "image/jpeg",
           });
           bufferFormData.append("file", Thumbfile);
@@ -221,7 +226,7 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
         await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/media`, {
           user_id: userId,
           project_id: params.id,
-          name: file.name,
+          name: cleanedFile.name,
           filepath: "",
           type: fileType,
           thumbnail_url: fileType === "video" ? thumbnailUrl : "",

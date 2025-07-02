@@ -62,6 +62,7 @@ interface TimelineProps {
   setFetchDataAfterSplit: React.Dispatch<React.SetStateAction<boolean>>;
   fetchDataAfterVolChange: boolean;
   setFetchDataAfterVolChange: React.Dispatch<React.SetStateAction<boolean>>;
+  isUserScrollingRef: React.MutableRefObject<boolean>;
 }
 
 const Timeline: React.FC<TimelineProps> = ({
@@ -89,6 +90,7 @@ const Timeline: React.FC<TimelineProps> = ({
   setFetchDataAfterSplit,
   fetchDataAfterVolChange,
   setFetchDataAfterVolChange,
+  isUserScrollingRef,
 }) => {
   // usestate hooks
   const [columns, setColumns] = useState<ColumnsProps | undefined>(undefined); // column and barsdata are having same data
@@ -106,43 +108,67 @@ const Timeline: React.FC<TimelineProps> = ({
     id: null,
   });
   const [zoomLevel, setZoomLevel] = useState<number>(0);
-  const [scrollPosition, setScrollPosition] = useState<number>(0);
   const [hoveringOverRow, setHoveringOverRow] = useState<boolean>(false);
   const [updateBarsData, setUpdateBarsData] = useState<boolean>(false);
   const [barAfterShift, setBarAfterShift] = useState<boolean>(false);
 
   // use ref hooks
   const rowsRef = useRef<(HTMLDivElement | null)[]>([]);
-
   const barIdsRef = useRef<number[]>([]);
+  const playheadRef = useRef<HTMLDivElement>(null);
+  const rulerRef = useRef<HTMLDivElement | null>(null);
 
   // redux hooks
   const markerInterval = useSelector(
     (state: RootState) => state.markerInterval.markerInterval
   );
 
-  // needed for scrolling ruler when scrolled using thumb
+  // // needed for scrolling ruler when scrolled using thumb
   const handleScroll = () => {
-    if (mediaParentRef.current) {
-      setScrollPosition(mediaParentRef.current.scrollLeft);
-    }
+    const media = mediaParentRef.current;
+    if (!media) return;
+
+    // for auto scroll during ph movement
+    isUserScrollingRef.current = true;
+    clearTimeout((handleScroll as any).timeoutId);
+    (handleScroll as any).timeoutId = setTimeout(() => {
+      isUserScrollingRef.current = false;
+    }, 200);
   };
 
-  // needed for scrolling ruler when scrolled using thumb
+  // Sync ruler & playhead directly on scroll
   useEffect(() => {
-    if (mediaParentRef.current) {
-      const mediaParent = mediaParentRef.current;
-      mediaParent.addEventListener("scroll", handleScroll);
+    const media = mediaParentRef.current;
+    const ruler = rulerRef.current;
+    const playhead = playheadRef.current;
 
-      return () => {
-        mediaParent.removeEventListener("scroll", handleScroll);
-      };
-    }
+    if (!media || !ruler || !playhead) return;
+
+    const syncScroll = () => {
+      const scrollLeft = media.scrollLeft;
+      if (ruler) ruler.scrollLeft = scrollLeft;
+
+      // using animation frame since playhead div appear after clips are dropped
+      requestAnimationFrame(() => {
+        if (playheadRef.current) {
+          playheadRef.current.scrollLeft = scrollLeft;
+        } else {
+          console.warn("playheadRef not ready during syncScroll");
+        }
+      });
+    };
+
+    media.addEventListener("scroll", handleScroll);
+    media.addEventListener("scroll", syncScroll);
+
+    return () => {
+      media.removeEventListener("scroll", handleScroll);
+      media.removeEventListener("scroll", syncScroll);
+    };
   }, []);
 
   // use gesture and spring
   const allBars = useMemo(() => {
-    console.log("barsdadta checko memo", barsData);
     // using useMemo since allBars becomes stale and doesn't update after barsData changes
     return (
       barsData?.sub_columns?.flatMap((subCol) =>
@@ -296,8 +322,6 @@ const Timeline: React.FC<TimelineProps> = ({
       markerInterval
     );
 
-    console.log("payload checko", payload);
-
     const response = await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/${columns?.id}/sub-columns`,
       payload
@@ -343,6 +367,7 @@ const Timeline: React.FC<TimelineProps> = ({
           project_id: columns?.project_id,
           user_id: columns?.user_id,
           parent_id: columns?.id,
+          media_type: "",
           // bars will be empty here since this new subcol is for creating subcol having no bars
           bars: [],
           gaps: [],
@@ -374,19 +399,31 @@ const Timeline: React.FC<TimelineProps> = ({
       }, 0) ||
       parsedItem?.duration ||
       0; // if sub_columns is undefined(case: where no sub col present) take duration of dropped media else 0
-    let containerWidth = 0;
 
-    if (zoomLevel >= 10) {
-      containerWidth = totalDuration * 100; // making 100px per sec for zoom level 10
-    } else if (zoomLevel >= 8) {
-      containerWidth = totalDuration * 80;
-    } else if (zoomLevel >= 5) {
-      containerWidth = totalDuration * 80;
-    } else if (zoomLevel >= 2) {
-      containerWidth = totalDuration * 80;
-    } else {
-      containerWidth = totalDuration * 80;
-    }
+    const factor = 10;
+    const minPixelsPerSecond = 80;
+    const maxPixelsPerSecond = 300;
+
+    const pixelsPerSecond = Math.min(
+      maxPixelsPerSecond,
+      Math.max(minPixelsPerSecond, zoomLevel * factor)
+    );
+
+    const containerWidth = totalDuration * pixelsPerSecond;
+
+    // let containerWidth = 0;
+
+    // if (zoomLevel >= 10) {
+    //   containerWidth = totalDuration * 100; // making 100px per sec for zoom level 10
+    // } else if (zoomLevel >= 8) {
+    //   containerWidth = totalDuration * 80;
+    // } else if (zoomLevel >= 5) {
+    //   containerWidth = totalDuration * 80;
+    // } else if (zoomLevel >= 2) {
+    //   containerWidth = totalDuration * 80;
+    // } else {
+    //   containerWidth = totalDuration * 80;
+    // }
 
     setTotalMediaDuration(totalDuration); // used for timelineRuler
     setMediaContainerWidth(containerWidth);
@@ -636,8 +673,6 @@ const Timeline: React.FC<TimelineProps> = ({
         {barsData?.sub_columns?.length !== 0 &&
           barsData?.sub_columns !== null && (
             <Playhead
-              setScrollPosition={setScrollPosition}
-              scrollPosition={scrollPosition}
               phLeftRef={phLeftRef}
               mediaContainerWidth={mediaContainerWidth}
               videoRef={videoRef}
@@ -645,6 +680,7 @@ const Timeline: React.FC<TimelineProps> = ({
               manualPhLeftRef={manualPhLeftRef}
               phLeftRefAfterMediaStop={phLeftRefAfterMediaStop}
               setShowPhTime={setShowPhTime}
+              playheadRef={playheadRef}
             />
           )}
 
@@ -652,7 +688,6 @@ const Timeline: React.FC<TimelineProps> = ({
           totalDuration={totalMediaDuration}
           zoomLevel={zoomLevel}
           containerWidth={mediaContainerWidth}
-          scrollPosition={scrollPosition}
           barsData={barsData}
           videoRef={videoRef}
           api={api}
@@ -664,6 +699,7 @@ const Timeline: React.FC<TimelineProps> = ({
           phLeftRefAfterMediaStop={phLeftRefAfterMediaStop}
           lastClipId={lastClipId}
           setShowPhTime={setShowPhTime}
+          rulerRef={rulerRef}
         />
         <div className={styles.media_parent_div} ref={mediaParentRef}>
           <div

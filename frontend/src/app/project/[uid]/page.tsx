@@ -59,7 +59,6 @@ const Project = () => {
             },
           }
         );
-        console.log("User data:", response.data);
         const res_uid = response.data.user_id;
         dispatch(setUserId(res_uid));
         setLoading(false);
@@ -78,8 +77,6 @@ const Project = () => {
     if (!loading) {
       if (userId !== params.uid) {
         router.push("/auth");
-      } else {
-        console.log("You are the user, bro");
       }
     }
   }, [userId, loading, params.uid]);
@@ -90,7 +87,6 @@ const Project = () => {
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/projects`
         );
-        console.log("bru u want", response.data);
         const data = response.data;
         setData(data);
         return response.data;
