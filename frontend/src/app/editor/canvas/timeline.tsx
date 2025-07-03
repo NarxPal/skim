@@ -124,8 +124,8 @@ const Timeline: React.FC<TimelineProps> = ({
   );
 
   // // needed for scrolling ruler when scrolled using thumb
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const handleScroll = () => {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const media = mediaParentRef.current;
     if (!media) return;
 
@@ -342,7 +342,7 @@ const Timeline: React.FC<TimelineProps> = ({
       parsedItem = JSON.parse(dropped_Item);
       console.log("media dropped parsed item bro", parsedItem);
     } catch (error) {
-      console.error("Invalid dropped item:", dropped_Item);
+      console.error("Invalid dropped item:", error);
       return; // prevent further execution
     }
 
