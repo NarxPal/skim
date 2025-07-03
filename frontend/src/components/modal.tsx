@@ -109,10 +109,9 @@ const Modal: React.FC<ModalProps> = ({
 
   const handleDelPrj = async () => {
     try {
-      const response = await axios.delete(
+      await axios.delete(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/projects/${delPrjData.id}`
       );
-      console.log("delete project", response);
       setOpenDelModal(false);
       deleteRootColumn(delPrjData.id);
     } catch (error) {

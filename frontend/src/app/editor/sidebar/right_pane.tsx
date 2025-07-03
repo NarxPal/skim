@@ -16,7 +16,6 @@ const RightPane: React.FC<RightPane> = ({
 
   useEffect(() => {
     const fetchMediaClipForVolume = async () => {
-      console.log("fetch media clip vol ran", barForVolume);
       if (!barForVolume) return;
       const updateClipVolume = await axios.get(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/clips/${barForVolume.id}`
@@ -24,7 +23,6 @@ const RightPane: React.FC<RightPane> = ({
 
       if (sliderRef.current) {
         const value = updateClipVolume.data.volume;
-        console.log("value ran", value);
         sliderRef.current.value = value.toString();
         sliderRef.current.style.background = `linear-gradient(to right, #2a6fff ${
           value * 100
@@ -52,7 +50,6 @@ const RightPane: React.FC<RightPane> = ({
       }
     );
     setFetchDataAfterVolChange(true);
-    console.log("updated volume checko babe", updateClipVolume);
   };
 
   return (

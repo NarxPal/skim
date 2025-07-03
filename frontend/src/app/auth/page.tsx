@@ -55,7 +55,6 @@ const Auth = () => {
         formData.password,
         formData.username
       );
-      console.log("User signed up:", userCredential);
       const uid = userCredential.user.user_id;
       if (userCredential && uid) {
         router.push(`/project/${uid}`);

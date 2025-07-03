@@ -14,7 +14,6 @@ export function FetchUser(uid: string | string[] | undefined) {
   useEffect(() => {
     const handleGetUser = async () => {
       if (!token || !uid) {
-        console.log("token , uid", token, uid);
         return;
       }
 
@@ -33,7 +32,6 @@ export function FetchUser(uid: string | string[] | undefined) {
         return response.data;
       } catch (error) {
         console.error("Error fetching user data:", error);
-        console.log("error fetch uid token", uid, token);
         router.push("/auth");
       }
     };

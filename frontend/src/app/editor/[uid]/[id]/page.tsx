@@ -74,8 +74,6 @@ const UserId = () => {
     if (!loadingId) {
       if (id?.toString() !== params.id) {
         router.push("/auth");
-      } else {
-        console.log("add pop up here");
       }
     }
   }, [loadingId, params.id, id]);
@@ -84,8 +82,6 @@ const UserId = () => {
     if (!loading) {
       if (userId !== params.uid) {
         router.push("/auth");
-      } else {
-        console.log("add pop up here");
       }
     }
   }, [userId, loading, params.uid]);

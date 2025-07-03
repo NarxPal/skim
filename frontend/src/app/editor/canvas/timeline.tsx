@@ -226,7 +226,6 @@ const Timeline: React.FC<TimelineProps> = ({
 
         const columnData = response.data;
         setColumns(columnData);
-        console.log("root col data", columnData);
         setBarsData(columnData);
         setBarsDataChangeAfterZoom(columnData); // added here since required after drag,drop for bind functions in clips
       } catch (error) {
@@ -237,7 +236,6 @@ const Timeline: React.FC<TimelineProps> = ({
       setUpdateBarsData(false);
       setFetchDataAfterSplit(false);
       setFetchDataAfterVolChange(false);
-      console.log("ALL BARS ", allBars);
     };
     if (prjId) {
       fetchRootColumn();
@@ -340,7 +338,6 @@ const Timeline: React.FC<TimelineProps> = ({
     let parsedItem;
     try {
       parsedItem = JSON.parse(dropped_Item);
-      console.log("media dropped parsed item bro", parsedItem);
     } catch (error) {
       console.error("Invalid dropped item:", error);
       return; // prevent further execution
@@ -374,7 +371,6 @@ const Timeline: React.FC<TimelineProps> = ({
           gaps: [],
         }
       );
-      console.log("sub col created for empty bars :", response.data);
       setFetchBars(true); // Fetch and show all the sub_col in timeline
       return response;
     } catch (error) {
@@ -385,8 +381,6 @@ const Timeline: React.FC<TimelineProps> = ({
   // ****** zoom in out ***********
   // it only changes the containerwidth
   const calcContainerWidth = async (parsedItem?: MediaItem) => {
-    console.log("barsdatachangeafter zoom state", barsDataChangeAfterZoom);
-    console.log("barsdata[0]", barsData);
     const totalDuration =
       barsData?.sub_columns?.reduce((acc, subCol) => {
         const subColBars = subCol?.bars || [];
@@ -439,7 +433,6 @@ const Timeline: React.FC<TimelineProps> = ({
   const zoom_In = async () => {
     const MAX_ZOOM_LEVEL = 0; // Max zoom is 0
     if (zoomLevel !== 0) {
-      console.log("zooom in", zoomLevel);
       setZoomLevel((prev) => Math.max(prev - 2, MAX_ZOOM_LEVEL));
       // setFetchBars(true); // it will fetch the barsData which will run the useEffect calcTicks in timelineruler file
       setStopPhAfterZoom(true);
@@ -449,7 +442,6 @@ const Timeline: React.FC<TimelineProps> = ({
   const zoom_Out = async () => {
     const MIN_ZOOM_LEVEL = 10; // High value mean less zoom
     if (zoomLevel >= 0 && zoomLevel < 10) {
-      console.log("zooom out", zoomLevel);
       setZoomLevel((prev) => Math.min(prev + 2, MIN_ZOOM_LEVEL));
       // setFetchBars(true);
       setStopPhAfterZoom(true);
@@ -511,7 +503,6 @@ const Timeline: React.FC<TimelineProps> = ({
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/g/update/batchUpdate/${data.project_id}`,
           { updatedGaps: allUpdatedGaps }
         );
-        console.log("updated gap checkoo for shift gaps", updatedGap.data);
         setBarsData(updatedGap.data);
         setBarsDataChangeAfterZoom(updatedGap.data);
         setBarAfterShift(true);
@@ -523,7 +514,6 @@ const Timeline: React.FC<TimelineProps> = ({
 
   const shiftBarsAfterGapDelete = async (data: BarsProp, gap: gap) => {
     try {
-      console.log("shift bar gap del ran");
       data.sub_columns?.map(async (subCol) => {
         const changeBarOfDelGap = subCol.bars?.find(
           (bar) => bar.id === gap.barId
@@ -567,7 +557,6 @@ const Timeline: React.FC<TimelineProps> = ({
             addBarData: { ...updatedBars },
           }
         );
-        console.log("updated data.data shift bar gap checko", updatedData.data);
         const getUpdatedData = updatedData.data;
         shiftGapsAfterGapDelete(getUpdatedData, gap);
       });
@@ -590,7 +579,6 @@ const Timeline: React.FC<TimelineProps> = ({
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gaps/update/${prjId}/${gap.id}`,
         { ...targetGap, start_gap: startGap, end_gap: startGap, width: 0 }
       );
-      console.log("del gap checko ran", delGap.data);
       setBarsData(delGap.data);
       setBarsDataChangeAfterZoom(delGap.data);
       setBarAfterShift(true);

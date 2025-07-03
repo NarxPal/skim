@@ -70,14 +70,12 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
 
   const handleDragEnd = () => {
     // setDraggedItem(null);
-    console.log("Drag ended");
   };
 
   useEffect(() => {
     // Fetch all media for sidebar after uploading
     const loadMedia = async () => {
       const media_Items = await fetchUserMediaWithUrls();
-      console.log("media items bro:", media_Items);
       setMediaItems(media_Items);
     };
     loadMedia();
@@ -191,8 +189,6 @@ const Left_pane = ({ selectedCategory }: { selectedCategory: string }) => {
             headers: { "Content-Type": "multipart/form-data" },
           }
         );
-
-        console.log("data upload", uploadRes);
 
         let thumbnailUrl;
         if (fileType === "video") {

@@ -122,7 +122,6 @@ const Clip: React.FC<ClipProps> = ({
       );
       const gapUpdated = handleGapRes.data;
       setBarsDataChangeAfterZoom(gapUpdated);
-      console.log("handle gap res", handleGapRes.data);
     } catch (error) {
       console.error("Error updating gap:", error);
     }
@@ -233,7 +232,6 @@ const Clip: React.FC<ClipProps> = ({
         const filteredData = updatebar.data.filter(
           (bar: BarsProp) => bar.project_id === Number(prjId)
         );
-        console.log("filtered data check in here", filteredData[0]);
         const updatedData = filteredData[0];
         setBarsDataChangeAfterZoom(updatedData);
         setBarsData(updatedData);
@@ -300,7 +298,6 @@ const Clip: React.FC<ClipProps> = ({
               addBarData: { ...updatedBars },
             }
           );
-          console.log("updated data.data", updatedData.data);
           const getUpdatedData = updatedData.data;
           setBarsDataChangeAfterZoom(getUpdatedData);
           setBarsData(getUpdatedData);
@@ -354,7 +351,6 @@ const Clip: React.FC<ClipProps> = ({
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/g/update/batchUpdate/${data.project_id}`,
           { updatedGaps: allUpdatedGaps }
         );
-        console.log("updated gap checkoo", updatedGap.data);
         setBarsData(updatedGap.data);
         setBarsDataChangeAfterZoom(updatedGap.data);
       }
@@ -372,7 +368,6 @@ const Clip: React.FC<ClipProps> = ({
           addGapData: { ...updatedGapRes }, // add gap to dropped subcol
         }
       );
-      console.log("after adding gap", afterAddingGap.data);
       delCmGapId(delGapFromRow?.sub_col_id, delGapFromRow?.id); // delete gap from dragged bar row
     } catch (error) {
       console.error("Error in updateGapRow:", error);
@@ -418,7 +413,6 @@ const Clip: React.FC<ClipProps> = ({
       const updatedGapRes = filteredData
         .flatMap((subcol: sub_column) => subcol.gaps || [])
         .find((gap: gap) => gap.id === targetGap.id);
-      console.log("update gaps res checko", updatedGapRes);
       updateGapRow(NumHovRowId, updatedGapRes);
     });
   };
@@ -433,7 +427,6 @@ const Clip: React.FC<ClipProps> = ({
           addBarData: { ...updatedBarRes }, // add bar to dropped subcol
         }
       );
-      console.log("after adding bar", afterAddingBar.data);
       await delCmBarId(delBarFromRow?.sub_col_id, delBarFromRow?.id, rowId); // delete dragged bar from its row
     } catch (error) {
       console.error("Error in updateBarRow:", error);
@@ -449,7 +442,6 @@ const Clip: React.FC<ClipProps> = ({
     pxToTime: number
   ) => {
     const NumHovRowId = Number(hoveredRowId);
-    console.log("CHECK HOVER ROW ID ", NumHovRowId);
     barsDataChangeAfterZoom?.sub_columns?.map(async (subcol) => {
       const targetBar = subcol.bars?.find((b) => b.id === barId); // fetching dragged bar here
       if (targetBar) {
@@ -654,12 +646,10 @@ const Clip: React.FC<ClipProps> = ({
                 rulerStartTimePxVal,
                 pxToTime
               );
-              console.log("newx in < vertical", newX);
             } else if (Math.abs(dy) > verticalThreshold) {
               // for dragged bar bw the subcol
               const { clipsInRow, mediaType } = fetchClipsOnHover(hoveredRowId);
               const rowTypeEquals = mediaType === barType;
-              console.log("clips in row ", clipsInRow);
 
               if (hoveredRowId && rowTypeEquals) {
                 clipsInRow?.map((clips) => {
@@ -673,7 +663,6 @@ const Clip: React.FC<ClipProps> = ({
                     const end = bar.left_position + bar.width;
 
                     if (newX <= firstBarLp) {
-                      console.log("newx, barlp 1", newX, bar.left_position);
                       resolvedX = newX;
                       updateBarLPAfterDrop(
                         barId,
@@ -682,7 +671,6 @@ const Clip: React.FC<ClipProps> = ({
                         rulerStartTimePxVal,
                         pxToTime
                       );
-                      console.log("before first clips ran");
                     }
 
                     for (let i = 0; i < clips.bars.length - 1; i++) {
@@ -701,16 +689,6 @@ const Clip: React.FC<ClipProps> = ({
                           hoveredRowId,
                           rulerStartTimePxVal,
                           pxToTime
-                        );
-                        console.log(
-                          "bw clips ran, currentend, nextstart, newx",
-                          currentEnd,
-                          nextStart,
-                          newX
-                        );
-                        console.log(
-                          "hover row id in lp after drop",
-                          hoveredRowId
                         );
                         break;
                       }
@@ -731,9 +709,6 @@ const Clip: React.FC<ClipProps> = ({
                         rulerStartTimePxVal,
                         pxToTime
                       );
-                      // console.log("newx, barlp 3", newX, bar.left_position);
-                      console.log("start, end , newx", start, end, newX);
-                      console.log("on hov clips ran");
                     }
                     if (newX >= lastBarLp + lastBarWidth) {
                       resolvedX = newX;
@@ -744,12 +719,6 @@ const Clip: React.FC<ClipProps> = ({
                         rulerStartTimePxVal,
                         pxToTime
                       );
-                      console.log(
-                        "after last clips ran, newx, lastbarlp + lastbarwidth",
-                        newX,
-                        lastBarLp + lastBarWidth
-                      );
-                      console.log("px to time", pxToTime);
                     }
                   });
                 });
@@ -986,7 +955,6 @@ const Clip: React.FC<ClipProps> = ({
       const delSubCol = await axios.delete(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/delSubCol/${prjId}`
       );
-      console.log("del bar res", delSubCol);
       setFetchBars(true);
     } catch (error) {
       console.log("error deleting bar", error);
@@ -1008,7 +976,6 @@ const Clip: React.FC<ClipProps> = ({
         (bar: BarsProp) => bar.project_id === Number(prjId)
       );
       const updatedRow = filteredData[0];
-      console.log("updated row bro after delcmbarid", updatedRow);
       await shiftBarsAfterDrop(updatedRow, cmBarId, hoveredRowId);
     } catch (error) {
       console.log("error deleting bar", error);
@@ -1026,7 +993,6 @@ const Clip: React.FC<ClipProps> = ({
       const filteredData = delGap.data.filter(
         (gap: BarsProp) => gap.project_id === Number(prjId)
       );
-      console.log("filtered data gap checko", filteredData);
       const updatedData = filteredData[0];
       await shiftGapsAfterDrop(updatedData);
       deleteEmptyRow();
@@ -1094,10 +1060,8 @@ const Clip: React.FC<ClipProps> = ({
     label: string;
     action: (id: number) => void;
   }) => {
-    console.log("option click id", contextMenu.id);
     if (contextMenu.id !== null) {
       option.action(contextMenu.id);
-      console.log("option click id", contextMenu.id);
     }
     setContextMenu({ visible: false, x: 0, y: 0, id: null });
   };

@@ -70,7 +70,6 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/subCol/${prjId}`,
         updateData
       );
-      console.log("updatebaraz checko", updatebar.data);
     }
     setFetchBars(true);
   };
@@ -89,7 +88,6 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   };
 
   function calculateInterval(totalDuration: number, zoomLevel: number): number {
-    console.log("zl lolo", zoomLevel);
     const baseInterval = Math.max(
       30,
       Math.pow(2, Math.ceil(Math.log2(totalDuration / 300))) * 30
@@ -104,12 +102,8 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
       const markers: number[] = [];
       const formattedMarkersArray: string[] = [];
 
-      console.log("containerWidth:", containerWidth);
-      console.log("totalDuration:", totalDuration);
-
       const interval = calculateInterval(totalDuration, zoomLevel);
       dispatch(setMarkerInterval(interval));
-      console.log("interval", interval);
 
       // To add interval(in hh:mm:ss format), per marker accross container width
       for (let time = 0; time <= containerWidth; time += interval) {
@@ -186,7 +180,6 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
           };
         }) || [];
 
-      console.log("bro barsdurations", barsDurations);
       updateBarAZ(barsDurations);
     };
     calcTicks();
@@ -219,7 +212,6 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
     event: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) => {
     const hoverPosition = getHoverPosition(event);
-    console.log("hp", hoverPosition);
     dispatch(setPhPosition(hoverPosition));
     if (phLeftRef.current) {
       phLeftRef.current.style.transform = `translateX(${hoverPosition}px)`;
@@ -228,10 +220,8 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
     }
 
     lastClipId.current = null;
-    console.log("null", lastClipId.current);
     if (videoRef.current && hoverPosition) {
       const time = positionToTime(hoverPosition);
-      console.log("time bro", time);
       videoRef.current.currentTime = time || 0; // in case there is no clip the time would return nothing so fall to 0
       const formattedTime = formatTime(time);
       setShowPhTime(formattedTime);

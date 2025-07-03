@@ -144,8 +144,6 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
     } catch (error) {
       console.error("Error in gaps after split:", error);
     }
-
-    console.log("combined gaps checkko", combinedGaps);
   };
 
   const handleClipsAfterSplit = async () => {
@@ -291,7 +289,6 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
             return bar;
           });
       }) ?? [];
-    // console.log("subColOrderMap:", Array.from(subColOrderMap.entries()));
 
     return videoClips ?? []; // fallback to empty array if undefined
   };
@@ -331,7 +328,6 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
 
   const runAudioClips = async (newPosition: number) => {
     const audioClips = await fetchAudioData();
-    // console.log("audio clips", audioClips);
 
     const activeAudioClips = audioClips
       .filter(
@@ -344,8 +340,6 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
           (subColOrderMap.get(a.sub_col_id) ?? Infinity) -
           (subColOrderMap.get(b.sub_col_id) ?? Infinity)
       );
-
-    // console.log("active audio clips", activeAudioClips);
 
     const activeClipIds = new Set(activeAudioClips.map((clip) => clip.id));
     const currentInstances = audioInstancesRef.current;
@@ -590,7 +584,6 @@ const PhAnimation: React.FC<PhAnimationProps> = ({
 
     if (videoClips.length === 0) {
       // only run startmanual timer when there is no video clips
-      console.log("st about to run");
       startManualTimer();
     }
     return videoClips;
