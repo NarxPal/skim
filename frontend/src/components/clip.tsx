@@ -361,7 +361,7 @@ const Clip: React.FC<ClipProps> = ({
 
   const updateGapRow = async (rowId: number, updatedGapRes: gap) => {
     try {
-      const afterAddingGap = await axios.patch(
+      await axios.patch(
         // sub-columns/gap/:id - patch in backend
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/gap/update/${rowId}`,
         {
@@ -420,7 +420,7 @@ const Clip: React.FC<ClipProps> = ({
   // it adds dragged bar to the row where it has been dropped
   const updateBarRow = async (rowId: number, updatedBarRes: bar) => {
     try {
-      const afterAddingBar = await axios.patch(
+      await axios.patch(
         // sub-columns/:id - patch in backend
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/${rowId}`,
         {
@@ -952,7 +952,7 @@ const Clip: React.FC<ClipProps> = ({
   // run when clip dropped to another sub col
   const deleteEmptyRow = async () => {
     try {
-      const delSubCol = await axios.delete(
+      await axios.delete(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/delSubCol/${prjId}`
       );
       setFetchBars(true);

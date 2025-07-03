@@ -66,7 +66,7 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   const updateBarAZ = async (barsDurations: sub_column[]) => {
     const updateData = barsDurations;
     if (updateData && updateData.length > 0) {
-      const updatebar = await axios.patch(
+      await axios.patch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/subCol/${prjId}`,
         updateData
       );

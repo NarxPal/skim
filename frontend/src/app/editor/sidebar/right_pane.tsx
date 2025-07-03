@@ -42,7 +42,7 @@ const RightPane: React.FC<RightPane> = ({
   const handleUpdateVolume = async () => {
     const value = parseFloat(sliderRef.current?.value || "1");
     if (!barForVolume) return;
-    const updateClipVolume = await axios.patch(
+    await axios.patch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns/sub-columns/clips/${barForVolume.id}`,
       {
         ...barForVolume,
