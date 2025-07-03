@@ -7,15 +7,19 @@
 }
 
 .header {
-  @apply w-full h-[7%] border-b-2 border-editor_gray;
+  @apply w-full h-[5%] border-b-2 border-editor_gray;
 }
 
 .head_content {
-  @apply flex flex-row justify-between items-center;
+  @apply flex flex-row items-center h-full;
 }
 
-.profileBtn {
-  @apply bg-blue_btn text-white px-4 py-2 font-semibold rounded-md text-xs shadow-md cursor-pointer mr-8;
+.logo{
+  @apply ml-5
+}
+
+.logo_name{
+  @apply text-white text-lg
 }
 
 .pane_div {
@@ -95,25 +99,25 @@
 }
 
 .box_col_row {
-  @apply h-full w-full grid-cols-4 grid gap-4;
+  @apply h-full w-full grid-cols-12 grid gap-4;
 }
 
 .prj_box {
-  @apply flex h-full w-full bg-editor_gray flex-col rounded-lg gap-2 p-3;
+  @apply flex h-full w-full flex-col rounded-lg gap-2 p-3;
 }
 
-.thumbnail {
-  @apply h-[10rem];
+.opn_prj{
+  @apply cursor-pointer
 }
 
 .name_ic {
   @apply flex flex-row justify-between items-center;
 }
 
-.icons_ul {
-  @apply flex flex-row gap-2;
+.ic_li {
+  @apply cursor-pointer p-2 bg-containerGray rounded-full ;
 }
 
-.ic_li {
-  @apply cursor-pointer;
+.filename{
+  @apply  truncate max-w-[120px] overflow-hidden
 }

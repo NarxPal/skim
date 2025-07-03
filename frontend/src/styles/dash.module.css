@@ -11,7 +11,7 @@
 }
 
 .dash_header {
-  @apply flex flex-row w-full h-full text-white justify-between p-2 pl-0;
+  @apply flex flex-row w-full h-full text-white justify-between p-1 mx-2;
 }
 
 .logo_filename_div {

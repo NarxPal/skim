@@ -117,10 +117,10 @@ const UserId = () => {
             <div className={styles.logo_filename_div}>
               <div className={styles.logo_div}>
                 <Image
-                  src="/skim.png"
+                  src="/logo3d.png"
                   alt="logo"
-                  width={60}
-                  height={60}
+                  width={40}
+                  height={40}
                   priority={true}
                 />
               </div>

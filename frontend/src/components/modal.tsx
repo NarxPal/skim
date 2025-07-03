@@ -47,14 +47,11 @@ const Modal: React.FC<ModalProps> = ({
 
   const createRootColumn = async (prjData: projectProps) => {
     try {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/columns`,
-        {
-          project_id: prjData.id,
-          user_id: prjData.user_id,
-          parent_id: null, // since this is the creation of root column after creating project
-        }
-      );
+      await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/columns`, {
+        project_id: prjData.id,
+        user_id: prjData.user_id,
+        parent_id: null, // since this is the creation of root column after creating project
+      });
     } catch (error) {
       console.error("error creating column", error);
     }

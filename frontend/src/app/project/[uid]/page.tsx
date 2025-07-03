@@ -10,6 +10,9 @@ import Cookies from "js-cookie";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/redux/store";
 import { setUserId } from "@/redux/userId";
+import { Fascinate_Inline } from "next/font/google";
+
+const fascinateInline = Fascinate_Inline({ subsets: ["latin"], weight: "400" });
 
 type data = {
   id: number;
@@ -125,17 +128,15 @@ const Project = () => {
           <div className={styles.head_content}>
             <div className={styles.logo}>
               <Image
-                src="/skim.png"
+                src="/logo3d.png"
                 alt="logo"
-                width={90}
-                height={90}
+                width={40}
+                height={40}
                 priority={true}
               />
             </div>
-            <div className={styles.profileBtn}>
-              <button className={styles.pf_btn}>
-                Narendra Pal <span>&#x25BC;</span>
-              </button>
+            <div className={`${fascinateInline.className} ${styles.logo_name}`}>
+              Skim
             </div>
           </div>
         </div>
@@ -234,44 +235,52 @@ const Project = () => {
                     data
                       .filter((item) => item.user_id === params.uid)
                       .map((item) => (
-                        <div className={styles.prj_box} key={item.id}>
+                        <div
+                          className={`${styles.prj_box} group relative`}
+                          key={item.id}
+                        >
+                          <ul className="hidden group-hover:flex gap-1 absolute top-0 right-0">
+                            <li
+                              className={styles.ic_li}
+                              onClick={() => handleEditPrj(item.name, item.id)}
+                            >
+                              <Image
+                                src="/edit.png"
+                                alt="edit"
+                                height={13}
+                                width={13}
+                                priority={true}
+                              />
+                            </li>
+                            <li
+                              className={styles.ic_li}
+                              onClick={() => handleDelPrj(item.name, item.id)}
+                            >
+                              <Image
+                                src="/delete.png"
+                                alt="edit"
+                                height={13}
+                                width={13}
+                                priority={true}
+                              />
+                            </li>
+                          </ul>
+
                           <div
-                            className={styles.thumbnail}
                             onClick={() => openProject(item.id)}
+                            className={styles.opn_prj}
                           >
-                            thumbnail here bro
+                            <Image
+                              alt="prj"
+                              src="/prj.png"
+                              width={50}
+                              height={50}
+                              priority={true}
+                            />
                           </div>
 
                           <div className={styles.name_ic}>
-                            <div>{item.name}</div>
-                            <ul className={styles.icons_ul}>
-                              <li
-                                className={styles.ic_li}
-                                onClick={() =>
-                                  handleEditPrj(item.name, item.id)
-                                }
-                              >
-                                <Image
-                                  src="/edit.png"
-                                  alt="edit"
-                                  height={20}
-                                  width={20}
-                                  priority={true}
-                                />
-                              </li>
-                              <li
-                                className={styles.ic_li}
-                                onClick={() => handleDelPrj(item.name, item.id)}
-                              >
-                                <Image
-                                  src="/delete.png"
-                                  alt="edit"
-                                  height={20}
-                                  width={20}
-                                  priority={true}
-                                />
-                              </li>
-                            </ul>
+                            <div className={styles.filename}>{item.name}</div>
                           </div>
                         </div>
                       ))}

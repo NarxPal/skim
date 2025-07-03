@@ -1,3 +1,61 @@
+.auth_items{
+@apply  text-white w-screen h-screen flex items-center justify-center relative overflow-hidden  z-10
+}
+
+.auth_page{
+  @apply relative auth_items  bg-off_voi
+}
+
+.grid_overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+  linear-gradient(to right, rgba(44, 44, 44, 1) 1px, transparent 1px),
+  linear-gradient(to bottom, rgba(44, 44, 44, 1) 1px, transparent 1px);
+  background-size: 60px 60px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.auth_card{
+@apply border border-containerGray bg-editor_gray h-[55%] w-[25%] flex flex-col items-center justify-center rounded-lg  gap-8
+}
+
+.txt_sl{
+  @apply flex flex-col items-center gap-1
+}
+
+.sl_head{
+  @apply text-xl font-bold 
+}
+
 .log_span {
-  @apply text-blue-400;
+  @apply text-blue-400 cursor-pointer font-semibold;
+}
+
+.form{
+@apply gap-2 flex flex-col
+}
+
+.head_input{
+  @apply flex flex-col
+}
+
+.label{
+  @apply text-sm font-semibold
+}
+
+.input_box {
+  @apply bg-transparent focus:outline-none w-full;
+}
+
+.search_bar{
+  @apply bg-off_voi px-2 py-1 rounded-lg w-full flex flex-row gap-4 focus-within:outline-blue_btn outline-offset-0 focus-within:outline focus-within:outline-2 mt-2;
+}
+
+.auth_btn{
+  @apply bg-blue_btn px-5 py-2 mt-8 rounded-lg font-bold shadow-md
 }

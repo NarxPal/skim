@@ -125,13 +125,14 @@ const Timeline: React.FC<TimelineProps> = ({
 
   // // needed for scrolling ruler when scrolled using thumb
   const handleScroll = () => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const media = mediaParentRef.current;
     if (!media) return;
 
     // for auto scroll during ph movement
     isUserScrollingRef.current = true;
-    clearTimeout((handleScroll as any).timeoutId);
-    (handleScroll as any).timeoutId = setTimeout(() => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
       isUserScrollingRef.current = false;
     }, 200);
   };
