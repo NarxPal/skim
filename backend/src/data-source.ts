@@ -7,7 +7,7 @@ ConfigModule.forRoot(); // typeorm doesn't use config module so manually loading
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: 'localhost',
-  port: parseInt(process.env.PORT, 10),
+  port: parseInt(process.env.DB_PORT, 10),
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
