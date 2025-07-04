@@ -5,6 +5,12 @@
 
 A web-based video editing interface with timeline, drag-drop, and clip controls.
 
+
+## Demo
+![Screenshot from 2025-07-05 00-12-50](https://github.com/user-attachments/assets/8da39255-9179-4474-8326-585e828f8a42)
+
+
+
 ## Features
 
 - Timeline-based editor  
