@@ -20,6 +20,13 @@ import { Columns } from './models/columns.entity';
         database: configService.get<string>('DB_NAME'),
         entities: [User, Projects, Media, Columns],
         synchronize: true, // Auto sync entities with the database, should be false in production, since it could lead to data loss, use migration instead
+
+        ssl: true,
+        extra: {
+          ssl: {
+            rejectUnauthorized: false, // allow self-signed certs
+          },
+        },
       }),
     }),
   ],
