@@ -1,4 +1,7 @@
-# Skim
+<img src="https://github.com/user-attachments/assets/f6800391-def5-4234-95bc-97ed5f121730" alt="logo3d" width="80" style="vertical-align: middle;"/>
+<h1>
+ <strong>Skim</strong>
+</h1>
 
 A web-based video editing interface with timeline, drag-drop, and clip controls.
 
