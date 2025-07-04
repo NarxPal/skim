@@ -56,10 +56,17 @@ const Auth = () => {
         formData.username
       );
       const uid = userCredential.user.user_id;
-      if (userCredential && uid) {
+      const token = userCredential.accessToken;
+      if (userCredential && uid && token) {
+        Cookies.set("access_token", token, {
+          expires: 365,
+          secure: false, // true in prod
+          sameSite: "Lax",
+          priority: "High",
+        });
+        toast.success("Successfully signedUp");
         router.push(`/project/${uid}`);
       }
-      toast.success("Successfully signedUp");
     } catch (error) {
       console.error("Error signing up:", error);
     }
@@ -71,16 +78,18 @@ const Auth = () => {
       const userCredential = await signIn(formData.email, formData.password);
       // setAccessToken(userCredential.accessToken);
       const uid = userCredential.user.user_id;
-
       const token = userCredential.accessToken;
-      Cookies.set("access_token", token, {
-        expires: 365,
-        secure: false, // Set to true in production for HTTPS
-        sameSite: "Lax", // For cross-origin support
-        priority: "High",
-      });
-      toast.success("Successfully loggedIn");
-      router.push(`/project/${uid}`);
+
+      if (uid && token) {
+        Cookies.set("access_token", token, {
+          expires: 365,
+          secure: false, // Set to true in production for HTTPS
+          sameSite: "Lax", // For cross-origin support
+          priority: "High",
+        });
+        toast.success("Successfully loggedIn");
+        router.push(`/project/${uid}`);
+      }
     } catch (error) {
       toast.error("Check your email or password");
       console.error("Error signing in:", error);
