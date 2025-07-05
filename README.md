@@ -6,31 +6,55 @@
 A web-based video editing interface with timeline, drag-drop, and clip controls.
 
 
-## Demo
+## 🎬 Demo
 ![Screenshot from 2025-07-05 00-12-50](https://github.com/user-attachments/assets/8da39255-9179-4474-8326-585e828f8a42)
 
 
+## 🔗 Links
 
-## Features
+### 🎥 Skim Workflow Demo Video
+https://youtu.be/bAuBT_yFQoM
 
+### 🌐 Website Link
+https://skim-alpha.vercel.app  
+
+But it won't work since skim is pre-configured for local use, because production env will break and cause bad user experience follow [PRODUCTION DEPLOYMENT GUIDE](#-production-deployment-guide) if u still wish to.
+
+### 🧠 My Thoughts
+https://narendra8pal.hashnode.dev/skim-video-editor
+
+<br />
+
+## ✨ Features
 - Timeline-based editor  
 - Drag-and-drop clips  
-- Volume/split controls
-- Zoom In & Out controls
-- Delete gaps bw clips in one tap
+- Volume & split controls  
+- Zoom in/out  
+- One-tap gap deletion between clips  
 
-## Tools
-- React/TSX + Next.js frontend
-- NestJS for backend
-- REST API backend
-- Cloudinary for media storage
-- PostgreSQL for database
-- Render for backend deployment
+### 🚧 Coming Soon
+- Export (download) edited video  
+- Image media support  
+- Transitions between clips  
+- Fading effects  
+- Clip duplication
+
+<br />
+
+## 🛠 Tech Stack
+- **Frontend**: React + TypeScript + Next.js  
+- **Backend**: NestJS + REST API  
+- **Storage**: Cloudinary  
+- **Database**: PostgreSQL  
+- **Deployment**: Render  
+- **Video Processing**: FFmpeg (for thumbnails)  
+
 
 <br />
 
 > ⚠️ **Warning:** Free tier hosting on render causes significantly slow performance and even cold starts.
 
+<br />
 
 
 # Deployment URLs
@@ -47,6 +71,8 @@ A web-based video editing interface with timeline, drag-drop, and clip controls.
 >
 > IF YOU DON'T CARE ABOUT LAG, COLD STARTS, OR PERFORMANCE ISSUES,  
 > YOU CAN RUN IT IN PRODUCTION USING THE [PRODUCTION DEPLOYMENT GUIDE](#-production-deployment-guide).
+
+<br />
 
 > I would highly recommend using skim locally using the url provided for dev. Things aren't going to work perfect and smooth in production environment :(
 
