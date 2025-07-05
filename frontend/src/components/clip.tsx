@@ -722,7 +722,10 @@ const Clip: React.FC<ClipProps> = ({
                     }
                   });
                 });
-              } else {
+              } else if (
+                clipsInRow?.length &&
+                clipsInRow[0].bars?.length === 0
+              ) {
                 if (!hoveredRowId) return;
                 // when row is empty
                 addBarToNewSubCol(
